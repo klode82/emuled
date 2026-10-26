@@ -154,6 +154,10 @@ Per guardare o ascoltare un file **mentre scarica** (o dopo) con un player local
 
 Il pulsante «Ricerca in Kad»: chiede a Kad le note degli altri utenti su questo file. Risponde **202** con `{"started": true}`; i risultati arrivano piano piano e si leggono con `GET …/comments`. **422** se Kad non è collegato, **409** se una ricerca di note per questo file è già in corso.
 
+### `GET /api/v1/downloads/{hash}/blocks` — i blocchi in scarico adesso
+
+eMule scarica un *blocco* (chunk, `part_size` = 9 728 000 byte, quello della mappa) a **pezzi** da `block_size` = 184 320 byte (180 KB) che chiede alle fonti. Questa chiamata dice quali blocchi stanno arrivando in questo momento: `active` ha un elemento per ogni blocco con `part` (numero da 0), `size`, `missing` (byte ancora mancanti) e `sources`: le fonti che lo stanno trasferendo, ciascuna con `name`, `software`, `ip`, `port`, `speed` (byte/s) e `blocks`, i pezzi richiesti con `start` e `end` (posizioni nel file, estremi compresi) e `transferred` (byte già arrivati di quel pezzo). Conta solo la richiesta già partita verso la fonte, non quelle in attesa di essere inviate. Elenco vuoto se nessuna fonte sta trasferendo. **404** se il download non c'è o è completato.
+
 ### `GET /api/v1/downloads/{hash}/details` — i dettagli
 
 È la scheda «Generale» di eMule in JSON, per un download in corso (**404** se non c'è o è già completato): `name`, `part_met` e `part_met_path`, `hash`, `aich_hash` (o `null`) con `aich_status` (`error`, `empty`, `untrusted`, `trusted`, `verified`, `complete`), `hashset` (`ed2k` e `aich`: sono disponibili gli hash di tutte le parti?), `size` e `size_on_disk`, `type` (estensione), `parts` (`total`, `available`, `available_pct`), `status`, `sources` (`total`, `valid`, `transferring`, `no_needed_parts`, `other_file`), `speed`, `transferred`, `compression_gain`, `completed`, `corrupted`, `remaining` (ognuno con `bytes` e `pct`, troncata al decimo come eMule), `recovered_parts` (le parti recuperate dall'I.C.H.), e le date in secondi Unix: `added`, `active_seconds`, `last_seen_complete`, `last_received`.

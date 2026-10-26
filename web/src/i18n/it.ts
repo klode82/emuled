@@ -97,9 +97,10 @@ const it = {
     stopHint: 'Ferma e scarta le fonti', removeFromList: 'Togli dalla lista',
     cancelTitle: 'Annullare il download?', cancelText: '«{name}» sarà tolto dalla lista e il file parziale verrà cancellato. Non si può annullare.', cancelConfirm: 'Annulla download',
   },
+  blocks: { title: 'In scarico adesso', none: 'Nessun blocco in arrivo in questo momento.', pieces: 'nessun pezzo | {n} pezzo | {n} pezzi', hint: 'Ogni blocco è scaricato a pezzi da {size}, chiesti alle fonti che stanno trasferendo. Il riquadro arancione nella mappa è un blocco in scarico adesso.' },
   parts: {
     block: 'Blocco {n}', sources: 'nessuna fonte | {n} fonte | {n} fonti', aria: '{complete} blocchi completi su {total}', complete: '{n} completi', missing: '{n} mancanti',
-    corrupted: '{n} da riscaricare', size: 'blocchi da {size}',
+    corrupted: '{n} da riscaricare', active: '{n} in scarico adesso | {n} in scarico adesso', size: 'blocchi da {size}',
   },
   src: {
     state: {

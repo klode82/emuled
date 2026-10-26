@@ -142,6 +142,9 @@ int main(int argc, char **argv)
 		Http(port, "GET", "/t/nuovo/", "", "", s); CHECK(s == 200);
 		Http(port, "GET", "/api/v1/templates", "", "", s); CHECK(s == 401);
 		r = Http(port, "GET", "/api/v1/log?level=info&limit=200", token, "", s); CHECK(r.find("Template: ") != std::string::npos && r.find("non caricato") != std::string::npos);	// il Registro lo dice
+		// blocchi in scarico adesso: senza fonti in scarico l'elenco e' vuoto; hash sconosciuto 404
+		r = Http(port, "GET", "/api/v1/downloads/" + hash + "/blocks", token, "", s); CHECK(s == 200 && json::parse(r)["active"].is_array() && json::parse(r)["active"].empty() && json::parse(r)["part_size"] == 9728000 && json::parse(r)["block_size"] == 184320);
+		Http(port, "GET", "/api/v1/downloads/00000000000000000000000000000000/blocks", token, "", s); CHECK(s == 404);
 		// streaming: link temporaneo; un download senza dati su disco risponde 503 (il player riprova), un link sconosciuto 403
 		r = Http(port, "POST", "/api/v1/downloads/" + hash + "/stream", token, "", s); CHECK(s == 201);
 		{ std::string sp = json::parse(r)["path"]; CHECK(sp.rfind("/api/v1/stream/", 0) == 0 && json::parse(r)["expires_in"] > 0);

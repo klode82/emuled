@@ -10,7 +10,7 @@ import { useUi } from '@/stores/ui'
 import { bytes, dateTime, duration, ed2kLink, eta, number, percent, speed } from '@/lib/format'
 import { useCore } from '@/stores/core'
 import { PRIORITIES, priorityKey, statusInfo, toneClass } from '@/lib/labels'
-import type { Content, ContentTrack, Details, FileComments, FileNames, Parts, Priority, Source } from '@/types'
+import type { Blocks, Content, ContentTrack, Details, FileComments, FileNames, Parts, Priority, Source } from '@/types'
 import Icon from './Icon.vue'
 import ProgressBar from './ProgressBar.vue'
 import PartsMap from './PartsMap.vue'
@@ -26,7 +26,8 @@ const paused = computed(() => info.value?.key === 'paused')
 const done = computed(() => info.value?.key === 'done')
 
 // blocchi e fonti: si rileggono ogni 3 secondi finche' il pannello e' aperto (l'API non li manda come eventi)
-const parts = ref<Parts | null>(null), sources = ref<Source[]>([]), det = ref<Details | null>(null)
+const parts = ref<Parts | null>(null), sources = ref<Source[]>([]), det = ref<Details | null>(null), blocks = ref<Blocks | null>(null)
+const activeParts = computed(() => blocks.value?.active.map((a) => a.part) ?? [])
 type TabKey = 'general' | 'progress' | 'sources' | 'names' | 'comments' | 'content' | 'ed2k'
 const TABS: readonly TabKey[] = ['general', 'progress', 'sources', 'names', 'comments', 'content', 'ed2k']
 const tab = ref<TabKey>('general')
@@ -53,9 +54,9 @@ const kbps = (b: number | null | undefined) => (b ? `${number(Math.round(b / 100
 const trackLine = (tr: ContentTrack) => [tr.title, tr.lang].filter(Boolean).join(' · ')
 let timer: ReturnType<typeof setInterval> | undefined
 async function refresh() {
-  if (!d.value || done.value) { parts.value = null; sources.value = []; det.value = null; return }
+  if (!d.value || done.value) { parts.value = null; sources.value = []; det.value = null; blocks.value = null; return }
   const api = session.getApi()
-  try { [parts.value, sources.value, det.value] = await Promise.all([api.parts(props.hash), api.sources(props.hash), api.details(props.hash)]) } catch { /* il download puo' essere appena sparito */ }
+  try { [parts.value, sources.value, det.value, blocks.value] = await Promise.all([api.parts(props.hash), api.sources(props.hash), api.details(props.hash), api.blocks(props.hash)]) } catch { /* il download puo' essere appena sparito */ }
 }
 // schede Nome e Commenti: i dati si leggono solo mentre la scheda e' aperta
 const names = ref<FileNames | null>(null), comments = ref<FileComments | null>(null)
@@ -90,7 +91,7 @@ const stars = (n: number) => (n >= 1 && n <= 5 ? t('fd.rating.' + n) : '—')
 watch(() => props.hash, () => { names.value = null; comments.value = null; nameTouched.value = false; filterOpen.value = false; void refreshExtra() })
 onMounted(() => { void refresh(); timer = setInterval(() => { void refresh(); void refreshExtra() }, 3000) })
 onUnmounted(() => clearInterval(timer))
-watch(() => props.hash, () => { parts.value = null; sources.value = []; det.value = null; void refresh() })
+watch(() => props.hash, () => { parts.value = null; sources.value = []; det.value = null; blocks.value = null; void refresh() })
 
 // indirizzo ed2k con le opzioni di eMule: il proprio indirizzo come fonte (serve l'ID alto: l'ID e' l'indirizzo IP) e il tag HTML
 const withSource = ref(false), asHtml = ref(false)
@@ -155,7 +156,23 @@ const sortedSources = computed(() => [...own.value].sort((a, b) => stateOrder(a)
           <div class="flex items-baseline justify-between pb-1.5 text-sm"><span class="font-medium tabular-nums">{{ percent(d.percent) }}</span><span class="text-xs text-mute tabular-nums">{{ t('detail.of', { done: bytes(d.completed, 2, true), size: bytes(d.size, 2, true) }) }}</span></div>
           <ProgressBar :value="d.percent" tone="accent" :label="d.name" />
         </div>
-        <div v-if="parts"><h3 class="pb-2 text-xs font-semibold uppercase tracking-wide text-mute">{{ t('detail.blocks') }}</h3><PartsMap :parts="parts" /></div>
+        <div v-if="parts"><h3 class="pb-2 text-xs font-semibold uppercase tracking-wide text-mute">{{ t('detail.blocks') }}</h3><PartsMap :parts="parts" :active="activeParts" /></div>
+        <section class="rounded-lg border border-line" :aria-label="t('blocks.title')">
+          <h3 class="flex items-baseline justify-between border-b border-line px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-mute"><span>{{ t('blocks.title') }}</span><span class="font-normal tabular-nums">{{ blocks?.active.length ?? 0 }}</span></h3>
+          <p v-if="!blocks?.active.length" class="px-3 py-4 text-center text-xs text-mute">{{ t('blocks.none') }}</p>
+          <ul v-else class="divide-y divide-line text-xs">
+            <li v-for="a in blocks.active" :key="a.part" class="flex flex-col gap-1.5 px-3 py-2.5">
+              <div class="flex items-baseline justify-between gap-3"><span class="text-sm font-medium">{{ t('parts.block', { n: a.part + 1 }) }}</span>
+                <span class="tabular-nums text-mute">{{ bytes(a.size - a.missing, 2, true) }} / {{ bytes(a.size, 2, true) }} · {{ percent(a.size ? 100 * (1 - a.missing / a.size) : 0) }}</span></div>
+              <ProgressBar :value="a.size ? 100 * (1 - a.missing / a.size) : 0" tone="warn" :label="t('parts.block', { n: a.part + 1 })" />
+              <ul class="flex flex-col gap-0.5">
+                <li v-for="(s, i) in a.sources" :key="s.ip + ':' + s.port + i" class="flex items-baseline justify-between gap-3"><span class="min-w-0 truncate">{{ s.name || t('detail.unknownUser') }} <span class="text-mute">· {{ s.software || '—' }}</span></span>
+                  <span class="shrink-0 tabular-nums text-mute">{{ speed(s.speed) }} · {{ t('blocks.pieces', s.blocks.length) }}: {{ bytes(s.blocks.reduce((n, b) => n + b.transferred, 0), 1, true) }} / {{ bytes(s.blocks.reduce((n, b) => n + b.end - b.start + 1, 0), 1, true) }}</span></li>
+              </ul>
+            </li>
+          </ul>
+          <p class="border-t border-line px-3 py-1.5 text-[11px] text-mute">{{ t('blocks.hint', { size: bytes(blocks?.block_size ?? 184320, 0, true) }) }}</p>
+        </section>
       </template>
 
       <template v-else-if="tab === 'general'">

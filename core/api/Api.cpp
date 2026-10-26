@@ -299,6 +299,37 @@ json PartsJson(CPartFile *f)
 	return {{"part_size", ps}, {"size", size}, {"count", n}, {"parts", parts}};
 }
 
+// i blocchi che stanno arrivando adesso: eMule scarica un chunk (parte da 9,28 MB) a pezzi da 180 KB (EMBLOCKSIZE) chiesti alle fonti; qui, per ogni parte,
+// le fonti in scarico e i loro pezzi richiesti (fQueued = la richiesta e' partita), con quanti byte ne sono gia' arrivati
+json BlocksJson(CPartFile *f)
+{
+	const uint64_t size = (uint64_t)f->GetFileSize(), ps = PARTSIZE;
+	std::map<UINT, json> byPart;
+	for (POSITION pos = f->srclist.GetHeadPosition(); pos;) {
+		CUpDownClient *c = f->srclist.GetNext(pos);
+		if (c->GetDownloadState() != DS_DOWNLOADING) continue;
+		std::map<UINT, json> mine;
+		for (POSITION bp = c->GetPendingBlocks().GetHeadPosition(); bp;) {
+			const Pending_Block_Struct *pb = c->GetPendingBlocks().GetNext(bp);
+			if (!pb || !pb->block || !pb->fQueued) continue;
+			const UINT part = (UINT)(pb->block->StartOffset / ps);
+			mine[part]["blocks"].push_back({{"start", (uint64_t)pb->block->StartOffset}, {"end", (uint64_t)pb->block->EndOffset}, {"transferred", (uint64_t)pb->block->transferred}});
+		}
+		for (auto &kv : mine) {
+			json &p = byPart[kv.first];
+			p["sources"].push_back({{"name", std::string(c->GetUserName() ? c->GetUserName() : "")}, {"software", S(c->GetClientSoftVer())}, {"ip", S(ipstr(c->GetConnectIP()))}, {"port", c->GetUserPort()},
+				{"speed", c->GetDownloadDatarate()}, {"blocks", kv.second["blocks"]}});
+		}
+	}
+	json active = json::array();
+	for (auto &kv : byPart) {
+		const uint64_t len = std::min<uint64_t>(ps, size - (uint64_t)kv.first * ps), missing = f->GetTotalGapSizeInPart(kv.first);
+		kv.second["part"] = kv.first; kv.second["size"] = len; kv.second["missing"] = missing;
+		active.push_back(std::move(kv.second));
+	}
+	return {{"part_size", ps}, {"block_size", (uint64_t)EMBLOCKSIZE}, {"active", active}};
+}
+
 bool ParsePortStr(const std::string &v, uint16_t &out)
 {
 	if (v.empty() || v.size() > 5) return false;
@@ -418,6 +449,7 @@ void RegisterRoutes(HttpServer &srv, double started_s, const DaemonHooks &hooks)
 		return x;
 	});
 	srv.Route("GET", "/api/v1/downloads/:hash/parts", [](const Request &r) { Response e; CPartFile *f = FindDownload(r, e); return f ? Ok(PartsJson(f)) : e; });
+	srv.Route("GET", "/api/v1/downloads/:hash/blocks", [](const Request &r) { Response e; CPartFile *f = FindDownload(r, e); return f ? Ok(BlocksJson(f)) : e; });
 	srv.Route("POST", "/api/v1/downloads/clear-completed", [](const Request &) { size_t n = emule::CompletedDownloads::Clear(); Audit("completed list cleared (" + std::to_string(n) + " items)"); return Ok({{"removed", n}}); });
 	srv.Route("POST", "/api/v1/downloads", [](const Request &r) {
 		json b; Response e; if (!ParseBody(r, b, e)) return e;

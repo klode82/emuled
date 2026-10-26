@@ -28,6 +28,9 @@ export interface TemplateInfo {
   source: 'system' | 'user' | 'dev'; valid: boolean; errors: string[]; reserved: boolean; url: string | null; preview: string | null
 }
 export interface TemplateList { templates: TemplateInfo[]; api_version: number; dirs: { system?: string; user?: string; extra?: string } }
+export interface BlockSource { name: string; software: string; ip: string; port: number; speed: number; blocks: { start: number; end: number; transferred: number }[] }
+export interface BlockActive { part: number; size: number; missing: number; sources: BlockSource[] }
+export interface Blocks { part_size: number; block_size: number; active: BlockActive[] }
 export interface StreamLink { path: string; name: string; size: number; expires_in: number; mime: string }
 export interface FileNames { current: string; names: { name: string; count: number }[] }
 export interface FileComment { network: 'ed2k' | 'kad'; rating: number; comment: string; file_name: string; user: string }

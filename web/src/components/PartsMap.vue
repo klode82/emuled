@@ -6,7 +6,8 @@ import { bytes, percent } from '@/lib/format'
 import type { Parts } from '@/types'
 
 const { t } = useI18n()
-const props = defineProps<{ parts: Parts }>()
+const props = defineProps<{ parts: Parts; active?: number[] }>()
+const isActive = (i: number) => !!props.active?.includes(i)
 const cells = computed(() => props.parts.parts.map((p) => {
   const done = p.size ? 100 * (1 - p.missing / p.size) : 0
   return { p, done, title: `${t('parts.block', { n: p.index + 1 })} · ${bytes(p.size)} · ${percent(done)} · ${t('parts.sources', p.sources)}` }
@@ -22,11 +23,13 @@ const count = (s: string) => props.parts.parts.filter((p) => p.state === s).leng
       <span v-for="c in cells" :key="c.p.index" :title="c.title" class="relative aspect-square overflow-hidden rounded-[2px]"
         :class="c.p.state === 'corrupted' ? 'bg-bad' : c.p.sources === 0 && c.p.state !== 'complete' ? 'bg-sunk ring-1 ring-inset ring-line' : 'bg-sunk'">
         <span v-if="c.p.state !== 'corrupted'" class="absolute inset-x-0 bottom-0 bg-accent" :class="fill(c.done)" />
+        <span v-if="isActive(c.p.index)" class="absolute inset-0 rounded-[2px] ring-2 ring-inset ring-warn" />
       </span>
     </div>
     <figcaption class="flex flex-wrap gap-x-4 gap-y-1 pt-2 text-xs text-mute">
       <span><i class="mr-1 inline-block size-2 rounded-[2px] bg-accent align-middle" />{{ t('parts.complete', count('complete')) }}</span>
       <span><i class="mr-1 inline-block size-2 rounded-[2px] bg-sunk ring-1 ring-inset ring-line align-middle" />{{ t('parts.missing', count('empty') + count('partial')) }}</span>
+      <span v-if="active?.length" class="text-warn"><i class="mr-1 inline-block size-2 rounded-[2px] ring-2 ring-inset ring-warn align-middle" />{{ t('parts.active', active.length) }}</span>
       <span v-if="count('corrupted')" class="text-bad"><i class="mr-1 inline-block size-2 rounded-[2px] bg-bad align-middle" />{{ t('parts.corrupted', count('corrupted')) }}</span>
       <span class="ml-auto">{{ t('parts.size', { size: bytes(parts.part_size) }) }}</span>
     </figcaption>

@@ -1462,6 +1462,57 @@
         ]
       }
     },
+    "/api/v1/downloads/{hash}/blocks": {
+      "get": {
+        "summary": "Blocchi in scarico adesso",
+        "description": "I blocchi (chunk da part_size = 9 728 000 byte) che stanno arrivando in questo momento: per ognuno part (da 0), size, missing e le fonti che lo trasferiscono (name, software, ip, port, speed in byte/s) con i pezzi da block_size = 184 320 byte richiesti (start, end, transferred). Elenco active vuoto se nessuna fonte trasferisce. 404 se il download non c'e' o e' completato.",
+        "responses": {
+          "200": {
+            "description": "Blocchi"
+          },
+          "404": {
+            "description": "Download non trovato",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": [
+          "Download"
+        ],
+        "parameters": [
+          {
+            "name": "hash",
+            "in": "path",
+            "required": true,
+            "description": "MD4 del file: 32 caratteri esadecimali",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9A-Fa-f]{32}$"
+            }
+          }
+        ]
+      }
+    },
     "/api/v1/downloads/{hash}/names": {
       "get": {
         "summary": "Nomi del file usati dalle fonti",

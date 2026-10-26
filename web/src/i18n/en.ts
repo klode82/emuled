@@ -98,9 +98,10 @@ const en: Messages = {
     stopHint: 'Stop and discard the sources', removeFromList: 'Remove from list',
     cancelTitle: 'Cancel the download?', cancelText: '“{name}” will be removed from the list and the partial file deleted. This cannot be undone.', cancelConfirm: 'Cancel download',
   },
+  blocks: { title: 'Downloading now', none: 'No block is arriving right now.', pieces: 'no pieces | {n} piece | {n} pieces', hint: 'Each block is downloaded in pieces of {size}, requested from the sources that are transferring. The orange frame on the map is a block being downloaded right now.' },
   parts: {
     block: 'Block {n}', sources: 'no sources | {n} source | {n} sources', aria: '{complete} of {total} blocks complete', complete: '{n} complete', missing: '{n} missing',
-    corrupted: '{n} to redownload', size: '{size} blocks',
+    corrupted: '{n} to redownload', active: '{n} downloading now | {n} downloading now', size: '{size} blocks',
   },
   src: {
     state: {

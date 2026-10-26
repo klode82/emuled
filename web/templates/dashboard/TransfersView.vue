@@ -105,7 +105,7 @@ function pick(hash: string, e: MouseEvent) {
 
     <template v-if="dl.detail">
       <div class="fixed inset-0 z-20 bg-black/40" @click="dl.detail = null"></div>
-      <aside class="fixed inset-y-0 right-0 z-30 w-full max-w-md border-l border-line bg-surface shadow-2xl" :aria-label="t('detail.aria')"><DownloadDetail :hash="dl.detail" @close="dl.detail = null" /></aside>
+      <aside class="fixed inset-y-0 right-0 z-30 w-full border-l border-line bg-surface shadow-2xl lg:w-1/2 lg:max-w-3xl" :aria-label="t('detail.aria')"><DownloadDetail :hash="dl.detail" @close="dl.detail = null" /></aside>
     </template>
   </div>
 </template>

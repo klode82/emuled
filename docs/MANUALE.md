@@ -639,12 +639,12 @@ Compilatore: g++ 13.3, C++20. Costruzione: CMake 3.28 + Ninja 1.11. Elenco dei p
 | `compat/` | lo strato MFC/Windows → Linux (B3); `ci/` = symlink generati |
 | `core/` | sorgenti di eMule portati e codice nuovo (`met/`, `known/`, `profile/`, `guardian/`, `net/`, `util/`) e i sostituti provvisori degli oggetti globali |
 | `daemon/` | `emuled.cpp` |
-| `web/` | **l'interfaccia web** (Vue 3 + Vite + TypeScript + Pinia + Tailwind + vue-i18n): `src/lib` (client API, WebSocket, formati), `src/stores` (stato), `src/components`, `src/views` (schermate comuni), `src/i18n` (italiano e inglese) e `src/template.ts` (il **kit comune**), `templates/<id>/` (i quattro template di serie: console, dashboard, studio, mobile); `./demo.sh` la mostra con dati d'esempio; vedi `web/README.md` |
+| `web/` | **l'interfaccia web** (Vue 3 + Vite + TypeScript + Pinia + Tailwind + vue-i18n): `src/lib` (client API, WebSocket, formati), `src/stores` (stato), `src/components`, `src/views` (schermate comuni), `src/i18n` (italiano, inglese e altre 12 lingue: es, zh, hi, ar, fr, pt, ru, de, ja, ko, tr, id; l'arabo si legge da destra a sinistra) e `src/template.ts` (il **kit comune**), `templates/<id>/` (i quattro template di serie: console, dashboard, studio, mobile); `./demo.sh` la mostra con dati d'esempio; vedi `web/README.md` |
 | `tests/` | i 19 test e i costruttori di file di prova |
 | `tools/` | `fix_case.py` |
 | `docs/` | questo manuale, l'inventario dei cast non allineati |
 | `web/` | l'interfaccia web (vuota fino alla Fase 7) |
-| `srchybrid/` | il sorgente Windows originale: **non si modifica** |
+| `upstream/emule/0.72a-community/srchybrid/` (percorso in `EMULED_UPSTREAM`, CMakeLists.txt) | il sorgente Windows originale: **non si modifica** |
 
 ---
 
@@ -733,7 +733,7 @@ L'orchestrazione e' la `GlobalSearch` (nell'originale sta nella finestra dei ris
 
 ## B10. Regola di porting per ogni file (lista di controllo)
 
-Ogni file di eMule portato da `upstream/srchybrid/` a `core/` passa per questi punti. `srchybrid/` non si modifica mai: si importa con `tools/import_src.py` (toglie i CR e converte da cp1252 a UTF-8) e poi si corregge la copia.
+Ogni file di eMule portato da `upstream/emule/0.72a-community/srchybrid/` a `core/` passa per questi punti. `srchybrid/` non si modifica mai: si importa con `tools/import_src.py` (toglie i CR e converte da cp1252 a UTF-8) e poi si corregge la copia.
 
 1. **Struct con `#pragma pack`** (quelle che finiscono su disco o in rete): `static_assert` sulla dimensione. Esempio: `Preferences_Ext_Struct` di `preferences.dat` deve restare di 61 byte.
 2. **Letture non allineate**: `memcpy`, mai un cast di puntatore a `uint32*` su un buffer di byte.

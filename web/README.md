@@ -29,7 +29,7 @@ In sviluppo (`TEMPLATE=dashboard npm run dev`) Vite serve il template scelto sul
 
 L'interfaccia è fatta di **template**: ognuno è una piccola applicazione indipendente (`dist/templates/<id>/`, con il suo `template.yaml`) che parla solo con l'API.
 I quattro di serie hanno gli stessi dati, le stesse schermate comuni (Ricerca, Server, Condivisi, Kad, Registro, Statistiche, Preferenze) e lo stesso pannello di
-dettaglio del download; cambiano la cornice, i colori e la schermata Trasferimenti. Come si crea un template tuo: `docs/TEMPLATES.md`.
+dettaglio del download; cambiano la cornice, i colori e la schermata Trasferimenti. Come si crea un template tuo: `docs/TEMPLATES.md` (da zero) e `docs/TEMPLATE-DA-CONSOLE.md` (da Console, con il kit).
 
 | Template | Cartella | Com'è |
 |---|---|---|
@@ -81,10 +81,10 @@ Ogni richiesta porta `Authorization: Bearer TOKEN`; il WebSocket lo prende da `?
 
 ## Lingue (i18n)
 
-Italiano e inglese. Si sceglie dalle Preferenze o dalla schermata di accesso e si ricorda nel browser; la prima volta si usa la lingua del browser, altrimenti l'italiano.
+Italiano, inglese e altre 12 lingue (spagnolo, cinese, hindi, arabo, francese, portoghese, russo, tedesco, giapponese, coreano, turco, indonesiano). Si sceglie dalle Preferenze o dalla schermata di accesso e si ricorda nel browser; la prima volta si usa la lingua del browser, altrimenti l'italiano.
 
-- Nessun testo sta nei componenti: ci sono solo chiavi (`t('transfers.emptyTitle')`). I testi sono in `src/i18n/it.ts`; `en.ts` ha **le stesse chiavi** (il tipo TypeScript lo impone).
-- Il test `i18n` controlla anche: nessun testo vuoto, stessi segnaposto (`{n}`) e stesse forme plurali nelle due lingue, e che ogni chiave usata nel codice esista.
+- Nessun testo sta nei componenti: ci sono solo chiavi (`t('transfers.emptyTitle')`). I testi sono in `src/i18n/it.ts`; `en.ts` e le altre 12 lingue (`es zh hi ar fr pt ru de ja ko tr id`) hanno **le stesse chiavi** (il tipo TypeScript lo impone).
+- Il test `i18n` controlla anche: nessun testo vuoto, stessi segnaposto (`{n}`) e stesse forme plurali in tutte le lingue, e che ogni chiave usata nel codice esista.
 - Plurali: `"1 file | {n} file"`; numeri, dimensioni, date e durate seguono la lingua (`15,47 MB` in italiano, `15.47 MB` in inglese).
 - **Per aggiungere una lingua**: copiare `it.ts`, tradurre, aggiungerla a `LANGS` in `src/i18n/index.ts` e a `messages`.
 - Limite attuale: i messaggi di errore che arrivano dal demone sono in italiano (li scrive il demone). Il passo successivo è dare agli errori dell'API un codice stabile, da tradurre qui.

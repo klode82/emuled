@@ -1,0 +1,77 @@
+# A ogni push su master: se la versione in CMakeLists.txt (EMULED_VERSION) non ha ancora il tag v<versione>,
+# costruisce .deb, .rpm e immagine Docker, crea il tag e la release su GitHub. Per fare un rilascio basta alzare EMULED_VERSION.
+name: release
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+permissions:
+  contents: write
+  packages: write
+jobs:
+  version:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      new: ${{ steps.v.outputs.new }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - id: v
+        run: |
+          v=$(sed -n 's/^set(EMULED_VERSION \([0-9.]*\)).*/\1/p' CMakeLists.txt)
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          if git rev-parse -q --verify "refs/tags/v$v" >/dev/null; then echo "new=false" >> "$GITHUB_OUTPUT"; else echo "new=true" >> "$GITHUB_OUTPUT"; fi
+
+  deb:
+    needs: version
+    if: needs.version.outputs.new == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: grep -vE '^\s*(#|$)' requirements-apt.txt | xargs sudo apt-get install -y nodejs npm python3
+      - run: python3 tools/fix_case.py && (cd web && npm ci --no-audit --no-fund && npm run build)
+      - run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build --target emuled && (cd build && cpack -G DEB)
+      - uses: actions/upload-artifact@v4
+        with: { name: deb, path: build/*.deb }
+
+  rpm:
+    needs: version
+    if: needs.version.outputs.new == 'true'
+    runs-on: ubuntu-24.04
+    container: fedora:40
+    steps:
+      - run: dnf install -y gcc-c++ cmake ninja-build pkgconf-pkg-config flex bison python3 rpm-build git cryptopp-devel miniupnpc-devel zlib-devel libcurl-devel json-devel nodejs npm
+      - uses: actions/checkout@v4
+      - run: python3 tools/fix_case.py && (cd web && npm ci --no-audit --no-fund && npm run build)
+      - run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build --target emuled && (cd build && cpack -G RPM)
+      - uses: actions/upload-artifact@v4
+        with: { name: rpm, path: build/*.rpm }
+
+  docker:
+    needs: version
+    if: needs.version.outputs.new == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with: { registry: ghcr.io, username: "${{ github.actor }}", password: "${{ secrets.GITHUB_TOKEN }}" }
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ needs.version.outputs.version }}
+            ghcr.io/${{ github.repository }}:latest
+
+  release:
+    needs: [version, deb, rpm, docker]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { path: pkg, merge-multiple: true }
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v${{ needs.version.outputs.version }}" pkg/* --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "emuled ${{ needs.version.outputs.version }}" --generate-notes

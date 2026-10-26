@@ -851,7 +851,16 @@
             }
           },
           "version": {
-            "type": "string"
+            "type": "string",
+            "description": "versione di eMule annunciata in rete"
+          },
+          "emuled_version": {
+            "type": "string",
+            "description": "versione di emuled"
+          },
+          "base_version": {
+            "type": "string",
+            "description": "codice eMule da cui deriva emuled"
           },
           "nick": {
             "type": "string"

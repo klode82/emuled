@@ -52,6 +52,10 @@ const en: Messages = {
     studio: { search: 'Add a link or search…', count: 'no transfers | {n} transfer | {n} transfers', pick: 'Pick a download to see its details.', pickClient: 'Pick a user to see their details.', userHash: 'User hash' },
     mobile: { search: 'Search for a file or paste an ed2k link' },
   },
+  about: {
+    title: 'About', emuled: 'emuled version', base: 'Based on', license: 'License', basedOn: 'based on {base}',
+    note: 'emuled is a Linux derivative of eMule community. It is not an official program and is not affiliated with the eMule authors.',
+  },
   template: {
     title: 'Look', hint: 'Choose how emuled looks. The choice only applies to this browser: without one, “Console” is used. Copy your own templates into {user}.',
     inUse: 'In use', stock: 'Built-in', yours: 'Yours', dev: 'Development', use: 'Use this one', noPreview: 'No preview', by: 'by {author}', rescan: 'Rescan folders', rescanned: 'Folders rescanned: {n} templates',

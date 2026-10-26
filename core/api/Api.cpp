@@ -113,7 +113,7 @@ json ServerJson(CServer *s);
 json StatusJson(double started_s, const DaemonHooks &hooks)
 {
 	json j;
-	j["version"] = S(theApp.m_strCurVersionLong); j["nick"] = S(thePrefs.GetUserNick()); j["uptime_s"] = (int64_t)(NowS() - started_s);
+	j["version"] = S(theApp.m_strCurVersionLong); j["emuled_version"] = EMULED_VERSION; j["base_version"] = EMULED_BASE_VERSION; j["nick"] = S(thePrefs.GetUserNick()); j["uptime_s"] = (int64_t)(NowS() - started_s);
 	j["ports"] = {{"tcp", thePrefs.GetPort()}, {"udp", thePrefs.GetUDPPort()}};
 	CServerConnect &sc = *theApp.serverconnect;
 	json srv = {{"connected", sc.IsConnected()}, {"connecting", sc.IsConnecting()}};

@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 3.20)
 project(emule_linux CXX)
 
+set(EMULED_VERSION 0.1.0)		# versione di emuled (non quella di eMule): il workflow GitHub ne ricava il tag v<versione>
+set(EMULED_UPSTREAM "upstream/emule/0.72a-community")	# sorgenti originali di eMule (sola lettura); gli script in tools/ la leggono da qui
+set(EMULED_BASE_VERSION "eMule 0.72a-community")	# il codice da cui deriva
+add_compile_definitions(EMULED_VERSION="${EMULED_VERSION}" EMULED_BASE_VERSION="${EMULED_BASE_VERSION}")
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)
@@ -24,7 +29,7 @@ if(NOT FIXCASE_RC EQUAL 0)
 endif()
 
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(CRYPTOPP REQUIRED IMPORTED_TARGET libcrypto++)
+pkg_search_module(CRYPTOPP REQUIRED IMPORTED_TARGET libcrypto++ libcryptopp)		# Debian: libcrypto++.pc, Fedora: libcryptopp.pc
 pkg_check_modules(CURL REQUIRED IMPORTED_TARGET libcurl)
 find_package(ZLIB REQUIRED)
 
@@ -383,3 +388,23 @@ if(EXISTS ${CMAKE_SOURCE_DIR}/web/dist/templates)
 else()
   message(WARNING "web/dist/templates non c'e': `cmake --install` non installera' i template di serie. Costruirli con: cd web && npm install && npm run build")
 endif()
+install(FILES packaging/emuled-pkg.service DESTINATION lib/systemd/user RENAME emuled.service)
+install(FILES README.md NOTICE.md LICENSE docs/MANUALE.md docs/TEMPLATES.md DESTINATION share/doc/emuled)
+
+# ---- pacchetti (task 615): `cmake -S . -B build -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build --target emuled && cpack --config build/CPackConfig.cmake -G DEB` (oppure -G RPM, serve rpmbuild)
+set(CPACK_PACKAGE_NAME emuled)
+set(CPACK_STRIP_FILES ON)
+set(CPACK_PACKAGE_VERSION ${EMULED_VERSION})
+set(CPACK_PACKAGE_CONTACT "klode82@gmail.com")
+set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/klode82/emuled")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "emuled - eMule per Linux (demone con API REST e interfaccia web)")
+set(CPACK_RESOURCE_FILE_LICENSE ${CMAKE_SOURCE_DIR}/LICENSE)
+set(CPACK_PACKAGING_INSTALL_PREFIX /usr)
+set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+set(CPACK_DEBIAN_PACKAGE_SECTION net)
+set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
+set(CPACK_RPM_PACKAGE_LICENSE "GPLv2+")
+set(CPACK_RPM_PACKAGE_AUTOREQ ON)
+set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
+set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION /usr/lib/systemd /usr/lib/systemd/user /usr/share/doc)
+include(CPack)

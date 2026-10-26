@@ -51,6 +51,10 @@ const it = {
     studio: { search: 'Aggiungi link o cerca…', count: 'nessun trasferimento | {n} trasferimento | {n} trasferimenti', pick: 'Scegli un download per vederne i dettagli.', pickClient: 'Scegli un utente per vederne i dettagli.', userHash: 'Hash utente' },
     mobile: { search: 'Cerca un file o incolla un link ed2k' },
   },
+  about: {
+    title: 'Informazioni', emuled: 'Versione di emuled', base: 'Basato su', license: 'Licenza', basedOn: 'basato su {base}',
+    note: 'emuled e\' un derivato di eMule community per Linux. Non e\' un programma ufficiale e non e\' affiliato agli autori di eMule.',
+  },
   template: {
     title: 'Aspetto', hint: 'Scegli come appare emuled. La scelta vale solo per questo browser: senza una scelta si usa «Console». I template tuoi si copiano in {user}.',
     inUse: 'In uso', stock: 'Di serie', yours: 'Tuo', dev: 'Di sviluppo', use: 'Usa questo', noPreview: 'Nessuna anteprima', by: 'di {author}', rescan: 'Rileggi le cartelle', rescanned: 'Cartelle rilette: {n} template',

@@ -8,11 +8,12 @@ import { useUi, type Theme } from '@/stores/ui'
 import { PREFS, PREF_GROUPS, type PrefMeta } from '@/lib/prefsMeta'
 import { LANGS, setLang, type Lang } from '@/i18n'
 import type { Category, Directories } from '@/types'
+import { useCore } from '@/stores/core'
 import Icon from '@/components/Icon.vue'
 
 const { t, te, locale } = useI18n()
 const route = useRoute()
-const p = usePrefs(), ui = useUi(), tpl = useTemplates()
+const p = usePrefs(), ui = useUi(), tpl = useTemplates(), core = useCore()
 onMounted(async () => { await Promise.all([p.load(), p.loadDirs(), tpl.load()]); await nextTick(); if (route.hash) document.querySelector(route.hash)?.scrollIntoView() })
 const known = new Set(PREFS.map((m) => m.key))
 const groups = computed(() => PREF_GROUPS.map((g) => ({ name: g, items: PREFS.filter((m) => m.group === g && m.key in p.draft) })).filter((g) => g.items.length))
@@ -161,6 +162,16 @@ const nChanges = computed(() => Object.keys(p.changes).length)
         <div class="flex flex-col gap-1.5 px-5 py-3 sm:flex-row sm:items-center sm:justify-between"><div><label for="lang" class="text-sm font-medium">{{ t('lang.label') }}</label><p class="text-xs text-mute">{{ t('prefs.rememberedHere') }}</p></div>
           <select id="lang" class="rounded-lg border border-line bg-bg px-3 py-2 text-sm" :value="locale" @change="setLang(($event.target as HTMLSelectElement).value as Lang)"><option v-for="l in LANGS" :key="l.code" :value="l.code">{{ l.name }}</option></select></div>
       </div>
+    </section>
+
+    <section class="rounded-xl border border-line bg-surface" aria-labelledby="about">
+      <h2 id="about" class="border-b border-line px-5 py-3 text-sm font-semibold">{{ t('about.title') }}</h2>
+      <dl class="grid gap-x-6 gap-y-2 px-5 py-3 text-sm sm:grid-cols-[auto_1fr]">
+        <dt class="text-mute">{{ t('about.emuled') }}</dt><dd class="tabular-nums">{{ core.status?.emuled_version ?? '…' }}</dd>
+        <dt class="text-mute">{{ t('about.base') }}</dt><dd>{{ core.status?.base_version ?? '…' }} · <a class="text-accent underline" href="https://github.com/irwir/eMule" target="_blank" rel="noopener noreferrer">github.com/irwir/eMule</a></dd>
+        <dt class="text-mute">{{ t('about.license') }}</dt><dd>GPL-2.0-or-later</dd>
+      </dl>
+      <p class="border-t border-line px-5 py-3 text-xs text-mute">{{ t('about.note') }}</p>
     </section>
 
     <div v-if="p.dirty" class="fixed inset-x-0 bottom-14 z-20 border-t border-line bg-surface px-4 py-3 shadow-lg md:bottom-0 md:left-16 lg:left-56">

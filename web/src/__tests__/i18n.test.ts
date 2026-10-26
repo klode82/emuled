@@ -2,22 +2,26 @@ import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import itMessages from '@/i18n/it'
 import enMessages from '@/i18n/en'
+import { LANGS } from '@/i18n'
 import { detectLang, setLang, t } from '@/i18n'
 
 type Tree = { [k: string]: string | Tree }
 const flat = (o: Tree, p = ''): Record<string, string> => Object.fromEntries(Object.entries(o).flatMap(([k, v]) => (typeof v === 'string' ? [[p + k, v]] : Object.entries(flat(v, p + k + '.')))))
-const A = flat(itMessages as unknown as Tree), B = flat(enMessages as unknown as Tree)
+const A = flat(itMessages as unknown as Tree), B = flat(enMessages as unknown as Tree); void B
 const params = (s: string) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort().join(',')
 
 describe('traduzioni', () => {
-  it('italiano e inglese hanno le stesse chiavi', () => {
-    expect(Object.keys(B).sort()).toEqual(Object.keys(A).sort())
+  const ALL = import.meta.glob('../i18n/*.ts', { eager: true }) as Record<string, { default: unknown }>
+  const OTHERS = LANGS.filter((l) => l.code !== 'it').map((l) => [l.code, flat(ALL[`../i18n/${l.code}.ts`].default as Tree)] as const)
+  it('ogni lingua registrata ha un file e le stesse chiavi dell\'italiano', () => {
+    expect(OTHERS.length).toBe(LANGS.length - 1)
+    for (const [c, m] of OTHERS) expect(Object.keys(m).sort(), c).toEqual(Object.keys(A).sort())
   })
   it('nessun testo vuoto, stessi segnaposto e stesso numero di forme plurali', () => {
-    for (const k of Object.keys(A)) {
-      expect(A[k].trim(), k).not.toBe(''); expect(B[k].trim(), k).not.toBe('')
-      expect(params(B[k]), `segnaposto di ${k}`).toBe(params(A[k]))
-      expect(B[k].split(' | ').length, `forme plurali di ${k}`).toBe(A[k].split(' | ').length)
+    for (const [c, M] of OTHERS) for (const k of Object.keys(A)) {
+      expect(M[k].trim(), `${c} ${k}`).not.toBe('')
+      expect(params(M[k]), `segnaposto di ${c} ${k}`).toBe(params(A[k]))
+      expect(M[k].split(' | ').length, `forme plurali di ${c} ${k}`).toBe(A[k].split(' | ').length)
     }
   })
   it('ogni chiave usata nel codice esiste (t("...") e $t("..."), anche con prefissi dinamici)', () => {
@@ -36,7 +40,7 @@ describe('traduzioni', () => {
     for (const p of prefixes) expect(Object.keys(A).some((k) => k.startsWith(p)), `prefisso ${p}`).toBe(true)
   })
   it('scelta della lingua: salvata, poi quella del browser, poi italiano', () => {
-    expect(detectLang('en', ['it-IT'])).toBe('en'); expect(detectLang(null, ['fr-FR', 'en-GB'])).toBe('en'); expect(detectLang('xx', ['de'])).toBe('it'); expect(detectLang(null, [])).toBe('it')
+    expect(detectLang('en', ['it-IT'])).toBe('en'); expect(detectLang(null, ['nl-NL', 'en-GB'])).toBe('en'); expect(detectLang('xx', ['nl'])).toBe('it'); expect(detectLang(null, [])).toBe('it')
   })
   it('plurali e segnaposto funzionano nelle due lingue', () => {
     setLang('it'); expect(t('toast.added', 1)).toBe('Download aggiunto'); expect(t('toast.added', 3)).toBe('3 download aggiunti'); expect(t('transfers.selected', 2)).toBe('2 selezionati')

@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Rigenera core/kademlia/io/KadLowerMap.inc da srchybrid/res/WideCharLowerMap.bin (sola lettura del sorgente Windows)."""
 import struct, sys, os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from upstream import SRCHYBRID
 root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
-d = open(os.path.join(root, "upstream", "srchybrid", "res", "WideCharLowerMap.bin"), "rb").read()
+d = open(os.path.join(SRCHYBRID, "res", "WideCharLowerMap.bin"), "rb").read()
 m = struct.unpack("<65536H", d)
 diffs = [(i, v) for i, v in enumerate(m) if i != v]
 out = ["// GENERATO da srchybrid/res/WideCharLowerMap.bin (la mappa Unicode -> minuscolo che TUTTI i nodi Kad devono usare identica).",

@@ -40,7 +40,8 @@ const linkBad = computed(() => session.link !== 'open')
         </div>
       </template>
       <div class="mt-auto flex flex-col gap-1">
-        <p v-if="st" class="hidden px-3 py-1 text-xs text-mute lg:block">{{ st.nick }} · v{{ st.version.replace(/^.*?(\d)/, '$1') }}</p>
+        <p v-if="st" class="hidden px-3 py-1 text-xs text-mute lg:block">{{ st.nick }} · emuled {{ st.emuled_version }}</p>
+        <p v-if="st" class="hidden px-3 pb-1 text-[10px] text-mute lg:block">{{ t('about.basedOn', { base: st.base_version }) }}</p>
         <button class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-mute hover:bg-sunk hover:text-fg" @click="session.logout()" :title="t('nav.logout')"><Icon name="logout" class="!size-5" /><span class="hidden lg:inline">{{ t('nav.logout') }}</span></button>
       </div>
     </aside>

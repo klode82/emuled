@@ -54,7 +54,7 @@ export interface Content {
 export interface KadBootstrap { state: 'idle' | 'running' | 'done' | 'failed'; kind?: 'url' | 'address'; target?: string; added?: number; contacts?: number; error?: string }
 export interface ServerUpdate { state: 'idle' | 'running' | 'done' | 'failed'; url?: string; added?: number; total?: number; error?: string }
 export interface Status {
-  version: string; nick: string; uptime_s: number; ports: { tcp: number; udp: number }
+  version: string; emuled_version: string; base_version: string; nick: string; uptime_s: number; ports: { tcp: number; udp: number }
   ed2k: Ed2kState; kad: KadState; transfers: Transfers
   upnp?: { enabled: boolean; state: 'off' | 'offline' | 'pending' | 'forwarded' | 'failed' | 'unavailable' }
 }

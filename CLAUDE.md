@@ -11,7 +11,7 @@ Mantiene compatibili i formati di profilo di eMule Windows. L'utente scrive in i
 ## Cartelle
 - `core/` il codice portato e nuovo; `compat/` livello di compatibilita' MFC/Win32 (CString, CFile, ...); `daemon/emuled.cpp` il programma; `tests/`; `tools/` (rebuild.sh, gen_openapi.py, bench.py, ...);
   `web/` interfaccia; `docs/` (MANUALE.md, APIDOC.md, openapi.json generato); `packaging/` (servizio systemd); `build/` compilazione (si puo' cancellare).
-- `upstream/srchybrid` e `upstream/mbedtls`: i sorgenti ORIGINALI di eMule per Windows. **Sola lettura: non modificarli mai.** Servono da riferimento e ai generatori in `tools/`.
+- `upstream/emule/0.72a-community/srchybrid` e `upstream/emule/0.72a-community/mbedtls`: i sorgenti ORIGINALI di eMule per Windows. **Sola lettura: non modificarli mai.** Servono da riferimento e ai generatori in `tools/`. Il percorso della versione di eMule e' in un posto solo: `EMULED_UPSTREAM` in `CMakeLists.txt` (gli script di `tools/` lo leggono con `tools/upstream.py`); per una nuova versione basta aggiungere `upstream/emule/<versione>/` e cambiare quella variabile e `EMULED_BASE_VERSION`.
 
 ## Come si lavora
 - Compilare: `tools/rebuild.sh` (emuled + web/dist; toglie da build/ i programmi di prova). Tutto con i test: `ninja` in `build/` poi `ctest` (42 test). Si usa **Ninja**, mai `make`.

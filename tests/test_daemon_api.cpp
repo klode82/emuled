@@ -97,6 +97,7 @@ int main(int argc, char **argv)
 		Http(port, "GET", "/api/v1/status", "", "", s); CHECK(s == 401);
 		r = Http(port, "GET", "/api/v1/status", token, "", s); CHECK(s == 200);
 		json st_ = json::parse(r, nullptr, false); CHECK(st_.is_object() && st_["ed2k"]["connected"] == false && st_["kad"]["running"] == false && st_["ports"]["tcp"].get<int>() == std::atoi(tcp.c_str()));
+		CHECK(st_["emuled_version"] == EMULED_VERSION && st_["base_version"] == EMULED_BASE_VERSION);
 		{	// eventi: senza token niente WebSocket; con token arrivano stats ogni secondo e download.added / removed
 			CHECK(WsOpen(port, "sbagliato") == -1);
 			int ws = WsOpen(port, token); CHECK(ws >= 0);

@@ -55,9 +55,11 @@ Il demone serve anche le pagine dell'interfaccia, **senza token**: `/t/<id>/…`
 
 ### `GET /api/v1/status` — lo stato generale
 
+`version` e' la versione del protocollo/client eMule (quella che si annuncia in rete); `emuled_version` e' la versione di emuled; `base_version` e' il codice eMule da cui deriva.
+
 ```json
 {
-  "version": "0.72a", "nick": "eMuleLinux", "uptime_s": 3600,
+  "version": "0.72a", "emuled_version": "0.1.0", "base_version": "eMule 0.72a-community", "nick": "eMuleLinux", "uptime_s": 3600,
   "ports": {"tcp": 55662, "udp": 55672},
   "ed2k": {"connected": true, "connecting": false, "id": 1757362257, "high_id": true,
            "server": {"name": "eMule Sunrise", "address": "176.123.5.89", "port": 4725, "users": 48000, "files": 9000000}},

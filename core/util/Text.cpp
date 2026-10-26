@@ -1,5 +1,6 @@
 // LINUX: origine srchybrid/OtherFunctions.cpp:100-250 (GetForceSpeedsToKB: opzione della UI, qui sempre falsa)
 #include "util/Text.h"
+#include <climits>
 #include "Opcodes.h"
 
 CString CastItoXBytes(uint16 count, bool isK, bool isPerSec, uint32 decimal)

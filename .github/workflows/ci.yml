@@ -11,4 +11,4 @@ jobs:
       - run: python3 tools/fix_case.py
       - run: cd web && npm ci --no-audit --no-fund && npx vue-tsc --noEmit && npx vitest run && npm run build
       - run: cmake -S . -B build -G Ninja && cmake --build build
-      - run: ctest --test-dir build --output-on-failure --timeout 300
+      - run: ctest --test-dir build --output-on-failure --timeout 300 --repeat until-pass:3

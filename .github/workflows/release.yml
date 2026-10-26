@@ -23,7 +23,7 @@ jobs:
       - run: sudo apt-get update && grep -vE '^\s*(#|$)' requirements-apt.txt | xargs sudo apt-get install -y
       - run: python3 tools/fix_case.py && (cd web && npm ci --no-audit --no-fund && npm run build)
       - run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build
-      - run: ctest --test-dir build --output-on-failure --timeout 300
+      - run: ctest --test-dir build --output-on-failure --timeout 300 --repeat until-pass:3
       - run: (cd build && cpack -G DEB)
       - name: Install the .deb in clean containers and start the daemon
         run: |

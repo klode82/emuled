@@ -1,12 +1,8 @@
-@import '@fontsource/ibm-plex-sans/400.css';
-@import '@fontsource/ibm-plex-sans/500.css';
-@import '@fontsource/ibm-plex-sans/600.css';
-@import '@fontsource/ibm-plex-mono/400.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* I token di colore stanno in ogni template (templates/<id>/tokens.css): qui solo cio' che vale per tutti. */
+/* Colori e caratteri stanno in ogni template (templates/<id>/tokens.css e main.ts): qui solo cio' che vale per tutti. */
 
 @layer base {
   *:focus-visible { @apply outline outline-2 outline-offset-2 outline-accent; }

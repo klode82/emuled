@@ -1,5 +1,5 @@
 /* Token di colore del template (le stesse variabili in ogni template: i componenti comuni li leggono tramite Tailwind). Tema: segue il sistema; data-theme="light"|"dark" sulla radice lo forza. */
-:root {--bg:#fbf8fa;--surface:#ffffff;--sunk:#f3eef1;--line:#e8dfe4;--fg:#1d1519;--mute:#6b5f66;--accent:#c22a62;--onaccent:#ffffff;--soft:#fbe1ec;--ok:#1c7c4d;--warn:#9a6300;--bad:#c0301f;color-scheme:light;}
+:root {--font-sans:'DM Sans',ui-sans-serif,system-ui,sans-serif;--font-mono:'IBM Plex Mono',ui-monospace,monospace;--bg:#fbf8fa;--surface:#ffffff;--sunk:#f3eef1;--line:#e8dfe4;--fg:#1d1519;--mute:#6b5f66;--accent:#c22a62;--onaccent:#ffffff;--soft:#fbe1ec;--ok:#1c7c4d;--warn:#9a6300;--bad:#c0301f;color-scheme:light;}
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {--bg:#130f12;--surface:#1b1519;--sunk:#241c21;--line:#34292f;--fg:#f1e9ed;--mute:#a2929b;--accent:#ff6b9a;--onaccent:#32061a;--soft:#3a1727;--ok:#55c98f;--warn:#e6b250;--bad:#ff8173;color-scheme:dark;}
 }

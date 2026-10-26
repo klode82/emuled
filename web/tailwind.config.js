@@ -7,7 +7,7 @@ export default {
   theme: {
     extend: {
       colors: Object.fromEntries(['bg', 'surface', 'sunk', 'line', 'fg', 'mute', 'accent', 'onaccent', 'soft', 'ok', 'warn', 'bad'].map((n) => [n, c(n)])),
-      fontFamily: { sans: ['IBM Plex Sans', 'ui-sans-serif', 'system-ui', 'sans-serif'], mono: ['IBM Plex Mono', 'ui-monospace', 'monospace'] },
+      fontFamily: { sans: ['var(--font-sans)'], mono: ['var(--font-mono)'] },		// il carattere e' del template (--font-sans e --font-mono in tokens.css)
     },
   },
 }

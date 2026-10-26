@@ -40,8 +40,7 @@ dettaglio del download; cambiano la cornice, i colori e la schermata Trasferimen
 
 Ogni cartella ha: `Shell.vue` (il guscio), `TransfersView.vue` (la schermata Trasferimenti), `tokens.css` (i colori), `main.ts` (l'ingresso), `index.html`, `template.yaml`
 (il manifest) e `preview.png`. Il **kit comune** (`src/`: dati, schermate, componenti, traduzioni) viene incluso in ogni template al momento della costruzione; a runtime i template
-non condividono niente. I colori sono token CSS (`--bg`, `--accent`, ...): ogni template ridefinisce gli stessi nomi; il resto è solo classi Tailwind. I caratteri sono quelli di IBM Plex
-per tutti (i tre del mockup, Manrope, Public Sans e DM Sans, non sono installati). Codice condiviso fra i gusci: `src/lib/shell.ts` (casella cerca/link, stato ed2k e Kad), `src/lib/transferActions.ts` (annulla, pausa), `src/template.ts` (monta l'applicazione).
+non condividono niente. I colori sono token CSS (`--bg`, `--accent`, ...): ogni template ridefinisce gli stessi nomi; il resto è solo classi Tailwind. **I caratteri sono del template**: Console usa IBM Plex Sans, Cruscotto Manrope, Studio Public Sans, Mobile first DM Sans (più IBM Plex Mono per il testo a caratteri fissi). Si importano in `main.ts` del template (`@fontsource/…`, pacchetti locali) e la famiglia è la variabile `--font-sans` (e `--font-mono`) di `tokens.css`: i file dei caratteri finiscono nella cartella del template e non si scarica niente da fuori. Codice condiviso fra i gusci: `src/lib/shell.ts` (casella cerca/link, stato ed2k e Kad), `src/lib/transferActions.ts` (annulla, pausa), `src/template.ts` (monta l'applicazione).
 
 ## Comandi
 

@@ -1,0 +1,56 @@
+# Inventario dei cast non allineati nel sorgente originale (srchybrid/)
+# Generato con: grep -a -rnE '\*\(\(?(uint|UINT|DWORD|WORD)[0-9]*\s*\*\)'. Si correggono con memcpy quando il file viene portato (test con UBSan).
+# Gia' corretti in linux/core: SafeFile.cpp e SafeFile.h (12 punti).
+
+ArchiveRecovery.cpp:1588:	return *(uint16*)input;
+ArchiveRecovery.cpp:1593:	return *(uint32*)input;
+ArchiveRecovery.cpp:740:				if (*(uint32*)foundPos == marker) {
+ArchiveRecovery.cpp:830:						unsigned short Flags = *((WORD*)&checkCRC[checkCRCsize]);
+DownloadClient.cpp:934:		uint32 nDbgStartPos = *(uint32*)&packet[16];
+DownloadClient.cpp:937:				Debug(_T("  Start=%u  BlockSize=%u  Size=%u  %s\n"), nDbgStartPos, *(uint32*)&packet[16 + 4], size - 24, (LPCTSTR)DbgGetFileInfo(packet));
+DownloadClient.cpp:939:				Debug(_T("  Start=%u  End=%u  Size=%u  %s\n"), nDbgStartPos, *(uint32*)&packet[16 + 4], *(uint32*)&packet[16 + 4] - nDbgStartPos, (LPCTSTR)DbgGetFileInfo(packet));
+EmuleDlg.cpp:2752:				if (dwResult > *(uint32*)abyCurVer) {
+IESecurity.cpp:218:		*(DWORD*)pPolicy = dwPolicy;
+IPFilter.cpp:380:	uint32 ip = *(uint32*)pvKey;
+KadContactHistogramCtrl.cpp:65:	DWORD dwHighestWord = *(DWORD*)KadUint128.GetData();
+kademlia/kademlia/Search.cpp:1110:				uSize = *((uint64*)cTag.GetBsob());
+kademlia/net/KademliaUDPListener.cpp:1219:								pEntry->m_uSize = *((uint64*)pTag->GetBsob());
+kademlia/net/KademliaUDPListener.cpp:1319:						pEntry->m_uSize = *((uint64*)pTag->GetBsob());
+MediaInfo.cpp:1258:									if (_byteswap_ulong(*(DWORD*)(pucTypeData + 4)) == 'VIDO') {
+MediaInfo.cpp:1260:										mi->video.bmiHeader.biCompression = *(DWORD*)(pucTypeData + 8);
+MediaInfo.cpp:1261:										mi->video.bmiHeader.biWidth = _byteswap_ushort(*(WORD*)(pucTypeData + 12));
+MediaInfo.cpp:1262:										mi->video.bmiHeader.biHeight = _byteswap_ushort(*(WORD*)(pucTypeData + 14));
+MediaInfo.cpp:1264:										mi->fVideoFrameRate = _byteswap_ushort(*(WORD*)(pucTypeData + 22));
+MediaInfo.cpp:1285:									DWORD dwFourCC = *(DWORD*)(pucTypeData + 0);
+MediaInfo.cpp:1286:									WORD wVer = _byteswap_ushort(*(WORD*)(pucTypeData + 4));
+MediaInfo.cpp:1291:												mi->audio.nChannels = _byteswap_ushort(*(WORD*)(pucTypeData + 8));
+MediaInfo.cpp:1297:												mi->audio.nSamplesPerSec = _byteswap_ushort(*(WORD*)(pucTypeData + 48));
+MediaInfo.cpp:1298:												mi->audio.nChannels = _byteswap_ushort(*(WORD*)(pucTypeData + 54));
+MediaInfo.cpp:1308:												mi->audio.nSamplesPerSec = _byteswap_ulong(*(DWORD*)(pucTypeData + 48));
+MediaInfo.cpp:1309:												mi->audio.nChannels = _byteswap_ushort(*(WORD*)(pucTypeData + 60));
+MediaInfo.cpp:2464:														dwCodecId = *(WORD*)(BYTE*)aCodecInfo;
+MediaInfo.cpp:2469:														dwCodecId = *(DWORD*)(BYTE*)aCodecInfo;
+MediaInfo.cpp:2616:														mi->audio.wFormatTag = *(WORD*)(BYTE*)aCodecInfo;
+MediaInfo.cpp:2658:														mi->video.bmiHeader.biCompression = *(DWORD*)(BYTE*)aCodecInfo;
+OtherFunctions.h:493:	return ipstr(*(uint32*)&nIP);
+OtherFunctions.h:498:	return ipstrA(*(uint32*)&nIP);
+PartFileWriteThread.cpp:134:			*(uint64*)&pOvWrite->oOverlap.Offset = pBuffer->start;
+Quantize.cpp:34:	BYTE *pbBits = (BYTE*)bmpImage + *(DWORD*)bmpImage + ds.biClrUsed * sizeof(RGBQUAD);
+SafeFile.cpp:297:	uint16 nResult = *(uint16*)&m_lpBuffer[m_nPosition];
+SafeFile.cpp:306:	uint32 nResult = *(uint32*)&m_lpBuffer[m_nPosition];
+SafeFile.cpp:315:	uint64 nResult = *(uint64*)&m_lpBuffer[m_nPosition];
+SafeFile.cpp:346:	*(uint16*)&m_lpBuffer[m_nPosition] = nVal;
+SafeFile.cpp:356:	*(uint32*)&m_lpBuffer[m_nPosition] = nVal;
+SafeFile.cpp:366:	*(uint64*)&m_lpBuffer[m_nPosition] = nVal;
+SafeFile.h:162:	return *((uint8*)p);
+SafeFile.h:167:	return *((uint16*)p);
+SafeFile.h:172:	return *((uint32*)p);
+SafeFile.h:177:	return *((uint64*)p);
+SafeFile.h:187:	*((uint8*)p) = nVal;
+SafeFile.h:192:	*((uint16*)p) = nVal;
+SafeFile.h:197:	*((uint32*)p) = nVal;
+SafeFile.h:202:	*((uint64*)p) = nVal;
+ServerSocket.cpp:466:					if (*(uint32*)aucHash == 0x2A2A2A2Au)
+SharedFileList.cpp:349:				*(uint64*)partData = 0; //quick check for zero
+SharedFileList.cpp:353:				if (*(uint64*)partData == 0 && (partSize <= sizeof(uint64) || !memcmp(partData, partData + sizeof(uint64), partSize - sizeof(uint64))))
+UploadDiskIOThread.cpp:234:			*(uint64*)&pOverlappedRead->oOverlap.Offset = currentblock->StartOffset;

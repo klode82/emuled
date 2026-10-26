@@ -1,0 +1,8 @@
+- [Bench tracking](bench-tracking.md) — registrare ogni passaggio, pro/contro e decisione su Bench (progetto 10)
+- [eMule Linux port](emule-linux-port.md) — decisioni, profilo reale dell'utente (usato da eMule Windows), come si prova
+- [Manual Reference](manual-reference.md) — spiegare le sigle; tenere aggiornato linux/docs/MANUALE.md; APIDoc in Fase 6
+- [Search requirements](search-requirements.md) — ricerca su un server/tutti/Kad, download via Kad, piano di prova col file scelto dall utente
+- [Bench token](bench-token.md) — token API Bench salvato su ordine dell utente (23/10/2026); solo come variabile BT
+- [Riconnessione ed2k riprende il download](ed2k-riconnessione-riprende-download.md) — sorgenti 0: riconnettere al server e rifare GETSOURCES
+- [Piano interfaccia web](web-ui-plan.md) — 4 modelli selezionabili, A per primo; gusci + logica comune
+- [Solo Tailwind per il layout](feedback-tailwind-only.md) — niente CSS a mano; la cornice non scorre, solo il contenuto

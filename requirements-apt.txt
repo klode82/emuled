@@ -1,0 +1,21 @@
+# Dipendenze di sistema (Ubuntu 24.04 / Debian). Installazione:
+#   xargs -a requirements-apt.txt sudo apt install -y
+# Righe vuote e commenti sono ignorati da apt solo se filtrati: usare
+#   grep -vE '^\s*(#|$)' requirements-apt.txt | xargs sudo apt install -y
+
+# Toolchain
+build-essential
+cmake
+ninja-build
+pkg-config
+flex
+bison
+
+# Librerie del core (versioni verificate: cryptopp 8.9, miniupnpc 2.2.6, zlib 1.3, curl 8.5)
+libcrypto++-dev
+libminiupnpc-dev
+zlib1g-dev
+libcurl4-openssl-dev
+
+# TLS per l'API (il sistema ha mbedtls 2.28: vedi decisione aperta su Bench)
+libmbedtls-dev

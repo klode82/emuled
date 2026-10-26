@@ -1,0 +1,24 @@
+# Servizio systemd "utente" per emuled. Installazione (come utente normale, senza sudo):
+#   mkdir -p ~/.config/systemd/user && cp packaging/emuled.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload && systemctl --user enable --now emuled
+#   loginctl enable-linger $USER          # facoltativo: parte all'avvio del PC anche senza accedere
+# Comandi utili: systemctl --user status emuled | journalctl --user -u emuled -f | systemctl --user reload emuled (ricontrolla le cartelle condivise)
+# Si aspetta che emuled sia in ~/.emuled/emuled (o un collegamento a build/emuled) e la configurazione in ~/.emuled/config.yaml.
+[Unit]
+Description=emuled - eMule per Linux (interfaccia web su 127.0.0.1:8765)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=%h/.emuled/emuled
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+RestartSec=10
+# allo spegnimento il demone salva le preferenze e fa l'ultimo giro del guardiano: gli si lascia il tempo
+TimeoutStopSec=60
+KillSignal=SIGTERM
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=default.target

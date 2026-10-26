@@ -1,0 +1,59 @@
+// LINUX (codice nuovo): lettore/scrittore INI compatibile con quelli di eMule (GetPrivateProfile* di Windows).
+// - sezioni e chiavi senza distinzione di maiuscole, vince la prima chiave duplicata
+// - conserva byte per byte le righe non modificate, fine riga (CRLF/LF), BOM e codifica (ANSI, UTF-8, UTF-16LE)
+// - Set() riscrive solo la riga toccata; Save() usa SafeWriteMet (validazione, .bak solo se sano, rename atomico)
+#pragma once
+#include "met/SafeMet.h"
+#include <string>
+#include <vector>
+#include <cstdint>
+
+namespace emule::profile {
+
+enum class TextEnc { Ansi, Utf8Bom, Utf16LE };
+
+// Divide un file di testo in righe UTF-8 (shareddir.dat, downloads.txt, .ini, ...). Riconosce BOM UTF-16LE/UTF-8.
+struct DecodedText {
+	std::vector<std::string> lines;
+	TextEnc enc = TextEnc::Ansi;
+	std::string eol = "\r\n";
+	bool ok = true;			// false se UTF-16 di lunghezza dispari
+};
+DecodedText DecodeText(const std::string &bytes);
+
+class IniFile {
+public:
+	IniFile() = default;
+	static IniFile FromBytes(const std::string &bytes);
+	// false se il file non si legge (err valorizzato); un file assente da' false con err "assente"
+	static bool Load(const std::string &path, IniFile &out, std::string &err);
+
+	std::vector<std::string> Sections() const;			// nomi delle sezioni nell'ordine del file
+	bool Has(const std::string &sec, const std::string &key) const;
+	std::string Get(const std::string &sec, const std::string &key, const std::string &def = "") const;
+	int64_t GetInt(const std::string &sec, const std::string &key, int64_t def = 0) const;
+	bool GetBool(const std::string &sec, const std::string &key, bool def = false) const { return GetInt(sec, key, def ? 1 : 0) != 0; }
+
+	void Set(const std::string &sec, const std::string &key, const std::string &value);
+	void SetInt(const std::string &sec, const std::string &key, int64_t v) { Set(sec, key, std::to_string(v)); }
+
+	std::string Bytes() const;				// contenuto completo da scrivere
+	bool Save(const std::string &path, std::string &err) const;
+	bool dirty() const;
+	TextEnc encoding() const { return enc_; }
+
+private:
+	struct Line { std::string raw; std::string text; bool dirty = false; };
+	std::vector<Line> lines_;
+	TextEnc enc_ = TextEnc::Ansi;
+	bool ansi_non_utf8_ = false;
+	bool final_eol_ = true;
+	std::string eol_ = "\r\n";
+	int Find(const std::string &sec, const std::string &key, int *sec_last_line = nullptr) const;
+	std::string Encode(const std::string &utf8) const;
+};
+
+// Validatore per SafeWriteMet: struttura leggibile e almeno una sezione.
+met::Report ValidateIni(const uint8_t *data, size_t size);
+
+} // namespace emule::profile

@@ -11,7 +11,7 @@ PORT="${DEMO_PORT:-8765}"
 
 TMP="$(mktemp -d)"; mkdir -p "$TMP/config"
 trap 'kill "${PID:-0}" 2>/dev/null || true; wait "${PID:-0}" 2>/dev/null || true; rm -rf "$TMP"' EXIT
-"$BIN" --run --fake-profile --profile "$TMP/config" --offline --api-port "$PORT" --web-dir "$PWD/dist" --status-interval 0 > "$TMP/emuled.log" 2>&1 &
+"$BIN" --run --fake-profile --profile "$TMP/config" --offline --api-port "$PORT" --templates-dir "$PWD/dist/templates" --status-interval 0 > "$TMP/emuled.log" 2>&1 &
 PID=$!
 for _ in $(seq 1 50); do [ -s "$TMP/config/emuled.token" ] && curl -sf "http://127.0.0.1:$PORT/api/v1/ping" >/dev/null && break; sleep 0.2; done
 TOKEN="$(cat "$TMP/config/emuled.token")"

@@ -1,12 +1,12 @@
 // Prova nel browser vero contro un demone ACCESO e OFFLINE (meglio una copia del profilo: aggiunge e cancella download, cambia il nome utente, crea categorie).
-//   emuled --run --fake-profile --profile COPIA --offline --api-port 18765 --web-dir dist &
-//   EMULED_URL=http://127.0.0.1:18765/ EMULED_TOKEN_FILE=COPIA/emuled.token npm run e2e
+//   emuled --run --fake-profile --profile COPIA --offline --api-port 18765 --templates-dir dist/templates &
+//   EMULED_URL=http://127.0.0.1:18765/t/console/ EMULED_TOKEN_FILE=COPIA/emuled.token npm run e2e     (l'indirizzo del template da provare; l'API e' sempre alla radice)
 // Serve un profilo con qualche server (es. copia di server.met): le prove sui server lo richiedono.
 // Variabili: EMULED_URL, EMULED_TOKEN | EMULED_TOKEN_FILE, CHROME (predefinito /usr/bin/google-chrome), E2E_SHOTS (cartella dove salvare le schermate)
 import puppeteer from 'puppeteer-core'
 import fs from 'node:fs'
 
-const base = process.env.EMULED_URL ?? 'http://127.0.0.1:8765/'
+const base = process.env.EMULED_URL ?? 'http://127.0.0.1:8765/t/console/'
 const token = (process.env.EMULED_TOKEN ?? (process.env.EMULED_TOKEN_FILE ? fs.readFileSync(process.env.EMULED_TOKEN_FILE, 'utf8') : '')).trim()
 if (!token) { console.error('Serve EMULED_TOKEN o EMULED_TOKEN_FILE'); process.exit(2) }
 const shots = process.env.E2E_SHOTS
@@ -35,7 +35,7 @@ ok((await text()).includes('Trasferimenti'), 'accesso con il token')
 await shot('transfers')
 
 // blocchi e fonti nel dettaglio: un download da 20 000 000 byte ha 3 blocchi
-const api = (m, path, body) => fetch(base + 'api/v1' + path, { method: m, headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined })
+const api = (m, path, body) => fetch(new URL('/api/v1' + path, base).href, { method: m, headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined })
 const bhash = uniq(32), bname = 'blocchi-' + uniq(4) + '.bin'
 ok((await api('POST', '/downloads', { hash: bhash, name: bname, size: 20000000 })).status === 201, 'download da 20 MB aggiunto via API'); await wait(1500)
 await p.evaluate((n) => [...document.querySelectorAll('ul[role=list] li')].find((l) => l.innerText.includes(n)).click(), bname); await wait(3800)
@@ -142,7 +142,7 @@ await p.goto(base + '#/prefs'); await wait(800)
 const nick = 'N' + Date.now()
 await p.$eval('#p-nick', (e, v) => { e.value = v; e.dispatchEvent(new Event('input')) }, nick); await wait(300); await shot('prefs')
 await (await btn('Salva')).click(); await wait(800)
-const pr = await (await fetch(base + 'api/v1/preferences', { headers: { Authorization: 'Bearer ' + token } })).json()
+const pr = await (await fetch(new URL('/api/v1/preferences', base).href, { headers: { Authorization: 'Bearer ' + token } })).json()
 ok(pr.nick === nick, 'preferenza salvata nel demone')
 
 // server: aggiungi, cambia priorita', togli

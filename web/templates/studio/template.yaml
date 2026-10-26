@@ -1,0 +1,10 @@
+# Template di serie di emuled (Fase 11). Vedi docs/TEMPLATES.md.
+id: studio
+name: Studio
+version: 1.0.0
+description: C: elenco compatto a sinistra e dettaglio a destra, casella comandi con Ctrl+K, barra di stato a caratteri fissi.
+author: emuled
+license: GPL-2.0-or-later
+api: 1
+entry: index.html
+preview: preview.png

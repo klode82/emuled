@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc --noEmit && vite build",
+    "build": "vue-tsc --noEmit && node build-templates.mjs",
+    "build:template": "node build-templates.mjs",
     "typecheck": "vue-tsc --noEmit",
     "test": "vitest run",
     "e2e": "node e2e/flow.mjs"

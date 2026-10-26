@@ -1,0 +1,6 @@
+/* Token di colore del template (le stesse variabili in ogni template: i componenti comuni li leggono tramite Tailwind). Tema: segue il sistema; data-theme="light"|"dark" sulla radice lo forza. */
+:root {--bg:#eaeef6;--surface:#ffffff;--sunk:#f2f4fa;--line:#d9dfec;--fg:#101828;--mute:#5a6478;--accent:#2d56e0;--onaccent:#ffffff;--soft:#e0e7fc;--ok:#14804a;--warn:#a15c00;--bad:#c8321f;color-scheme:light;}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {--bg:#0b0f19;--surface:#121826;--sunk:#182032;--line:#232d44;--fg:#e8ecf6;--mute:#8a95ad;--accent:#7c9bff;--onaccent:#0a1230;--soft:#1b2748;--ok:#4cc38a;--warn:#e6b24f;--bad:#ff7d6e;color-scheme:dark;}
+}
+:root[data-theme="dark"] {--bg:#0b0f19;--surface:#121826;--sunk:#182032;--line:#232d44;--fg:#e8ecf6;--mute:#8a95ad;--accent:#7c9bff;--onaccent:#0a1230;--soft:#1b2748;--ok:#4cc38a;--warn:#e6b24f;--bad:#ff7d6e;color-scheme:dark;}

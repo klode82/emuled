@@ -10,6 +10,7 @@ import { useSession } from '@/stores/session'
 import { useShared } from '@/stores/shared'
 import { number, speed } from '@/lib/format'
 import Icon from '@/components/Icon.vue'
+import logo from '@/assets/emuled_logo_transparent.png'
 
 const { t } = useI18n()
 const session = useSession(), route = useRoute()
@@ -25,7 +26,7 @@ const linkBad = computed(() => session.link !== 'open')
   <div class="relative flex h-full flex-col overflow-hidden bg-bg md:flex-row">
     <aside class="hidden shrink-0 flex-col gap-1 border-r border-line bg-surface p-2 md:flex md:w-16 lg:w-56" :aria-label="t('nav.sections')">
       <div class="flex items-center gap-2 px-2 py-3">
-        <img src="/assets/images/emuled_logo_transparent.png" alt="" class="size-8 shrink-0 object-contain" />
+        <img :src="logo" alt="" class="size-8 shrink-0 object-contain" />
         <span class="hidden text-sm font-semibold lg:inline">emuled</span>
       </div>
       <template v-for="s in SECTIONS" :key="s.name">

@@ -8,6 +8,7 @@ import { useSession } from '@/stores/session'
 import { useUi } from '@/stores/ui'
 import { useShellBar } from '@/lib/shell'
 import Icon from '@/components/Icon.vue'
+import logo from '@/assets/emuled_logo_transparent.png'
 
 const { t } = useI18n()
 const session = useSession(), ui = useUi(), route = useRoute()
@@ -19,7 +20,7 @@ const SEG = [{ path: '/transfers', key: 'nav.transfersDownload' }, { path: '/tra
 <template>
   <div class="relative flex h-full overflow-hidden bg-bg">
     <aside class="hidden w-20 shrink-0 flex-col items-center gap-2 border-r border-line bg-surface py-4 lg:flex" :aria-label="t('nav.sections')">
-      <img src="/assets/images/emuled_logo_transparent.png" alt="" class="mb-3 size-10 object-contain" />
+      <img :src="logo" alt="" class="mb-3 size-10 object-contain" />
       <RouterLink v-for="s in SECTIONS" :key="s.name" :to="s.path" :title="t('nav.' + s.name)" :aria-label="t('nav.' + s.name)" class="grid size-11 place-items-center rounded-2xl text-mute hover:bg-sunk" active-class="!bg-soft !text-accent"><Icon :name="s.icon" class="!size-5" /></RouterLink>
       <button class="mt-auto grid size-11 place-items-center rounded-2xl text-mute hover:bg-sunk hover:text-fg" :title="t('nav.logout')" :aria-label="t('nav.logout')" @click="session.logout()"><Icon name="logout" class="!size-5" /></button>
     </aside>

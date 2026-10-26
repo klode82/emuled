@@ -1,0 +1,10 @@
+# Template di serie di emuled (Fase 11). Vedi docs/TEMPLATES.md.
+id: console
+name: Console
+version: 1.0.0
+description: A: barra laterale, tabella densa e barra di stato. Il template di serie predefinito.
+author: emuled
+license: GPL-2.0-or-later
+api: 1
+entry: index.html
+preview: preview.png

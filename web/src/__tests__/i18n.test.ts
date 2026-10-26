@@ -22,7 +22,7 @@ describe('traduzioni', () => {
   })
   it('ogni chiave usata nel codice esiste (t("...") e $t("..."), anche con prefissi dinamici)', () => {
     const walk = (d: string): string[] => readdirSync(d).flatMap((f) => { const p = join(d, f); return statSync(p).isDirectory() ? (f === '__tests__' || f === 'i18n' ? [] : walk(p)) : /\.(vue|ts)$/.test(f) ? [p] : [] })
-    const files = walk(join(__dirname, '..'))
+    const files = [...walk(join(__dirname, '..')), ...walk(join(__dirname, '..', '..', 'templates'))]
     const used = new Set<string>(), prefixes = new Set<string>()
     for (const f of files) {
       const src = readFileSync(f, 'utf8')

@@ -7,6 +7,7 @@ import { SECTIONS } from '@/router'
 import { useSession } from '@/stores/session'
 import { useUi } from '@/stores/ui'
 import Icon from '@/components/Icon.vue'
+import logo from '@/assets/emuled_logo_transparent.png'
 
 const { t } = useI18n()
 const session = useSession(), ui = useUi(), route = useRoute()
@@ -17,7 +18,7 @@ const linkBad = computed(() => session.link !== 'open')
     <div v-if="linkBad" class="flex shrink-0 items-center gap-2 border-b border-line bg-soft px-4 py-1.5 text-xs text-warn" role="status"><Icon name="wifi" />{{ t('shell.linkDown') }}</div>
     <header class="shrink-0 border-b border-line bg-surface">
       <div class="flex items-center gap-3 px-4 py-3 md:px-6">
-        <img src="/assets/images/emuled_logo_transparent.png" alt="" class="size-8 shrink-0 object-contain" />
+        <img :src="logo" alt="" class="size-8 shrink-0 object-contain" />
         <span class="hidden text-base font-extrabold tracking-tight text-accent sm:inline">emuled</span>
         <nav class="flex min-w-0 flex-1 gap-1 overflow-x-auto" :aria-label="t('nav.sections')">
           <RouterLink v-for="s in SECTIONS" :key="s.name" :to="s.path" :title="t('nav.' + s.name)" class="flex items-center gap-2 whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-semibold text-mute hover:bg-sunk hover:text-fg" active-class="!bg-accent !text-onaccent">

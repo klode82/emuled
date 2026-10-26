@@ -9,6 +9,7 @@ import { useUi } from '@/stores/ui'
 import { useShellBar } from '@/lib/shell'
 import { number, speed } from '@/lib/format'
 import Icon from '@/components/Icon.vue'
+import logo from '@/assets/emuled_logo_transparent.png'
 
 const { t } = useI18n()
 const session = useSession(), ui = useUi(), route = useRoute()
@@ -23,7 +24,7 @@ onUnmounted(() => window.removeEventListener('keydown', key))
   <div class="flex h-full flex-col overflow-hidden bg-bg">
     <div v-if="linkBad" class="flex shrink-0 items-center gap-2 border-b border-line bg-soft px-4 py-1.5 text-xs text-warn" role="status"><Icon name="wifi" />{{ t('shell.linkDown') }}</div>
     <header class="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-b border-line bg-surface px-4 py-2">
-      <img src="/assets/images/emuled_logo_transparent.png" alt="" class="size-7 shrink-0 object-contain" />
+      <img :src="logo" alt="" class="size-7 shrink-0 object-contain" />
       <nav class="flex min-w-0 basis-[calc(100%-3.5rem)] gap-1 overflow-x-auto text-sm sm:flex-1 sm:basis-0" :aria-label="t('nav.sections')">
         <RouterLink v-for="s in SECTIONS" :key="s.name" :to="s.path" class="whitespace-nowrap border-b-2 border-transparent px-3 py-2 text-mute hover:text-fg" active-class="!border-accent font-semibold !text-fg">{{ t('nav.' + s.name) }}</RouterLink>
       </nav>

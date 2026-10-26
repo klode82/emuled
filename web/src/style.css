@@ -6,29 +6,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Token del modello A (Console). Tema: segue il sistema; data-theme="light"|"dark" sulla radice lo forza (impostazione Tema). */
-:root {--bg:#f4f6f8;--surface:#ffffff;--sunk:#eceff2;--line:#dde2e7;--fg:#12171d;--mute:#566170;--accent:#0a7c76;--onaccent:#ffffff;--soft:#d9f0ee;--ok:#18794e;--warn:#9a6700;--bad:#c4311f;color-scheme:light;}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {--bg:#0e1216;--surface:#151a20;--sunk:#1b2128;--line:#262e37;--fg:#e7ebef;--mute:#8b96a3;--accent:#38c5bb;--onaccent:#04201e;--soft:#12332f;--ok:#4cc38a;--warn:#e0b04a;--bad:#ff7b6b;color-scheme:dark;}
-}
-:root[data-theme="dark"] {--bg:#0e1216;--surface:#151a20;--sunk:#1b2128;--line:#262e37;--fg:#e7ebef;--mute:#8b96a3;--accent:#38c5bb;--onaccent:#04201e;--soft:#12332f;--ok:#4cc38a;--warn:#e0b04a;--bad:#ff7b6b;color-scheme:dark;}
-
-/* Token degli altri modelli (B Cruscotto, C Studio, D Mobile first): stesse variabili, altri colori. L'attributo data-skin sulla radice lo mette lo store ui. */
-:root[data-skin="dashboard"] {--bg:#eaeef6;--surface:#ffffff;--sunk:#f2f4fa;--line:#d9dfec;--fg:#101828;--mute:#5a6478;--accent:#2d56e0;--onaccent:#ffffff;--soft:#e0e7fc;--ok:#14804a;--warn:#a15c00;--bad:#c8321f;color-scheme:light;}
-:root[data-skin="studio"] {--bg:#efeeea;--surface:#fbfbf9;--sunk:#e6e5e0;--line:#d3d1ca;--fg:#1c1b18;--mute:#68665f;--accent:#a8520a;--onaccent:#ffffff;--soft:#f6e3cf;--ok:#2a7a3b;--warn:#8d6200;--bad:#b3261e;color-scheme:light;}
-:root[data-skin="mobile"] {--bg:#fbf8fa;--surface:#ffffff;--sunk:#f3eef1;--line:#e8dfe4;--fg:#1d1519;--mute:#6b5f66;--accent:#c22a62;--onaccent:#ffffff;--soft:#fbe1ec;--ok:#1c7c4d;--warn:#9a6300;--bad:#c0301f;color-scheme:light;}
-@media (prefers-color-scheme: dark) {
-  :root[data-skin="dashboard"]:not([data-theme="light"]) {--bg:#0b0f19;--surface:#121826;--sunk:#182032;--line:#232d44;--fg:#e8ecf6;--mute:#8a95ad;--accent:#7c9bff;--onaccent:#0a1230;--soft:#1b2748;--ok:#4cc38a;--warn:#e6b24f;--bad:#ff7d6e;color-scheme:dark;}
-}
-:root[data-skin="dashboard"][data-theme="dark"] {--bg:#0b0f19;--surface:#121826;--sunk:#182032;--line:#232d44;--fg:#e8ecf6;--mute:#8a95ad;--accent:#7c9bff;--onaccent:#0a1230;--soft:#1b2748;--ok:#4cc38a;--warn:#e6b24f;--bad:#ff7d6e;color-scheme:dark;}
-@media (prefers-color-scheme: dark) {
-  :root[data-skin="studio"]:not([data-theme="light"]) {--bg:#131312;--surface:#1a1a18;--sunk:#222220;--line:#302f2c;--fg:#ecebe6;--mute:#9a988f;--accent:#f0a23a;--onaccent:#241500;--soft:#3a2a12;--ok:#6fcf7f;--warn:#e8b84a;--bad:#ff8077;color-scheme:dark;}
-}
-:root[data-skin="studio"][data-theme="dark"] {--bg:#131312;--surface:#1a1a18;--sunk:#222220;--line:#302f2c;--fg:#ecebe6;--mute:#9a988f;--accent:#f0a23a;--onaccent:#241500;--soft:#3a2a12;--ok:#6fcf7f;--warn:#e8b84a;--bad:#ff8077;color-scheme:dark;}
-@media (prefers-color-scheme: dark) {
-  :root[data-skin="mobile"]:not([data-theme="light"]) {--bg:#130f12;--surface:#1b1519;--sunk:#241c21;--line:#34292f;--fg:#f1e9ed;--mute:#a2929b;--accent:#ff6b9a;--onaccent:#32061a;--soft:#3a1727;--ok:#55c98f;--warn:#e6b250;--bad:#ff8173;color-scheme:dark;}
-}
-:root[data-skin="mobile"][data-theme="dark"] {--bg:#130f12;--surface:#1b1519;--sunk:#241c21;--line:#34292f;--fg:#f1e9ed;--mute:#a2929b;--accent:#ff6b9a;--onaccent:#32061a;--soft:#3a1727;--ok:#55c98f;--warn:#e6b250;--bad:#ff8173;color-scheme:dark;}
+/* I token di colore stanno in ogni template (templates/<id>/tokens.css): qui solo cio' che vale per tutti. */
 
 @layer base {
   *:focus-visible { @apply outline outline-2 outline-offset-2 outline-accent; }

@@ -69,10 +69,11 @@ jobs:
     permissions:
       contents: write
     steps:
+      # only the packages: the Docker build also leaves a *.dockerbuild artifact that cannot be downloaded
       - uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-          merge-multiple: true
+        with: { name: deb, path: artifacts }
+      - uses: actions/download-artifact@v4
+        with: { name: rpm, path: artifacts }
       - uses: softprops/action-gh-release@v2
         with:
           files: artifacts/*

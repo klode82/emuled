@@ -2,14 +2,18 @@
 // template non validi con il motivo, indirizzo di emergenza. Contro un demone ACCESO e OFFLINE, con i template di serie e due template dell'utente
 // (uno buono, uno senza pagina d'ingresso):
 //   mkdir -p H/.emuled/templates/mio H/.emuled/templates/rotto && cp -r ../docs/examples/template-ciao/. H/.emuled/templates/mio/ (con id: mio) ...
+//   export E2E_USER_TEMPLATES=H/.emuled/templates        (le prove dei casi di errore spostano e creano cartelle li' dentro, e rimettono tutto com'era)
 //   HOME=H emuled --run --fake-profile --profile H/config --offline --api-port 18766 --templates-dir dist/templates &
 //   EMULED_URL=http://127.0.0.1:18766/ EMULED_TOKEN_FILE=H/config/emuled.token npm run e2e:templates
 import puppeteer from 'puppeteer-core'
 import fs from 'node:fs'
+import path from 'node:path'
 
 const origin = new URL(process.env.EMULED_URL ?? 'http://127.0.0.1:8765/').origin
 const token = (process.env.EMULED_TOKEN ?? (process.env.EMULED_TOKEN_FILE ? fs.readFileSync(process.env.EMULED_TOKEN_FILE, 'utf8') : '')).trim()
 if (!token) { console.error('Serve EMULED_TOKEN o EMULED_TOKEN_FILE'); process.exit(2) }
+const userDir = process.env.E2E_USER_TEMPLATES
+const api = (m, p) => fetch(new URL('/api/v1' + p, origin).href, { method: m, headers: { Authorization: 'Bearer ' + token } }).then((r) => r.json())
 const wait = (ms) => new Promise((r) => setTimeout(r, ms))
 const fails = []
 const ok = (c, m) => { if (!c) { fails.push(m); console.log('FAIL', m) } else console.log('ok  ', m) }
@@ -71,6 +75,29 @@ await (await useBtn('Studio')).click(); await wait(1800); ok((await key()) === '
 await p.goto(origin + '/t/studio/#/prefs', { waitUntil: 'networkidle0' }); await wait(1200)
 await (await useBtn('Console')).click(); await wait(1800)
 ok((await where()).startsWith('/t/console/') && (await key()) === null, 'scegliere Console toglie la scelta dal browser')
+// 7. il template d'esempio dell'utente funziona davvero (usa lo stesso token del browser, senza chiederlo di nuovo)
+await p.goto(origin + '/?template=ciao', { waitUntil: 'networkidle0' }); await wait(2000)
+t = await text(); ok((await where()).startsWith('/t/ciao/') && t.includes('Ciao mondo') && /Scarico a \d+ KB\/s/.test(t) && !t.includes('Incolla il token'), 'il template dell\'utente mostra lo stato dal vivo senza richiedere il token')
+// 8. casi di errore (solo se si sa dove sono i template dell'utente)
+if (userDir) {
+  // un nome di serie dalla cartella dell'utente e' rifiutato
+  fs.mkdirSync(path.join(userDir, 'studio'), { recursive: true }); fs.writeFileSync(path.join(userDir, 'studio', 'template.yaml'), 'id: studio\nname: Falso studio\nversion: 1.0.0\n'); fs.writeFileSync(path.join(userDir, 'studio', 'index.html'), 'x')
+  await api('POST', '/templates/rescan')
+  await p.goto(origin + '/t/console/#/prefs', { waitUntil: 'networkidle0' }); await p.reload({ waitUntil: 'networkidle0' }); await wait(1500)
+  t = await text(); ok(t.includes('Non caricati') && /riservato ai template di serie/.test(t), 'un template dell\'utente con un nome di serie e\' rifiutato col motivo')
+  ok(!(await p.evaluate(() => [...document.querySelectorAll('#template li h3')].some((h) => h.innerText.trim() === 'Falso studio'))), 'e non compare fra quelli che si possono usare')
+  fs.rmSync(path.join(userDir, 'studio'), { recursive: true })
+  // il template scelto sparisce dal disco: niente schermo vuoto, la scelta rotta si toglie e si torna al predefinito
+  await p.goto(origin + '/?template=ciao', { waitUntil: 'networkidle0' }); await wait(1000)
+  ok((await key()) === 'ciao', 'scelto il template dell\'utente')
+  fs.renameSync(path.join(userDir, 'ciao'), path.join(userDir, 'ciao.off')); await api('POST', '/templates/rescan')
+  await p.goto(origin + '/', { waitUntil: 'networkidle0' }); await wait(1200)
+  t = await text(); ok(/Template non trovato/.test(t) && t.includes('Torna al template predefinito'), 'template sparito: pagina d\'aiuto, non uno schermo vuoto')
+  ok((await key()) === null && t.includes('Ho tolto questo template dalla tua scelta'), 'la scelta rotta e\' stata tolta')
+  await (await p.$('a')).click(); await wait(1500); ok((await where()).startsWith('/t/console/'), 'il link porta al predefinito')
+  await p.goto(origin + '/', { waitUntil: 'networkidle0' }); await wait(800); ok((await where()).startsWith('/t/console/'), 'la volta dopo si apre subito il predefinito')
+  fs.renameSync(path.join(userDir, 'ciao.off'), path.join(userDir, 'ciao')); await api('POST', '/templates/rescan')   // tutto come prima
+}
 ok(errs.length === 0, 'nessun errore ne\' violazione della CSP in console ' + JSON.stringify(errs))
 await b.close()
 console.log(fails.length ? `\n${fails.length} FALLITI` : '\ntutto ok'); process.exit(fails.length ? 1 : 0)

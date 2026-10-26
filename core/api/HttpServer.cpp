@@ -460,6 +460,15 @@ static Response Html(int status, const std::string &body)
 	return r;
 }
 
+// se il browser aveva scelto proprio questo template (che non c'e' piu' o e' rotto), si toglie la scelta: la prossima volta si apre il predefinito.
+// L'id e' inserito nello script solo se ha la forma di un id di template (lettere minuscole, cifre, trattino): niente testo libero nella pagina.
+static std::string ForgetChoice(const std::string &id)
+{
+	if (id.size() < 2 || id.size() > 32) return "";
+	for (char c : id) if (!((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-')) return "";
+	return "<p id=\"scelta\"></p><script>try{if(localStorage.getItem('emuled.template')==='" + id + "'){localStorage.removeItem('emuled.template');document.getElementById('scelta').textContent='Ho tolto questo template dalla tua scelta: la prossima volta si apre quello predefinito.';}}catch(e){}</script>";
+}
+
 // /t/<id>/... : la cartella del template
 Response HttpServer::Template(const Request &r) const
 {
@@ -469,7 +478,7 @@ Response HttpServer::Template(const Request &r) const
 	if (id.empty() || !templates_(id, t))
 		return Html(404, "<h1>Template non trovato</h1><p>Il template &laquo;" + HtmlEscape(id) + "&raquo; non c'&egrave; o non &egrave; valido.</p>"
 			"<p>I template stanno in <code>/usr/share/emuled/templates/</code> (quelli di serie) e in <code>~/.emuled/templates/</code> (i tuoi); ogni template ha una cartella con un file <code>template.yaml</code>. Il Registro di emuled dice perch&eacute; un template non viene caricato.</p>"
-			"<p><a href=\"/?template=console\">Torna al template predefinito (console)</a></p>");
+			"<p><a href=\"/?template=console\">Torna al template predefinito (console)</a></p>" + ForgetChoice(id));
 	if (slash == std::string::npos) {		// /t/<id> senza barra finale: gli indirizzi relativi dentro il template funzionano solo con la barra
 		Response x; x.status = 301; x.content_type = "text/plain; charset=utf-8"; x.headers["Location"] = "/t/" + id + "/";
 		return x;

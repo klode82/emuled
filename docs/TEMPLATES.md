@@ -61,7 +61,7 @@ Il «contratto» con i template è questa API: finché una chiamata del tipo `/a
 1. Copia la cartella in `~/.emuled/templates/<id>/`.
 2. Chiedi al demone di rileggere: `POST /api/v1/templates/rescan` (oppure riavvialo). Il **Registro** di emuled dice «Template: N caricati, M non validi» e, per ogni template che non si carica, il motivo.
 3. Apri `http://127.0.0.1:8765/?template=<id>`.
-4. Se qualcosa va storto, `http://127.0.0.1:8765/?template=console` riporta al template predefinito.
+4. Se il template che avevi scelto sparisce o si rompe, la pagina d'aiuto lo dice e **toglie da sola la scelta**: la volta dopo si apre il predefinito. Se qualcosa va storto, `http://127.0.0.1:8765/?template=console` riporta al template predefinito.
 
 Per sviluppare senza copiare ogni volta: avvia il demone con `--templates-dir <la tua cartella>` (o `templates_dir:` in `config.yaml`, o `EMULED_TEMPLATES_DIR`) e metti lì il template.
 

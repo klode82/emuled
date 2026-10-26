@@ -107,7 +107,8 @@ int main()
 		CHECK(Status(call(Req("GET", "/t/ciao/fuga.txt"))) == 403);																			// ne' tramite collegamenti simbolici
 		CHECK(Status(call(Req("GET", "/t/ciao/fuga-dir/index.html"))) == 403);
 		r = call(Req("GET", "/t/nulla/")); CHECK(Status(r) == 404 && Body(r).find("Template non trovato") != std::string::npos && Body(r).find("/?template=console") != std::string::npos);
-		r = call(Req("GET", "/t/<b>x</b>/")); CHECK(Status(r) == 404 && Body(r).find("<b>") == std::string::npos);							// l'id nella pagina e' protetto
+		CHECK(Body(call(Req("GET", "/t/nulla/"))).find("localStorage.removeItem('emuled.template')") != std::string::npos);					// toglie la scelta rotta
+		r = call(Req("GET", "/t/<b>x</b>/")); CHECK(Status(r) == 404 && Body(r).find("<b>") == std::string::npos && Body(r).find("localStorage") == std::string::npos);							// l'id nella pagina e' protetto
 		CHECK(Status(call(Req("POST", "/t/ciao/", "", "x"))) == 405);
 		// intestazioni di sicurezza: solo sulle pagine dei template (non sul resto); file enormi non si servono
 		r = call(Req("GET", "/t/ciao/")); CHECK(r.find("connect-src 'self'") != std::string::npos && r.find("frame-ancestors 'none'") != std::string::npos && r.find("Referrer-Policy: no-referrer") != std::string::npos && r.find("X-Frame-Options: DENY") != std::string::npos);

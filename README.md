@@ -264,7 +264,14 @@ Tests and the test daemons never touch your real profile: they run with `--fake-
 
 ## Releases
 
-[`.github/workflows/release.yml`](.github/workflows/release.yml) runs on every push to `master`. If `EMULED_VERSION` in `CMakeLists.txt` has no `v<version>` tag yet, it builds the `.deb`, the `.rpm` and the Docker image (published on `ghcr.io`), creates the tag and publishes a GitHub release with the packages attached. **To release: bump `EMULED_VERSION` and push.**
+[`.github/workflows/release.yml`](.github/workflows/release.yml) runs when you push a `v*` tag. It builds the `.deb` and `.rpm`, installs them in clean containers and starts the daemon, builds the Docker image (published on `ghcr.io`), then publishes a GitHub release with the packages attached. [`ci.yml`](.github/workflows/ci.yml) runs the tests on every push and pull request.
+
+**To release:** set `EMULED_VERSION` in `CMakeLists.txt` (the tag must match it), commit, then
+
+```sh
+git tag v0.1.0
+git push origin master v0.1.0
+```
 
 ## Repository layout
 

@@ -1,0 +1,14 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with: { node-version: 20 }
+      - run: sudo apt-get update && grep -vE '^\s*(#|$)' requirements-apt.txt | xargs sudo apt-get install -y
+      - run: python3 tools/fix_case.py
+      - run: cd web && npm ci --no-audit --no-fund && npx vue-tsc --noEmit && npx vitest run && npm run build
+      - run: cmake -S . -B build -G Ninja && cmake --build build
+      - run: ctest --test-dir build --output-on-failure --timeout 300

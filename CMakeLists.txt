@@ -174,6 +174,9 @@ add_library(emulecore STATIC
   core/profile/ProfileCheck.cpp
 )
 target_include_directories(emulecore PUBLIC compat compat/ci core ${CMAKE_BINARY_DIR}/gen)
+# i template di serie si cercano dove li installa `cmake --install` (<prefisso>/share/emuled/templates; /usr/share/... con -DCMAKE_INSTALL_PREFIX=/usr)
+include(GNUInstallDirs)
+target_compile_definitions(emulecore PRIVATE EMULED_SYSTEM_TEMPLATES="${CMAKE_INSTALL_FULL_DATADIR}/emuled/templates")
 # la descrizione OpenAPI dell'API entra nel binario (servita a /api/v1/openapi.json)
 add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/gen/openapi_json.h
   COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/gen
@@ -372,3 +375,11 @@ set_tests_properties(real_profile PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 300)
 add_executable(test_indexed_load tests/test_indexed_load.cpp)
 target_link_libraries(test_indexed_load emulecore)
 add_test(NAME indexed_load COMMAND test_indexed_load)
+
+# ---- installazione (Bench 849; il pacchetto vero e' il task 615): il demone e i template di serie, che si costruiscono con `npm run build` in web/
+install(TARGETS emuled RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+if(EXISTS ${CMAKE_SOURCE_DIR}/web/dist/templates)
+  install(DIRECTORY ${CMAKE_SOURCE_DIR}/web/dist/templates/ DESTINATION ${CMAKE_INSTALL_DATADIR}/emuled/templates)
+else()
+  message(WARNING "web/dist/templates non c'e': `cmake --install` non installera' i template di serie. Costruirli con: cd web && npm install && npm run build")
+endif()

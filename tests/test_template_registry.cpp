@@ -71,7 +71,13 @@ int main()
 	// cartelle che non esistono: nessun errore
 	{ Registry r2; Dirs none; none.system = (base / "non-esiste").string(); r2.Scan(none); CHECK(r2.entries().empty() && r2.ValidCount() == 0); }
 	// percorsi predefiniti
-	{ Dirs def = DefaultDirs("/home/x"); CHECK(def.system == "/usr/share/emuled/templates" && def.user == "/home/x/.emuled/templates" && def.extra.empty()); CHECK(DefaultDirs("").user.empty()); }
+	{ Dirs def = DefaultDirs("/home/x"); CHECK(def.system.size() > std::string("/share/emuled/templates").size() && def.system.rfind("/share/emuled/templates") == def.system.size() - std::string("/share/emuled/templates").size() && def.user == "/home/x/.emuled/templates" && def.extra.empty()); CHECK(DefaultDirs("").user.empty()); }
+	// cartella dell'utente: si crea (con il LEGGIMI) solo se manca; se c'e' gia' non si tocca niente
+	{ fs::path nd = base / "casa" / ".emuled" / "templates"; CHECK(EnsureUserDir(nd.string()) && fs::is_directory(nd) && fs::is_regular_file(nd / "LEGGIMI.txt"));
+	  { std::ifstream r(nd / "LEGGIMI.txt"); std::string txt((std::istreambuf_iterator<char>(r)), {}); CHECK(txt.find("template.yaml") != std::string::npos && txt.find("TEMPLATES.md") != std::string::npos); }
+	  std::ofstream(nd / "LEGGIMI.txt") << "modificato dall'utente"; CHECK(!EnsureUserDir(nd.string()));
+	  { std::ifstream r(nd / "LEGGIMI.txt"); std::string txt((std::istreambuf_iterator<char>(r)), {}); CHECK(txt == "modificato dall'utente"); }
+	  CHECK(!EnsureUserDir("")); }
 	fs::remove_all(base);
 	std::printf(fails ? "FALLITI: %d\n" : "template_registry ok\n", fails);
 	return fails ? 1 : 0;

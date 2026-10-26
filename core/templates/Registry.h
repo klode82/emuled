@@ -18,7 +18,11 @@ enum class Source { System, User, Extra };
 const char *SourceName(Source s);				// "system" | "user" | "dev"
 
 struct Dirs { std::string system, user, extra; };		// vuoto = non cercare
-Dirs DefaultDirs(const std::string &home);		// /usr/share/emuled/templates e <home>/.emuled/templates
+// La cartella di sistema segue il prefisso di installazione (EMULED_SYSTEM_TEMPLATES, deciso da CMake: <prefisso>/share/emuled/templates; /usr/share/emuled/templates
+// nei pacchetti, che usano il prefisso /usr); quella dell'utente e' <home>/.emuled/templates.
+Dirs DefaultDirs(const std::string &home);
+// Crea la cartella dei template dell'utente se manca, con un LEGGIMI.txt che spiega a cosa serve (solo quando la crea: se c'e' gia', non tocca niente). true = l'ha creata.
+bool EnsureUserDir(const std::string &dir);
 
 struct Entry
 {

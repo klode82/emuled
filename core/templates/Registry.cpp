@@ -4,13 +4,36 @@
 #include "Log.h"
 #include <algorithm>
 #include <filesystem>
+#include <fstream>
 #include <set>
 
 namespace fs = std::filesystem;
 namespace emule::templates {
 
 const char *SourceName(Source s) { return s == Source::System ? "system" : s == Source::User ? "user" : "dev"; }
-Dirs DefaultDirs(const std::string &home) { Dirs d; d.system = "/usr/share/emuled/templates"; if (!home.empty()) d.user = home + "/.emuled/templates"; return d; }
+#ifndef EMULED_SYSTEM_TEMPLATES
+#define EMULED_SYSTEM_TEMPLATES "/usr/share/emuled/templates"
+#endif
+Dirs DefaultDirs(const std::string &home) { Dirs d; d.system = EMULED_SYSTEM_TEMPLATES; if (!home.empty()) d.user = home + "/.emuled/templates"; return d; }
+
+bool EnsureUserDir(const std::string &dir)
+{
+	if (dir.empty()) return false;
+	std::error_code ec;
+	if (fs::exists(dir, ec)) return false;
+	if (!fs::create_directories(dir, ec) || ec) return false;
+	std::ofstream f(fs::path(dir) / "LEGGIMI.txt");
+	f << "In questa cartella vanno i TUOI template d'interfaccia di emuled.\n\n"
+		 "Ogni template e' una cartella con un file template.yaml e una pagina d'ingresso (index.html di solito):\n"
+		 "  ~/.emuled/templates/il-mio-template/template.yaml\n"
+		 "  ~/.emuled/templates/il-mio-template/index.html\n\n"
+		 "Il nome della cartella deve essere uguale all'id scritto in template.yaml. I nomi console, dashboard, studio e mobile sono dei template di serie\n"
+		 "(che stanno in " EMULED_SYSTEM_TEMPLATES " e non si toccano): per partire da uno di essi, copia la cartella e dagli un altro nome.\n\n"
+		 "Dopo aver copiato un template: Preferenze > Aspetto > \"Rileggi le cartelle\" (oppure riavvia emuled). Se un template non compare, la stessa\n"
+		 "sezione dice perche'. Come si crea un template: docs/TEMPLATES.md, con un esempio completo in docs/examples/template-ciao/.\n\n"
+		 "Attenzione: un template e' un programma che gira nella pagina e puo' leggere il codice di accesso al demone. Usa solo template di cui ti fidi.\n";
+	return true;
+}
 
 bool IsReservedId(const std::string &id) { return id == "console" || id == "dashboard" || id == "studio" || id == "mobile"; }
 

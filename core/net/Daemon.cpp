@@ -275,6 +275,7 @@ int RunDaemon(const DaemonOptions &opt)
 			{	// template d'interfaccia: sistema, utente (~/.emuled/templates) ed extra; la pagina "/" porta al template scelto, salvo che sia indicata una cartella web_dir (un'interfaccia sola)
 				const char *home = std::getenv("HOME");
 				emule::templates::Dirs td = emule::templates::DefaultDirs(home ? home : ""); td.extra = opt.templates_dir;
+				if (emule::templates::EnsureUserDir(td.user)) AddLogLine(false, _T("Template: creata la cartella dei tuoi template %s"), td.user.c_str());
 				templates.Scan(td);
 				api.SetTemplates([&templates](const std::string &id, emule::api::TemplateTarget &t) {
 					const auto *e = templates.Find(id); if (!e) return false;

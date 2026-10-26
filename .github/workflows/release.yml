@@ -29,7 +29,9 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - run: grep -vE '^\s*(#|$)' requirements-apt.txt | xargs sudo apt-get install -y nodejs npm python3
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: sudo apt-get update && grep -vE '^\s*(#|$)' requirements-apt.txt | xargs sudo apt-get install -y
       - run: python3 tools/fix_case.py && (cd web && npm ci --no-audit --no-fund && npm run build)
       - run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build --target emuled && (cd build && cpack -G DEB)
       - uses: actions/upload-artifact@v4

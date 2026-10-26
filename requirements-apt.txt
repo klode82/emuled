@@ -17,8 +17,5 @@ libminiupnpc-dev
 zlib1g-dev
 libcurl4-openssl-dev
 
-# TLS per l'API (il sistema ha mbedtls 2.28: vedi decisione aperta su Bench)
-libmbedtls-dev
-
 # JSON dell API
 nlohmann-json3-dev

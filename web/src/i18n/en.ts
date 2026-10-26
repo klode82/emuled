@@ -98,10 +98,12 @@ const en: Messages = {
     stopHint: 'Stop and discard the sources', removeFromList: 'Remove from list',
     cancelTitle: 'Cancel the download?', cancelText: '“{name}” will be removed from the list and the partial file deleted. This cannot be undone.', cancelConfirm: 'Cancel download',
   },
-  blocks: { title: 'Downloading now', none: 'No block is arriving right now.', pieces: 'no pieces | {n} piece | {n} pieces', hint: 'Each block is downloaded in pieces of {size}, requested from the sources that are transferring. The orange frame on the map is a block being downloaded right now.' },
+  blocks: { title: 'Downloading now', none: 'No block is arriving right now.', pieces: 'no pieces | {n} piece | {n} pieces', hint: 'Each block is downloaded in pieces of {size}, requested from the sources that are transferring. On the map an orange frame is a block being downloaded right now (solid = arriving, light = requested and waiting).' },
   parts: {
     block: 'Block {n}', sources: 'no sources | {n} source | {n} sources', aria: '{complete} of {total} blocks complete', complete: '{n} complete', missing: '{n} missing',
-    corrupted: '{n} to redownload', active: '{n} downloading now | {n} downloading now', size: '{size} blocks',
+    corrupted: '{n} to redownload', partial: '{n} partial', unverified: '{n} complete, not verified', unverifiedHint: 'The file has no block hash list (hashset): a complete block cannot be checked.',
+    rare: '{n} rare (1-2 sources)', rareHint: 'Very few sources have this block: if they go away, the file stays incomplete.', noSources: '{n} without sources', receiving: '{n} receiving', requested: '{n} requested',
+    tag: { receiving: 'receiving', requested: 'requested, waiting', corrupted: 'to redownload', unverified: 'not verified', rare: 'rare', noSources: 'no sources' }, size: '{size} blocks',
   },
   src: {
     state: {

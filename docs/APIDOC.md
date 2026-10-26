@@ -156,7 +156,7 @@ Il pulsante «Ricerca in Kad»: chiede a Kad le note degli altri utenti su quest
 
 ### `GET /api/v1/downloads/{hash}/blocks` — i blocchi in scarico adesso
 
-eMule scarica un *blocco* (chunk, `part_size` = 9 728 000 byte, quello della mappa) a **pezzi** da `block_size` = 184 320 byte (180 KB) che chiede alle fonti. Questa chiamata dice quali blocchi stanno arrivando in questo momento: `active` ha un elemento per ogni blocco con `part` (numero da 0), `size`, `missing` (byte ancora mancanti) e `sources`: le fonti che lo stanno trasferendo, ciascuna con `name`, `software`, `ip`, `port`, `speed` (byte/s) e `blocks`, i pezzi richiesti con `start` e `end` (posizioni nel file, estremi compresi) e `transferred` (byte già arrivati di quel pezzo). Conta solo la richiesta già partita verso la fonte, non quelle in attesa di essere inviate. Elenco vuoto se nessuna fonte sta trasferendo. **404** se il download non c'è o è completato.
+eMule scarica un *blocco* (chunk, `part_size` = 9 728 000 byte, quello della mappa) a **pezzi** da `block_size` = 184 320 byte (180 KB) che chiede alle fonti. Questa chiamata dice quali blocchi stanno arrivando in questo momento: `active` ha un elemento per ogni blocco con `part` (numero da 0), `size`, `missing` (byte ancora mancanti) e `sources`: le fonti che lo stanno trasferendo, ciascuna con `name`, `software`, `ip`, `port`, `speed` (byte/s) e `blocks`, i pezzi richiesti con `start` e `end` (posizioni nel file, estremi compresi) e `transferred` (byte già arrivati di quel pezzo). Conta solo la richiesta già partita verso la fonte, non quelle in attesa di essere inviate. `receiving` dice se il blocco sta **arrivando davvero** (una fonte ha velocità o un pezzo ha già dei byte) o è solo **richiesto** e in attesa della risposta. Elenco vuoto se nessuna fonte sta trasferendo. **404** se il download non c'è o è completato.
 
 ### `GET /api/v1/downloads/{hash}/details` — i dettagli
 
@@ -168,7 +168,7 @@ eMule scarica un *blocco* (chunk, `part_size` = 9 728 000 byte, quello della map
 
 ### `GET /api/v1/downloads/{hash}/parts` — i blocchi
 
-eMule divide il file in blocchi da **9 728 000 byte** (`part_size`). Per ogni blocco: `index`, `size` (l'ultimo è più corto), `missing` (byte ancora da scaricare), `sources` (in quante fonti c'è) e `state`: `empty`, `partial`, `complete` o `corrupted` (da riscaricare). Con questi si disegna la mappa dei blocchi.
+eMule divide il file in blocchi da **9 728 000 byte** (`part_size`). Per ogni blocco: `index`, `size` (l'ultimo è più corto), `missing` (byte ancora da scaricare), `sources` (in quante fonti c'è) e `state`: `empty`, `partial`, `complete` o `corrupted` (da riscaricare), e `verified`: `false` per un blocco completo che **non si può controllare** perché il file non ha l'elenco degli hash dei blocchi (hashset; con un blocco solo vale l'hash del file). In più, al livello superiore, `hashset` (c'è l'elenco degli hash?). Con questi si disegna la mappa dei blocchi: la legenda distingue anche i blocchi **rari** (1-2 fonti: `sources` ≤ 2) e quelli **senza fonti** (`sources` = 0). Chi non conosce `verified` o `hashset` (versioni più vecchie del demone) li tratta come «verificato».
 
 ### `DELETE /api/v1/downloads/{hash}` — annulla
 

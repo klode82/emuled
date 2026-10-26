@@ -27,7 +27,7 @@ const done = computed(() => info.value?.key === 'done')
 
 // blocchi e fonti: si rileggono ogni 3 secondi finche' il pannello e' aperto (l'API non li manda come eventi)
 const parts = ref<Parts | null>(null), sources = ref<Source[]>([]), det = ref<Details | null>(null), blocks = ref<Blocks | null>(null)
-const activeParts = computed(() => blocks.value?.active.map((a) => a.part) ?? [])
+const activeParts = computed(() => blocks.value?.active.map((a) => ({ part: a.part, receiving: a.receiving !== false })) ?? [])
 type TabKey = 'general' | 'progress' | 'sources' | 'names' | 'comments' | 'content' | 'ed2k'
 const TABS: readonly TabKey[] = ['general', 'progress', 'sources', 'names', 'comments', 'content', 'ed2k']
 const tab = ref<TabKey>('general')
@@ -169,7 +169,7 @@ const sortedSources = computed(() => [...own.value].sort((a, b) => stateOrder(a)
           <p v-if="!blocks?.active.length" class="px-3 py-4 text-center text-xs text-mute">{{ t('blocks.none') }}</p>
           <ul v-else class="divide-y divide-line text-xs">
             <li v-for="a in blocks.active" :key="a.part" class="flex flex-col gap-1.5 px-3 py-2.5">
-              <div class="flex items-baseline justify-between gap-3"><span class="text-sm font-medium">{{ t('parts.block', { n: a.part + 1 }) }}</span>
+              <div class="flex items-baseline justify-between gap-3"><span class="text-sm font-medium">{{ t('parts.block', { n: a.part + 1 }) }} <span class="text-xs font-normal text-warn">{{ t(a.receiving === false ? 'parts.tag.requested' : 'parts.tag.receiving') }}</span></span>
                 <span class="tabular-nums text-mute">{{ bytes(a.size - a.missing, 2, true) }} / {{ bytes(a.size, 2, true) }} · {{ percent(a.size ? 100 * (1 - a.missing / a.size) : 0) }}</span></div>
               <ProgressBar :value="a.size ? 100 * (1 - a.missing / a.size) : 0" tone="warn" :label="t('parts.block', { n: a.part + 1 })" />
               <ul class="flex flex-col gap-0.5">

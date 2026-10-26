@@ -29,7 +29,7 @@ export interface TemplateInfo {
 }
 export interface TemplateList { templates: TemplateInfo[]; api_version: number; dirs: { system?: string; user?: string; extra?: string } }
 export interface BlockSource { name: string; software: string; ip: string; port: number; speed: number; blocks: { start: number; end: number; transferred: number }[] }
-export interface BlockActive { part: number; size: number; missing: number; sources: BlockSource[] }
+export interface BlockActive { part: number; size: number; missing: number; receiving?: boolean; sources: BlockSource[] }
 export interface Blocks { part_size: number; block_size: number; active: BlockActive[] }
 export interface StreamLink { path: string; name: string; size: number; expires_in: number; mime: string }
 export interface FileNames { current: string; names: { name: string; count: number }[] }
@@ -98,6 +98,6 @@ export interface Source {
   name: string; software: string; ip: string; port: number; low_id: boolean; state: SourceState; from: 'server' | 'kad' | 'source_exchange' | 'passive' | 'link' | 'unknown'
   queue_rank: number; speed: number; session_downloaded: number; available_parts: number; part_count: number
 }
-export interface Part { index: number; size: number; missing: number; sources: number; state: 'empty' | 'partial' | 'complete' | 'corrupted' }
-export interface Parts { part_size: number; size: number; count: number; parts: Part[] }
+export interface Part { index: number; size: number; missing: number; sources: number; state: 'empty' | 'partial' | 'complete' | 'corrupted'; verified?: boolean }
+export interface Parts { part_size: number; size: number; count: number; hashset?: boolean; parts: Part[] }
 export interface Directories { incoming: string; temp: string[]; shared: string[]; shared_missing?: string[] }

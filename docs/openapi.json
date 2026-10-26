@@ -1465,7 +1465,7 @@
     "/api/v1/downloads/{hash}/blocks": {
       "get": {
         "summary": "Blocchi in scarico adesso",
-        "description": "I blocchi (chunk da part_size = 9 728 000 byte) che stanno arrivando in questo momento: per ognuno part (da 0), size, missing e le fonti che lo trasferiscono (name, software, ip, port, speed in byte/s) con i pezzi da block_size = 184 320 byte richiesti (start, end, transferred). Elenco active vuoto se nessuna fonte trasferisce. 404 se il download non c'e' o e' completato.",
+        "description": "I blocchi (chunk da part_size = 9 728 000 byte) che stanno arrivando in questo momento: per ognuno part (da 0), size, missing e le fonti che lo trasferiscono (name, software, ip, port, speed in byte/s) con i pezzi da block_size = 184 320 byte richiesti (start, end, transferred). receiving = sta arrivando davvero (false = solo richiesto). Elenco active vuoto se nessuna fonte trasferisce. 404 se il download non c'e' o e' completato.",
         "responses": {
           "200": {
             "description": "Blocchi"
@@ -1853,7 +1853,7 @@
     "/api/v1/downloads/{hash}/parts": {
       "get": {
         "summary": "Blocchi di un download",
-        "description": "I blocchi (chunk) di 9 728 000 byte: per ognuno quanti byte mancano, in quante fonti c'e' e lo stato (empty, partial, complete, corrupted).",
+        "description": "I blocchi (chunk) di 9 728 000 byte: per ognuno quanti byte mancano, in quante fonti c'e', lo stato (empty, partial, complete, corrupted) e verified (false = completo ma non controllabile: manca l'hashset); in piu' hashset al livello superiore.",
         "responses": {
           "200": {
             "description": "Blocchi",

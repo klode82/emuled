@@ -290,13 +290,15 @@ json PartsJson(CPartFile *f)
 	const UINT n = f->GetPartCount();
 	std::vector<unsigned> avail(n, 0);
 	for (POSITION pos = f->srclist.GetHeadPosition(); pos;) { CUpDownClient *c = f->srclist.GetNext(pos); for (UINT i = 0; i < n; ++i) if (c->IsPartAvailable(i)) ++avail[i]; }
+	// senza l'elenco degli hash dei blocchi (hashset) un blocco completo non si puo' controllare: "verified" = false; con un blocco solo vale l'hash del file
+	const bool hashsetOk = n <= 1 || f->GetFileIdentifier().HasExpectedMD4HashCount();
 	json parts = json::array();
 	for (UINT i = 0; i < n; ++i) {
 		uint64_t len = std::min<uint64_t>(ps, size - (uint64_t)i * ps), missing = f->GetTotalGapSizeInPart(i);
 		const char *state = f->IsCorruptedPart(i) ? "corrupted" : missing == 0 ? "complete" : missing >= len ? "empty" : "partial";
-		parts.push_back({{"index", i}, {"size", len}, {"missing", missing}, {"sources", avail[i]}, {"state", state}});
+		parts.push_back({{"index", i}, {"size", len}, {"missing", missing}, {"sources", avail[i]}, {"state", state}, {"verified", missing == 0 && hashsetOk}});
 	}
-	return {{"part_size", ps}, {"size", size}, {"count", n}, {"parts", parts}};
+	return {{"part_size", ps}, {"size", size}, {"count", n}, {"hashset", hashsetOk}, {"parts", parts}};
 }
 
 // i blocchi che stanno arrivando adesso: eMule scarica un chunk (parte da 9,28 MB) a pezzi da 180 KB (EMBLOCKSIZE) chiesti alle fonti; qui, per ogni parte,
@@ -324,7 +326,9 @@ json BlocksJson(CPartFile *f)
 	json active = json::array();
 	for (auto &kv : byPart) {
 		const uint64_t len = std::min<uint64_t>(ps, size - (uint64_t)kv.first * ps), missing = f->GetTotalGapSizeInPart(kv.first);
-		kv.second["part"] = kv.first; kv.second["size"] = len; kv.second["missing"] = missing;
+		bool receiving = false;		// sta arrivando davvero: la fonte ha velocita' oppure un pezzo ha gia' dei byte; altrimenti e' solo richiesto
+		for (auto &s : kv.second["sources"]) { if (s["speed"].get<uint64_t>() > 0) receiving = true; for (auto &b : s["blocks"]) if (b["transferred"].get<uint64_t>() > 0) receiving = true; }
+		kv.second["part"] = kv.first; kv.second["size"] = len; kv.second["missing"] = missing; kv.second["receiving"] = receiving;
 		active.push_back(std::move(kv.second));
 	}
 	return {{"part_size", ps}, {"block_size", (uint64_t)EMBLOCKSIZE}, {"active", active}};

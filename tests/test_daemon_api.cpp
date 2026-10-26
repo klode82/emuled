@@ -143,6 +143,7 @@ int main(int argc, char **argv)
 		Http(port, "GET", "/api/v1/templates", "", "", s); CHECK(s == 401);
 		r = Http(port, "GET", "/api/v1/log?level=info&limit=200", token, "", s); CHECK(r.find("Template: ") != std::string::npos && r.find("non caricato") != std::string::npos);	// il Registro lo dice
 		// blocchi in scarico adesso: senza fonti in scarico l'elenco e' vuoto; hash sconosciuto 404
+		r = Http(port, "GET", "/api/v1/downloads/" + hash + "/parts", token, "", s); CHECK(s == 200 && json::parse(r)["hashset"].is_boolean() && json::parse(r)["parts"][0]["state"] == "empty" && json::parse(r)["parts"][0]["verified"] == false);
 		r = Http(port, "GET", "/api/v1/downloads/" + hash + "/blocks", token, "", s); CHECK(s == 200 && json::parse(r)["active"].is_array() && json::parse(r)["active"].empty() && json::parse(r)["part_size"] == 9728000 && json::parse(r)["block_size"] == 184320);
 		Http(port, "GET", "/api/v1/downloads/00000000000000000000000000000000/blocks", token, "", s); CHECK(s == 404);
 		// streaming: link temporaneo; un download senza dati su disco risponde 503 (il player riprova), un link sconosciuto 403

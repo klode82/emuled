@@ -97,10 +97,12 @@ const it = {
     stopHint: 'Ferma e scarta le fonti', removeFromList: 'Togli dalla lista',
     cancelTitle: 'Annullare il download?', cancelText: '«{name}» sarà tolto dalla lista e il file parziale verrà cancellato. Non si può annullare.', cancelConfirm: 'Annulla download',
   },
-  blocks: { title: 'In scarico adesso', none: 'Nessun blocco in arrivo in questo momento.', pieces: 'nessun pezzo | {n} pezzo | {n} pezzi', hint: 'Ogni blocco è scaricato a pezzi da {size}, chiesti alle fonti che stanno trasferendo. Il riquadro arancione nella mappa è un blocco in scarico adesso.' },
+  blocks: { title: 'In scarico adesso', none: 'Nessun blocco in arrivo in questo momento.', pieces: 'nessun pezzo | {n} pezzo | {n} pezzi', hint: 'Ogni blocco è scaricato a pezzi da {size}, chiesti alle fonti che stanno trasferendo. Nella mappa un riquadro arancione è un blocco in scarico adesso (pieno = sta arrivando, chiaro = richiesto e in attesa).' },
   parts: {
     block: 'Blocco {n}', sources: 'nessuna fonte | {n} fonte | {n} fonti', aria: '{complete} blocchi completi su {total}', complete: '{n} completi', missing: '{n} mancanti',
-    corrupted: '{n} da riscaricare', active: '{n} in scarico adesso | {n} in scarico adesso', size: 'blocchi da {size}',
+    corrupted: '{n} da riscaricare', partial: '{n} parziali', unverified: '{n} completi non verificati', unverifiedHint: 'Il file non ha l\'elenco degli hash dei blocchi (hashset): un blocco completo non si può controllare.',
+    rare: '{n} rari (1-2 fonti)', rareHint: 'Pochissime fonti hanno questo blocco: se spariscono, il file resta incompleto.', noSources: '{n} senza fonti', receiving: '{n} in ricezione', requested: '{n} richiesti',
+    tag: { receiving: 'in ricezione', requested: 'richiesto, in attesa', corrupted: 'da riscaricare', unverified: 'non verificato', rare: 'raro', noSources: 'senza fonti' }, size: 'blocchi da {size}',
   },
   src: {
     state: {

@@ -406,6 +406,9 @@ LPCTSTR GetED2KFileTypeSearchTerm(EED2KFileType iFileID)
 		return _T(ED2KFTSTR_DOCUMENT);
 	case ED2KFT_EMULECOLLECTION:
 		return _T(ED2KFTSTR_EMULECOLLECTION);
+	// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+	case ED2KFT_ANY:
+		break;
 	}
 	return _T(ED2KFTSTR_ANY);
 }
@@ -425,6 +428,10 @@ EED2KFileType GetED2KFileTypeSearchID(EED2KFileType iFileID)
 	case ED2KFT_ARCHIVE:
 	case ED2KFT_CDIMAGE:
 		return ED2KFT_PROGRAM;
+	// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+	case ED2KFT_ANY:
+	case ED2KFT_EMULECOLLECTION:
+		break;
 	}
 	return ED2KFT_ANY;
 }

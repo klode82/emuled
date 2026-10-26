@@ -2858,6 +2858,17 @@ CString CPreferences::GetMuleDirectory(EDefaultDirectory eDirectory, bool bCreat
 		return m_strSkinProfileDir;
 	case EMULE_TOOLBARDIR:
 		return m_sToolbarBitmapFolder;
+	// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+	case EMULE_ADDLANGDIR:
+	case EMULE_CONFIGBASEDIR:
+	case EMULE_CONFIGDIR:
+	case EMULE_DATABASEDIR:
+	case EMULE_EXECUTABLEDIR:
+	case EMULE_EXPANSIONDIR:
+	case EMULE_INSTLANGDIR:
+	case EMULE_LOGDIR:
+	case EMULE_WEBSERVERDIR:
+		break;
 	}
 	return GetDefaultDirectory(eDirectory, bCreate);
 }

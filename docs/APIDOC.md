@@ -16,7 +16,9 @@ emuled --run --profile /percorso/eMule/config --api-port 8765
 - **Senza API:** `--no-api`.
 - **Interfaccia web.** Con `--web-dir CARTELLA` il demone serve gli stessi file della web UI sulla stessa porta (`http://127.0.0.1:8765/`), così la web UI usa l'API senza altre impostazioni.
 
-**Il token.** Ogni chiamata (tranne `ping` e `openapi.json`) deve avere l'intestazione `Authorization: Bearer TOKEN`. Il token sta in `emuled.token` nella cartella di configurazione del profilo (lo crea il demone al primo avvio, 64 caratteri esadecimali, leggibile solo dal proprietario del file). Lo si può scegliere con `--api-token`. Il WebSocket dei browser, che non può mettere intestazioni, accetta anche `?token=TOKEN` nell'indirizzo.
+**Chi entra.** L'interfaccia web usa un **account** (nome utente e password, vedi la sezione 2 «Account»): `POST /api/v1/auth/login` risponde con un gettone di sessione. Gli script e gli strumenti possono usare invece il **token del file** descritto qui sotto. Le due cose valgono allo stesso modo come Bearer.
+
+**Il token.** Ogni chiamata (tranne `ping`, `openapi.json` e le tre di `auth/`) deve avere l'intestazione `Authorization: Bearer TOKEN`. Il token sta in `emuled.token` nella cartella di configurazione del profilo (lo crea il demone al primo avvio, 64 caratteri esadecimali, leggibile solo dal proprietario del file). Lo si può scegliere con `--api-token`. Il WebSocket dei browser, che non può mettere intestazioni, accetta anche `?token=TOKEN` nell'indirizzo.
 
 ```
 TOKEN=$(cat /percorso/eMule/config/emuled.token)
@@ -52,6 +54,16 @@ Il demone serve anche le pagine dell'interfaccia, **senza token**: `/t/<id>/…`
 ```
 
 ### `GET /api/v1/openapi.json` — la descrizione formale *(senza token)*
+
+### Account — `GET /api/v1/auth/status`, `POST /api/v1/auth/setup`, `POST /api/v1/auth/login` *(senza token)*
+
+L'interfaccia web si usa con nome utente e password. L'account sta nel file `emuled.users` della cartella del profilo (permessi `0600`): nome, un **sale** casuale, l'hash PBKDF2-HMAC-SHA256 della password (200000 giri) e un segreto che firma le sessioni. La password non si può recuperare, solo reimpostare dal terminale con `emuled --reset-user` (cambia anche il segreto: le sessioni già aperte decadono; funziona anche a demone acceso).
+
+- `GET /api/v1/auth/status` → `{"configured": true|false, "setup_required": true|false}`. Dice all'interfaccia se mostrare l'accesso o il primo avvio.
+- `POST /api/v1/auth/setup` `{"setup_code": "...", "username": "mario", "password": "almeno-8-caratteri"}` crea il **primo** account e risponde `201` con `{"token": "s1.…", "username": "mario", "expires_in": 2592000}`. Il **codice di impostazione** è il token del file `emuled.token`: il demone lo stampa all'avvio finché non c'è un account, così chi raggiunge la porta senza averlo non può prendersi l'interfaccia. Errori: `403 bad_setup_code`, `400 bad_username`/`bad_password`, `409 account_exists` (esiste già un account).
+- `POST /api/v1/auth/login` `{"username": "...", "password": "..."}` → `200` con lo stesso gettone (valido 30 giorni). Errori: `401 bad_credentials` (il demone non dice se è sbagliato il nome o la password), `429 too_many_attempts` con `Retry-After: 60`: cinque tentativi sbagliati da uno stesso indirizzo bloccano quell'indirizzo per un minuto.
+
+Il gettone di sessione si usa come il token del file (`Authorization: Bearer s1.…`, oppure `?token=` per il WebSocket). Nel browser sta alla stessa chiave `localStorage['emuled.token']`.
 
 ### `GET /api/v1/status` — lo stato generale
 

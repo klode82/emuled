@@ -273,6 +273,14 @@ bool CKeyEntry::SearchTermsMatch(const SSearchTerm &rSearchTerm) const
 				}
 		}
 		return false;
+	// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+	case SSearchTerm::OpEqual:
+	case SSearchTerm::OpGreater:
+	case SSearchTerm::OpGreaterEqual:
+	case SSearchTerm::OpLess:
+	case SSearchTerm::OpLessEqual:
+	case SSearchTerm::OpNotEqual:
+		break;
 	}
 
 	//Comparison operations for numbers
@@ -293,6 +301,13 @@ bool CKeyEntry::SearchTermsMatch(const SSearchTerm &rSearchTerm) const
 				return uValue == tInt;
 			case SSearchTerm::OpNotEqual:
 				return uValue != tInt;
+			// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+			case SSearchTerm::AND:
+			case SSearchTerm::MetaTag:
+			case SSearchTerm::NOT:
+			case SSearchTerm::OR:
+			case SSearchTerm::String:
+				break;
 			}
 		}
 	} else if (rSearchTerm.m_pTag->IsFloat()) { // meta tags with float values

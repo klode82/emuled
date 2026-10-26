@@ -85,6 +85,8 @@ add_library(emulecore STATIC
   core/net/Daemon.cpp
   core/api/HttpServer.cpp
   core/api/Api.cpp
+  core/api/Auth.cpp
+  core/api/AuthApi.cpp
   core/api/Search.cpp
   core/api/ServerUpdate.cpp
   core/api/Content.cpp
@@ -302,6 +304,10 @@ set_tests_properties(kad_routing PROPERTIES SKIP_REGULAR_EXPRESSION "^SKIP")
 add_executable(test_dgram_crypt tests/test_dgram_crypt.cpp)
 target_link_libraries(test_dgram_crypt emulecore)
 add_test(NAME dgram_crypt COMMAND test_dgram_crypt)
+
+add_executable(test_auth tests/test_auth.cpp)
+target_link_libraries(test_auth emulecore)
+add_test(NAME auth COMMAND test_auth)
 
 add_executable(test_kad_net tests/test_kad_net.cpp)
 target_link_libraries(test_kad_net emulecore)

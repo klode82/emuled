@@ -98,6 +98,26 @@ int main(int argc, char **argv)
 		r = Http(port, "GET", "/api/v1/status", token, "", s); CHECK(s == 200);
 		json st_ = json::parse(r, nullptr, false); CHECK(st_.is_object() && st_["ed2k"]["connected"] == false && st_["kad"]["running"] == false && st_["ports"]["tcp"].get<int>() == std::atoi(tcp.c_str()));
 		CHECK(st_["emuled_version"] == EMULED_VERSION && st_["base_version"] == EMULED_BASE_VERSION);
+		{	// account dell'interfaccia (Bench 872): stato pubblico, primo account solo con il codice di impostazione, accesso, sessione valida sulle API, limite ai tentativi
+			json as = json::parse(Http(port, "GET", "/api/v1/auth/status", "", "", s), nullptr, false); CHECK(s == 200 && as["configured"] == false && as["setup_required"] == true);
+			Http(port, "POST", "/api/v1/auth/setup", "", "{\"setup_code\":\"sbagliato\",\"username\":\"mario\",\"password\":\"password-lunga\"}", s); CHECK(s == 403);
+			Http(port, "POST", "/api/v1/auth/login", "", "{\"username\":\"mario\",\"password\":\"password-lunga\"}", s); CHECK(s == 401);		// ancora nessun account
+			Http(port, "POST", "/api/v1/auth/setup", "", "{\"setup_code\":\"" + token + "\",\"username\":\"mario\",\"password\":\"corta\"}", s); CHECK(s == 400);
+			Http(port, "POST", "/api/v1/auth/setup", "", "{\"setup_code\":\"" + token + "\",\"username\":\"ma rio\",\"password\":\"password-lunga\"}", s); CHECK(s == 400);
+			json su = json::parse(Http(port, "POST", "/api/v1/auth/setup", "", "{\"setup_code\":\"" + token + "\",\"username\":\"mario\",\"password\":\"password-lunga\"}", s), nullptr, false);
+			CHECK(s == 201 && su["username"] == "mario" && su["token"].is_string());
+			const std::string sess = su["token"].get<std::string>();
+			Http(port, "GET", "/api/v1/status", sess, "", s); CHECK(s == 200);						// la sessione vale come il token del file
+			Http(port, "GET", "/api/v1/status", token, "", s); CHECK(s == 200);						// e il token del file vale ancora (script, strumenti)
+			Http(port, "GET", "/api/v1/status", sess.substr(0, sess.size() - 2) + "00", "", s); CHECK(s == 401);
+			Http(port, "POST", "/api/v1/auth/setup", "", "{\"setup_code\":\"" + token + "\",\"username\":\"altro\",\"password\":\"password-lunga\"}", s); CHECK(s == 409);	// non si crea un secondo account
+			as = json::parse(Http(port, "GET", "/api/v1/auth/status", "", "", s), nullptr, false); CHECK(as["configured"] == true && as["setup_required"] == false);
+			json li = json::parse(Http(port, "POST", "/api/v1/auth/login", "", "{\"username\":\"mario\",\"password\":\"password-lunga\"}", s), nullptr, false); CHECK(s == 200 && li["token"].is_string());
+			Http(port, "GET", "/api/v1/status", li["token"].get<std::string>(), "", s); CHECK(s == 200);
+			Http(port, "POST", "/api/v1/auth/login", "", "{\"username\":\"mario\",\"password\":\"sbagliata-1\"}", s); CHECK(s == 401);
+			for (int i = 0; i < 4; ++i) Http(port, "POST", "/api/v1/auth/login", "", "{\"username\":\"mario\",\"password\":\"sbagliata-2\"}", s);
+			Http(port, "POST", "/api/v1/auth/login", "", "{\"username\":\"mario\",\"password\":\"password-lunga\"}", s); CHECK(s == 429);		// 5 errori: bloccato anche con la password giusta
+		}
 		{	// eventi: senza token niente WebSocket; con token arrivano stats ogni secondo e download.added / removed
 			CHECK(WsOpen(port, "sbagliato") == -1);
 			int ws = WsOpen(port, token); CHECK(ws >= 0);

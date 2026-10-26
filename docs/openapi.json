@@ -15,6 +15,9 @@
       "name": "Stato"
     },
     {
+      "name": "Account"
+    },
+    {
       "name": "Download"
     },
     {
@@ -970,6 +973,212 @@
                       "type": "boolean"
                     }
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/status": {
+      "get": {
+        "summary": "C'e' un account?",
+        "description": "Senza token. L'interfaccia sa cosi' se mostrare l'accesso o il primo avvio.",
+        "tags": [
+          "Account"
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Stato",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "configured": {
+                      "type": "boolean"
+                    },
+                    "setup_required": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/setup": {
+      "post": {
+        "summary": "Crea il primo account",
+        "description": "Senza token ma con il codice di impostazione (il token del file emuled.token, stampato dal demone all'avvio finche' non c'e' un account). Sale casuale + PBKDF2-HMAC-SHA256; la password non si recupera, si reimposta con emuled --reset-user.",
+        "tags": [
+          "Account"
+        ],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "setup_code",
+                  "username",
+                  "password"
+                ],
+                "properties": {
+                  "setup_code": {
+                    "type": "string"
+                  },
+                  "username": {
+                    "type": "string",
+                    "description": "1-32 caratteri: lettere, cifre, punto, trattino, trattino basso"
+                  },
+                  "password": {
+                    "type": "string",
+                    "description": "almeno 8 caratteri"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Account creato",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": {
+                      "type": "string"
+                    },
+                    "username": {
+                      "type": "string"
+                    },
+                    "expires_in": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Nome o password non validi (bad_username, bad_password)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Codice di impostazione errato (bad_setup_code)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "L'account esiste gia' (account_exists)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Troppi tentativi (too_many_attempts)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "summary": "Accedi con nome utente e password",
+        "description": "Senza token. Risponde con un gettone di sessione (30 giorni), da usare come Bearer. Cinque tentativi sbagliati da un indirizzo lo bloccano per un minuto.",
+        "tags": [
+          "Account"
+        ],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "username",
+                  "password"
+                ],
+                "properties": {
+                  "username": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Accesso riuscito",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": {
+                      "type": "string"
+                    },
+                    "username": {
+                      "type": "string"
+                    },
+                    "expires_in": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nome utente o password errati (bad_credentials)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Troppi tentativi (too_many_attempts)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }

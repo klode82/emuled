@@ -17,6 +17,10 @@
 #include "net/Daemon.h"
 #include "net/DaemonConfig.h"
 #include "net/UpnpProbe.h"
+#include "api/Auth.h"
+#include <termios.h>
+#include <unistd.h>
+#include <iostream>
 #include "Emule.h"
 #include "SHAHashSet.h"
 #include "KnownFile.h"
@@ -91,6 +95,7 @@ struct Args { std::string profile, pathmaps, backup_dir, guard_slot; bool check 
 int Usage(const char *me)
 {
 	std::fprintf(stderr, "uso: %s                (senza modalita': il demone; opzioni: --profile, --web-dir, --api-port, --fake-profile, ...; vedi MANUALE)\n       %s [--profile DIR] (--check-profile | --scan-shared | --verify-hashes [--sample N] [--max-size-mb M] | --update-known [--force] | --recover [--force] | --guard-scan --backup-dir DIR | --guard-restore SLOT --backup-dir DIR [--force]) [--pathmap \"WIN=LINUX\"]...\n"
+		"  --reset-user     crea o reimposta nome utente e password dell'interfaccia web (da terminale; chiude le sessioni gia' aperte)\n"
 		"  --check-profile  sola lettura: valida i .met e riporta cosa si potrebbe recuperare\n"
 		"  --scan-shared    sola lettura: elenca i file condivisi, quanti sono gia' in known.met e quanti vanno calcolati\n"
 		"  --verify-hashes  sola lettura: ricalcola l'hash ed2k (e quelli dei blocchi) di un campione dei file condivisi e lo confronta con known.met; poi anche l'AICH (master e blocchi da 180 KB) contro known.met e known2_64.met [--sample N] [--max-size-mb M]\n"
@@ -265,11 +270,41 @@ int RunCheckPorts(const std::string &met, int index, const std::string &nodes, i
 
 } // namespace
 
+// --reset-user: crea o reimposta nome utente e password dell'interfaccia web (Bench 872). Va eseguito dal terminale: chi ha accesso al computer puo' reimpostarla.
+// Cambia anche il segreto delle sessioni: i browser gia' collegati dovranno rifare l'accesso. Funziona anche a demone acceso (il file si rilegge da solo).
+static std::string ReadLine(const char *prompt, bool secret)
+{
+	std::fputs(prompt, stdout); std::fflush(stdout);
+	termios old {}; const bool hide = secret && tcgetattr(STDIN_FILENO, &old) == 0;
+	if (hide) { termios t = old; t.c_lflag &= ~(tcflag_t)ECHO; tcsetattr(STDIN_FILENO, TCSANOW, &t); }
+	std::string s; std::getline(std::cin, s);
+	if (hide) { tcsetattr(STDIN_FILENO, TCSANOW, &old); std::fputc('\n', stdout); }
+	return s;
+}
+static int ResetUser(const std::string &profile)
+{
+	if (!isatty(STDIN_FILENO)) { std::fprintf(stderr, "emuled --reset-user va eseguito da un terminale.\n"); return 2; }
+	std::error_code ec; if (!fs::is_directory(profile, ec)) { std::fprintf(stderr, "emuled: la cartella del profilo '%s' non esiste.\n", profile.c_str()); return 2; }
+	emule::api::Auth auth(profile);
+	std::printf("Account dell'interfaccia web di emuled (profilo %s)\n", profile.c_str());
+	std::string name, err;
+	for (;;) { name = ReadLine("Nome utente: ", false); if (emule::api::Auth::ValidName(name)) break; std::printf("  Nome non valido: 1-32 caratteri, lettere, cifre, punto, trattino, trattino basso.\n"); if (!std::cin) return 2; }
+	for (;;) {
+		std::string pw = ReadLine("Nuova password (almeno 8 caratteri): ", true);
+		if (!emule::api::Auth::ValidPassword(pw, err)) { std::printf("  %s\n", err.c_str()); if (!std::cin) return 2; continue; }
+		if (ReadLine("Ripeti la password: ", true) != pw) { std::printf("  Le due password non coincidono.\n"); if (!std::cin) return 2; continue; }
+		if (!auth.SetUser(name, pw, err)) { std::fprintf(stderr, "emuled: %s\n", err.c_str()); return 1; }
+		break;
+	}
+	std::printf("Fatto. Account '%s' salvato. Le sessioni gia' aperte nei browser sono state chiuse: dovranno rifare l'accesso.\n", name.c_str());
+	return 0;
+}
+
 // Modalita' demone (predefinita, --run facoltativo): emuled [--profile CONFIG_DIR] [--tcp-port P] [--udp-port Q] [--no-kad] [--server IP:PORTA] [--fake-profile] [--add LINK]... [--pathmap "Y:\\eMule=/dir"]...
 //                    [--status-interval N] [--max-seconds N] [--verbose]
 int RunDaemonCmd(int argc, char **argv)
 {
-	emule::net::DaemonOptions o; std::string prof;
+	emule::net::DaemonOptions o; std::string prof; bool resetUser = false;
 	// valori di avvio: file di configurazione, poi variabili d'ambiente; la riga di comando (sotto) vince su entrambi
 	{
 		std::string conf; for (int i = 1; i + 1 < argc; ++i) if (std::string(argv[i]) == "--conf") conf = argv[i + 1];
@@ -317,10 +352,12 @@ int RunDaemonCmd(int argc, char **argv)
 		else if (s == "--api-token") { const char *v = next(); if (!v) return 2; o.api_token = v; }
 		else if (s == "--web-dir") { const char *v = next(); if (!v) return 2; o.web_dir = v; }
 		else if (s == "--templates-dir") { const char *v = next(); if (!v) return 2; o.templates_dir = v; }
+		else if (s == "--reset-user") resetUser = true;
 		else { std::fprintf(stderr, "emuled --run: opzione sconosciuta '%s'\n", s.c_str()); return 2; }
 	}
 	if (prof.empty()) { std::fprintf(stderr, "emuled --run vuole la cartella di configurazione: --profile CARTELLA, oppure EMULED_CONFIG, oppure config: ... nel file di configurazione (~/.emuled/config.yaml)\n"); return 2; }
 	o.config_dir = fs::absolute(prof).lexically_normal().string();
+	if (resetUser) return ResetUser(o.config_dir);
 	return emule::net::RunDaemon(o);
 }
 

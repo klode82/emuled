@@ -424,6 +424,21 @@ void CClientReqSocket::ProcessPacket(const BYTE *packet, uint32 size, UINT opcod
 					client->DontSwapTo(rqfile); // ZZ:DownloadManager
 					if (!client->SwapToAnotherFile(_T("Source says it doesn't have the file. CClientReqSocket::ProcessPacket()"), true, true, true, NULL, false, false)) // ZZ:DownloadManager
 						theApp.downloadqueue->RemoveSource(client);
+					break;
+				// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+				case DS_BANNED:
+				case DS_CONNECTING:
+				case DS_DOWNLOADING:
+				case DS_ERROR:
+				case DS_LOWTOLOWIP:
+				case DS_NONE:
+				case DS_REMOTEQUEUEFULL:
+				case DS_REQHASHSET:
+				case DS_TOOMANYCONNS:
+				case DS_TOOMANYCONNSKAD:
+				case DS_WAITCALLBACK:
+				case DS_WAITCALLBACKKAD:
+					break;
 				}
 			} else
 				client->CheckFailedFileIdReqs(packet);

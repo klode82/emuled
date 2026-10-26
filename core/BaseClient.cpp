@@ -1521,6 +1521,16 @@ void CUpDownClient::ConnectionEstablished()
 		SetKadState(KS_FWCHECK_UDP);
 		DEBUG_ONLY(DebugLog(_T("Set KS_FWCHECK_UDP for client %s"), (LPCTSTR)DbgGetClientInfo()));
 		SendFirewallCheckUDPRequest();
+		break;
+	// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+	case KS_CONNECTED_BUDDY:
+	case KS_CONNECTED_FWCHECK:
+	case KS_FWCHECK_UDP:
+	case KS_NONE:
+	case KS_QUEUED_BUDDY:
+	case KS_QUEUED_FWCHECK:
+	case KS_QUEUED_FWCHECK_UDP:
+		break;
 	}
 
 	if (GetChatState() == MS_CONNECTING || GetChatState() == MS_CHATTING)
@@ -1538,6 +1548,21 @@ void CUpDownClient::ConnectionEstablished()
 		m_bReaskPending = false;
 		SetDownloadState(DS_CONNECTED);
 		SendFileRequest();
+		break;
+	// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+	case DS_BANNED:
+	case DS_CONNECTED:
+	case DS_DOWNLOADING:
+	case DS_ERROR:
+	case DS_LOWTOLOWIP:
+	case DS_NONE:
+	case DS_NONEEDEDPARTS:
+	case DS_ONQUEUE:
+	case DS_REMOTEQUEUEFULL:
+	case DS_REQHASHSET:
+	case DS_TOOMANYCONNS:
+	case DS_TOOMANYCONNSKAD:
+		break;
 	}
 
 	if (m_bReaskPending) {

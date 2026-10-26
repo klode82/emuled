@@ -2,7 +2,8 @@
 // e, finche' e' giu', si interroga l'API ogni 5 secondi.
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { Api, ApiError } from '@/lib/api'
+import { Api, ApiError, authLogin, authSetup } from '@/lib/api'
+import { errText } from './toasts'
 import { EventsClient, type LinkState } from '@/lib/events'
 import type { ServerEvent } from '@/types'
 import { t } from '@/i18n'
@@ -56,9 +57,21 @@ export const useSession = defineStore('session', () => {
     await refreshAll()
     return true
   }
+  // Accesso con nome utente e password (o primo account con il codice di impostazione): il demone risponde con un gettone di sessione, che da qui in poi
+  // si usa come il token del file (stessa chiave nel browser, stesso Bearer: il contratto dei template non cambia).
+  async function loginUser(username: string, password: string): Promise<boolean> {
+    busy.value = true; error.value = ''
+    try { const r = await authLogin(username.trim(), password); busy.value = false; return await login(r.token) }
+    catch (e) { busy.value = false; error.value = errText(e); return false }
+  }
+  async function setupAccount(code: string, username: string, password: string): Promise<boolean> {
+    busy.value = true; error.value = ''
+    try { const r = await authSetup(code.trim(), username.trim(), password); busy.value = false; return await login(r.token) }
+    catch (e) { busy.value = false; error.value = errText(e); return false }
+  }
   async function resume() { if (token.value && !ready.value) await login(token.value) }
   function logout(msg = '') {
     events?.stop(); events = null; stopPoll(); api = null; ready.value = false; link.value = 'closed'; token.value = ''; write(''); error.value = msg
   }
-  return { token, ready, link, error, busy, getApi, login, resume, logout }
+  return { token, ready, link, error, busy, getApi, login, loginUser, setupAccount, resume, logout }
 })

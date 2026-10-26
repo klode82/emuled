@@ -119,6 +119,10 @@ void CClientList::GetStatistics(uint32 &ruTotalClients
 			case IS_IDNEEDED:
 			case IS_IDBADGUY:
 				++stats[13];
+				break;
+			// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+			case IS_NOTAVAILABLE:
+				break;
 			}
 		}
 

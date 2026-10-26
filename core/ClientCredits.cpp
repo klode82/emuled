@@ -60,6 +60,10 @@ void CClientCredits::AddDownloaded(uint32 bytes, uint32 dwForIP)
 	case IS_IDNEEDED:
 		if (theApp.clientcredits->CryptoAvailable())
 			return;
+	// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+	case IS_IDENTIFIED:
+	case IS_NOTAVAILABLE:
+		break;
 	}
 
 	uint64 current = GetDownloadedTotal() + bytes;
@@ -76,6 +80,10 @@ void CClientCredits::AddUploaded(uint32 bytes, uint32 dwForIP)
 	case IS_IDNEEDED:
 		if (theApp.clientcredits->CryptoAvailable())
 			return;
+	// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+	case IS_IDENTIFIED:
+	case IS_NOTAVAILABLE:
+		break;
 	}
 
 	uint64 current = GetUploadedTotal() + bytes;
@@ -104,6 +112,10 @@ float CClientCredits::GetScoreRatio(uint32 dwForIP) const
 		if (theApp.clientcredits->CryptoAvailable())
 			// bad guy - no credits for you
 			return 1.0f;
+	// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+	case IS_IDENTIFIED:
+	case IS_NOTAVAILABLE:
+		break;
 	}
 
 	if (GetDownloadedTotal() < 1048576)

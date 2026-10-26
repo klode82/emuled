@@ -71,7 +71,7 @@ const char *Reason(int s)
 {
 	switch (s) { case 101: return "Switching Protocols"; case 200: return "OK"; case 201: return "Created"; case 204: return "No Content"; case 301: return "Moved Permanently"; case 206: return "Partial Content"; case 400: return "Bad Request"; case 401: return "Unauthorized";
 		case 403: return "Forbidden"; case 404: return "Not Found"; case 405: return "Method Not Allowed"; case 409: return "Conflict"; case 413: return "Payload Too Large"; case 416: return "Range Not Satisfiable";
-		case 422: return "Unprocessable Entity"; case 500: return "Internal Server Error"; case 503: return "Service Unavailable"; default: return "OK"; }
+		case 422: return "Unprocessable Entity"; case 429: return "Too Many Requests"; case 500: return "Internal Server Error"; case 503: return "Service Unavailable"; default: return "OK"; }
 }
 bool ConstEq(const std::string &a, const std::string &b)
 {
@@ -111,11 +111,12 @@ static std::string ErrorCode(int status, const std::string &m)
 		{"il server e' gia' in lista", "server_exists"}, {"il file e' gia' in download", "already_downloading"}, {"metodo non consentito", "method_not_allowed"},
 		{"percorso inesistente", "route_not_found"}, {"link di streaming", "stream_expired"}, {"questa parte del file", "range_not_ready"}, {"nessuna interfaccia web", "no_web_ui"}, {"file non condiviso", "not_shared"}, {"download non trovato", "download_not_found"},
 		{"categoria non trovata", "category_not_found"}, {"percorso non consentito", "forbidden_path"}, {"corpo troppo grande", "body_too_large"}, {"errore interno", "internal"},
+		{"nome utente o password errati", "bad_credentials"}, {"codice di impostazione", "bad_setup_code"}, {"l'account e' gia'", "account_exists"}, {"nome utente non valido", "bad_username"}, {"la password", "bad_password"},
 		{"temp:", "bad_directories"}, {"shared:", "bad_directories"}, {"la cartella", "bad_directories"}, {"cartella", "bad_directories"}, {"il percorso deve", "bad_directories"},
 	};
 	for (auto &e : kTable) if (m.rfind(e.prefix, 0) == 0) return e.code;
 	switch (status) { case 400: return "bad_request"; case 401: return "unauthorized"; case 403: return "forbidden"; case 404: return "not_found"; case 405: return "method_not_allowed";
-		case 409: return "conflict"; case 413: return "body_too_large"; case 422: return "invalid"; default: return status >= 500 ? "internal" : "error"; }
+		case 409: return "conflict"; case 413: return "body_too_large"; case 422: return "invalid"; case 429: return "too_many_attempts"; default: return status >= 500 ? "internal" : "error"; }
 }
 Response Response::Error(int status, const std::string &message) { return Json(status, "{\"error\":\"" + JsonEscape(message) + "\",\"code\":\"" + ErrorCode(status, message) + "\"}"); }
 
@@ -384,15 +385,17 @@ bool HttpServer::Authorized(const Request &r) const
 {
 	if (token_.empty()) return true;
 	auto it = r.headers.find("authorization");
-	if (it != r.headers.end() && it->second.rfind("Bearer ", 0) == 0 && ConstEq(it->second.substr(7), token_)) return true;
-	auto q = r.query.find("token");
-	return q != r.query.end() && ConstEq(q->second, token_);
+	std::string given;
+	if (it != r.headers.end() && it->second.rfind("Bearer ", 0) == 0) given = it->second.substr(7);
+	else if (auto q = r.query.find("token"); q != r.query.end()) given = q->second;
+	if (given.empty()) return false;
+	return ConstEq(given, token_) || (verifier_ && verifier_(given));		// token del file (script e strumenti) o sessione di un account (Auth)
 }
 
 Response HttpServer::Dispatch(Request &r)
 {
 	if (r.path.rfind("/api/", 0) == 0 || r.path == "/api") {
-		if (r.path != "/api/v1/ping" && r.path != "/api/v1/openapi.json" && r.path.rfind("/api/v1/stream/", 0) != 0 && !Authorized(r)) { Response x = Response::Error(401, "token mancante o errato"); x.headers["WWW-Authenticate"] = "Bearer"; return x; }
+		if (r.path != "/api/v1/ping" && r.path != "/api/v1/openapi.json" && !public_.count(r.path) && r.path.rfind("/api/v1/stream/", 0) != 0 && !Authorized(r)) { Response x = Response::Error(401, "token mancante o errato"); x.headers["WWW-Authenticate"] = "Bearer"; return x; }
 		std::vector<std::string> parts; { std::stringstream ss(r.path); std::string p; while (std::getline(ss, p, '/')) if (!p.empty()) parts.push_back(p); }
 		bool pathMatched = false;
 		for (auto &e : routes_) {

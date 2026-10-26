@@ -9,7 +9,7 @@ nel frattempo, interroga l'API ogni 5 secondi.
 ```bash
 cd web && npm install && ./demo.sh        # avvia un demone OFFLINE su una cartella temporanea, con download e server d'esempio
 ```
-Stampa l'indirizzo e il token; Ctrl-C ferma tutto e cancella la cartella temporanea. Il tuo profilo non viene toccato.
+Stampa l'indirizzo e il token (che al primo avvio serve da codice per creare l'account); Ctrl-C ferma tutto e cancella la cartella temporanea. Il tuo profilo non viene toccato.
 
 ## Provarla con il tuo profilo
 
@@ -18,7 +18,7 @@ cd web
 npm install
 npm run build                                   # crea dist/templates/<id>/ (un template per cartella)
 emuled --profile CONFIG --templates-dir dist/templates    # il demone serve l'API e i template sulla stessa porta (8765)
-# poi apri http://127.0.0.1:8765/ e incolla il token (CONFIG/emuled.token)
+# poi apri http://127.0.0.1:8765/ e crea il tuo account con il codice di impostazione stampato dal demone (CONFIG/emuled.token) ed entra con nome utente e password
 ```
 La pagina `/` porta al template scelto nel browser (senza scelta, `console`); `http://127.0.0.1:8765/?template=console` è l'indirizzo di emergenza.
 Per usarlo sempre così, nel `config.yaml` del demone: `templates_dir: /percorso/di/web/dist/templates`.

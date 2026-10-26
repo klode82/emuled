@@ -20,6 +20,14 @@ def op(summary, desc, responses, params=None, body=None, tags=None, security=Non
 paths = {
  "/api/v1/ping": {"get": {"summary": "Il demone risponde?", "description": "Unica chiamata senza token: serve all'interfaccia web per sapere se il demone e' acceso.", "tags": ["Stato"], "security": [],
      "responses": {"200": resp("Acceso", schema={"type": "object", "properties": {"pong": {"type": "boolean"}}})}}},
+ "/api/v1/auth/status": {"get": {"summary": "C'e' un account?", "description": "Senza token. L'interfaccia sa cosi' se mostrare l'accesso o il primo avvio.", "tags": ["Account"], "security": [],
+     "responses": {"200": resp("Stato", schema={"type": "object", "properties": {"configured": {"type": "boolean"}, "setup_required": {"type": "boolean"}}})}}},
+ "/api/v1/auth/setup": {"post": {"summary": "Crea il primo account", "description": "Senza token ma con il codice di impostazione (il token del file emuled.token, stampato dal demone all'avvio finche' non c'e' un account). Sale casuale + PBKDF2-HMAC-SHA256; la password non si recupera, si reimposta con emuled --reset-user.", "tags": ["Account"], "security": [],
+     "requestBody": {"required": True, "content": {"application/json": {"schema": {"type": "object", "required": ["setup_code", "username", "password"], "properties": {"setup_code": {"type": "string"}, "username": {"type": "string", "description": "1-32 caratteri: lettere, cifre, punto, trattino, trattino basso"}, "password": {"type": "string", "description": "almeno 8 caratteri"}}}}}},
+     "responses": {"201": resp("Account creato", schema={"type": "object", "properties": {"token": {"type": "string"}, "username": {"type": "string"}, "expires_in": {"type": "integer"}}}), "400": ERR("Nome o password non validi (bad_username, bad_password)"), "403": ERR("Codice di impostazione errato (bad_setup_code)"), "409": ERR("L'account esiste gia' (account_exists)"), "429": ERR("Troppi tentativi (too_many_attempts)")}}},
+ "/api/v1/auth/login": {"post": {"summary": "Accedi con nome utente e password", "description": "Senza token. Risponde con un gettone di sessione (30 giorni), da usare come Bearer. Cinque tentativi sbagliati da un indirizzo lo bloccano per un minuto.", "tags": ["Account"], "security": [],
+     "requestBody": {"required": True, "content": {"application/json": {"schema": {"type": "object", "required": ["username", "password"], "properties": {"username": {"type": "string"}, "password": {"type": "string"}}}}}},
+     "responses": {"200": resp("Accesso riuscito", schema={"type": "object", "properties": {"token": {"type": "string"}, "username": {"type": "string"}, "expires_in": {"type": "integer"}}}), "401": ERR("Nome utente o password errati (bad_credentials)"), "429": ERR("Troppi tentativi (too_many_attempts)")}}},
  "/api/v1/status": {"get": op("Stato generale", "Versione, porte, collegamento al server ed2k e a Kad, velocita' e numero di trasferimenti.", {"200": resp("Stato", ref="Status"), "401": ERR("Token mancante o errato")}, tags=["Stato"])},
  "/api/v1/downloads": {
    "get": op("Elenco dei download", "Tutti i file in scaricamento (e quelli in pausa o fermi), nell'ordine della coda.", {"200": resp("Elenco", schema={"type": "array", "items": {"$ref": "#/components/schemas/Download"}}), "401": ERR("Token")}, tags=["Download"]),
@@ -158,7 +166,7 @@ schemas = {
      "transfers": {"type": "object", "properties": {"downloads": {"type": "integer"}, "download_speed": {"type": "integer"}, "upload_speed": {"type": "integer"}, "uploading": {"type": "integer"}, "waiting": {"type": "integer"}}}}},
 }
 doc = {"openapi": "3.0.3", "info": {"title": "emuled", "version": "1.0.0", "description": "API REST/JSON del demone eMule per Linux. Ascolta di default solo su 127.0.0.1; ogni chiamata (tranne /ping e /openapi.json) richiede \"Authorization: Bearer TOKEN\"."},
-       "servers": [{"url": "http://127.0.0.1:8765"}], "tags": [{"name": "Stato"}, {"name": "Download"}, {"name": "Server"}, {"name": "Ricerca"}, {"name": "Condivisione"}, {"name": "Kad"}, {"name": "Preferenze"}, {"name": "Cartelle"}, {"name": "Registro"}, {"name": "Categorie"}],
+       "servers": [{"url": "http://127.0.0.1:8765"}], "tags": [{"name": "Stato"}, {"name": "Account"}, {"name": "Download"}, {"name": "Server"}, {"name": "Ricerca"}, {"name": "Condivisione"}, {"name": "Kad"}, {"name": "Preferenze"}, {"name": "Cartelle"}, {"name": "Registro"}, {"name": "Categorie"}],
        "components": {"securitySchemes": {"bearerAuth": {"type": "http", "scheme": "bearer"}}, "schemas": schemas}, "paths": paths}
 json.dump(doc, open("docs/openapi.json", "w"), indent=2, ensure_ascii=False); open("docs/openapi.json", "a").write("\n")
 print(len(paths), "percorsi")

@@ -559,6 +559,17 @@ void CUpDownClient::SetDownloadState(EDownloadState nNewState, LPCTSTR pszReason
 			// If we set this, we will not re-ask for that file until some time has passed.
 			SetLastAskedTime();
 			//DontSwapTo(m_reqfile);
+			break;
+		// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+		case DS_BANNED:
+		case DS_CONNECTED:
+		case DS_DOWNLOADING:
+		case DS_LOWTOLOWIP:
+		case DS_ONQUEUE:
+		case DS_REMOTEQUEUEFULL:
+		case DS_REQHASHSET:
+		case DS_TOOMANYCONNS:
+			break;
 		}
 
 		if (m_reqfile) {
@@ -1842,6 +1853,17 @@ bool CUpDownClient::IsValidSource() const
 	case DS_REMOTEQUEUEFULL:
 	case DS_REQHASHSET:
 		return IsEd2kClient();
+	// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+	case DS_BANNED:
+	case DS_CONNECTING:
+	case DS_ERROR:
+	case DS_LOWTOLOWIP:
+	case DS_NONE:
+	case DS_TOOMANYCONNS:
+	case DS_TOOMANYCONNSKAD:
+	case DS_WAITCALLBACK:
+	case DS_WAITCALLBACKKAD:
+		break;
 	}
 	return false;
 }
@@ -2117,6 +2139,19 @@ void CUpDownClient::ProcessAICHFileHash(CSafeMemFile *data, CPartFile *file, con
 				DontSwapTo(pPartFile); // ZZ:DownloadManager
 				if (!SwapToAnotherFile(_T("Source says it doesn't have the file (AICH mismatch). CUpDownClient::ProcessAICHFileHash"), true, true, true, NULL, false, false)) // ZZ:DownloadManager
 					theApp.downloadqueue->RemoveSource(this);
+				break;
+			// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+			case DS_BANNED:
+			case DS_CONNECTING:
+			case DS_ERROR:
+			case DS_LOWTOLOWIP:
+			case DS_NONE:
+			case DS_REMOTEQUEUEFULL:
+			case DS_TOOMANYCONNS:
+			case DS_TOOMANYCONNSKAD:
+			case DS_WAITCALLBACK:
+			case DS_WAITCALLBACKKAD:
+				break;
 			}
 		}
 	} else

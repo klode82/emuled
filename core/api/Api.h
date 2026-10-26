@@ -17,6 +17,8 @@ struct DaemonHooks { std::function<bool()> kad_start; std::function<void()> kad_
 void RegisterRoutes(HttpServer &server, double started_s, const DaemonHooks &hooks = {});
 void RegisterTransferRoutes(HttpServer &server, const DaemonHooks &hooks);
 void RegisterPrefsRoutes(HttpServer &server, const DaemonHooks &hooks);
+class Auth;
+void RegisterAuthRoutes(HttpServer &server, Auth &auth, const std::string &setup_code);	// account dell'interfaccia web (Auth.h)
 void RegisterLogRoutes(HttpServer &server);
 void Audit(const std::string &text);	// annota nel registro un'azione fatta via API (riga "[api] ...")	// GET/DELETE /log
 nlohmann::json LogLinesJson(const std::vector<LogLine> &lines);	// preferenze e categorie	// file condivisi, upload, Kad (connect/disconnect)

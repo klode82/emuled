@@ -1908,6 +1908,13 @@ uint32 CPartFile::Process(uint32 factor, UINT icounter)
 						cur_src->AskForDownload();
 					}
 				}
+				break;
+			// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+			case DS_CONNECTED:
+			case DS_ERROR:
+			case DS_REMOTEQUEUEFULL:
+			case DS_REQHASHSET:
+				break;
 			}
 		}
 		if (downloadingbefore != (m_anStates[DS_DOWNLOADING] > 0))
@@ -2698,6 +2705,21 @@ bool CPartFile::IsArchive(bool onlyPreviewable) const
 		case ARCHIVE_7Z:
 		case IMAGE_ISO:
 			return true;
+		// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+		case AUDIO_MPEG:
+		case DOCUMENT_PDF:
+		case FILETYPE_EXECUTABLE:
+		case FILETYPE_UNKNOWN:
+		case PIC_GIF:
+		case PIC_JPG:
+		case PIC_PNG:
+		case VIDEO_AVI:
+		case VIDEO_MKV:
+		case VIDEO_MP4:
+		case VIDEO_MPG:
+		case VIDEO_OGG:
+		case WM:
+			break;
 		}
 
 	return ED2KFT_ARCHIVE == GetED2KFileTypeID(GetFileName());
@@ -2753,6 +2775,15 @@ bool CPartFile::CanStopFile() const
 	case PS_COMPLETE:
 	case PS_COMPLETING:
 		return false;
+	// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+	case PS_EMPTY:
+	case PS_HASHING:
+	case PS_INSUFFICIENT:
+	case PS_PAUSED:
+	case PS_READY:
+	case PS_UNKNOWN:
+	case PS_WAITINGFORHASH:
+		break;
 	}
 	return !IsStopped();
 }
@@ -2797,6 +2828,14 @@ bool CPartFile::CanPauseFile() const
 	case PS_COMPLETE:
 	case PS_COMPLETING:
 		return false;
+	// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+	case PS_EMPTY:
+	case PS_HASHING:
+	case PS_INSUFFICIENT:
+	case PS_READY:
+	case PS_UNKNOWN:
+	case PS_WAITINGFORHASH:
+		break;
 	}
 	return true;
 }
@@ -2858,6 +2897,15 @@ bool CPartFile::CanResumeFile() const
 	case PS_INSUFFICIENT:
 	case PS_PAUSED:
 		return true;
+	// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+	case PS_COMPLETE:
+	case PS_COMPLETING:
+	case PS_EMPTY:
+	case PS_HASHING:
+	case PS_READY:
+	case PS_UNKNOWN:
+	case PS_WAITINGFORHASH:
+		break;
 	}
 	return false;
 }
@@ -2922,6 +2970,11 @@ CString CPartFile::getPartfileStatus() const
 				break;
 			case PFOP_UNCOMPRESSING:
 				strState += _T(" (Uncompressing)");
+				break;
+			// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+			case PFOP_IMPORTPARTS:
+			case PFOP_NONE:
+				break;
 			}
 			return strState;
 		}
@@ -2959,6 +3012,11 @@ int CPartFile::getPartfileStatusRank() const
 		return 4;
 	case PS_ERROR:
 		return 8;
+	// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+	case PS_EMPTY:
+	case PS_READY:
+	case PS_UNKNOWN:
+		break;
 	}
 	if (GetSrcStatisticsValue(DS_DOWNLOADING) == 0)
 		return 3; // waiting?

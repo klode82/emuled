@@ -9,6 +9,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -58,6 +59,9 @@ public:
 	uint16_t port() const { return port_; }
 	const std::string &LastError() const { return error_; }
 
+	// Oltre al token del file, vale qualunque gettone che il verificatore accetta (sessioni degli account, vedi Auth); i percorsi "pubblici" non chiedono il gettone (login, impostazione)
+	void SetTokenVerifier(std::function<bool(const std::string &)> v) { verifier_ = std::move(v); }
+	void AddPublicPath(const std::string &path) { public_.insert(path); }
 	void SetToken(const std::string &token) { token_ = token; }		// vuoto = nessuna autenticazione (solo prove)
 	void SetStaticDir(const std::string &dir) { static_dir_ = dir; }	// file statici (web UI) per i percorsi che non sono /api/
 	// template: /t/<id>/... serve la cartella del template (con la pagina d'ingresso per i percorsi senza estensione, come le applicazioni a pagina singola);
@@ -88,6 +92,7 @@ private:
 	std::map<uint64_t, std::unique_ptr<Conn>> conns_;
 	std::unique_ptr<Listener> listener_;
 	std::string token_, static_dir_, ws_path_, error_;
+	std::function<bool(const std::string &)> verifier_; std::set<std::string> public_;
 	TemplateResolver templates_; bool launcher_ = false;
 	WsMessageHandler ws_handler_;
 	uint16_t port_ = 0;

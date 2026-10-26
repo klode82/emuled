@@ -27,6 +27,7 @@
 #include "ListenSocket.h"
 #include "ClientUDPSocket.h"
 #include "ED2KLink.h"
+#include "api/Auth.h"
 #include "Statistics.h"
 #include "UploadBandwidthThrottler.h"
 #include "UPnPImplMiniLib.h"
@@ -252,6 +253,7 @@ int RunDaemon(const DaemonOptions &opt)
 		if (udp) { hooks.kad_start = kadStart; hooks.kad_stop = kadStop; }
 
 		emule::templates::Registry templates;		// i template d'interfaccia (cartelle con template.yaml); deve vivere quanto il server HTTP
+		std::unique_ptr<emule::api::Auth> auth;		// account dell'interfaccia web (nome utente + password), vedi api/Auth.h; dichiarato PRIMA di api: api lo usa finche' vive
 		emule::api::HttpServer api;
 		std::unique_ptr<emule::api::EventPublisher> events;
 		if (ok && opt.api) {
@@ -283,9 +285,13 @@ int RunDaemon(const DaemonOptions &opt)
 				}, opt.web_dir.empty());
 			}
 			emule::api::RegisterRoutes(api, NowS(), hooks);
+			auth = std::make_unique<emule::api::Auth>(cfg);
+			emule::api::RegisterAuthRoutes(api, *auth, token);
 			if (!api.Start(opt.api_bind, opt.api_port)) { std::printf("  errore: API non avviata: %s\n", api.LastError().c_str()); ok = false; rc = 1; }
 			else events = std::make_unique<emule::api::EventPublisher>(api, NowS(), hooks);
 			if (ok) std::printf("  API: http://%s:%u/api/v1/  (token in %s%s)\n", opt.api_bind.c_str(), (unsigned)api.port(), opt.api_token.empty() ? (cfg + "emuled.token").c_str() : "riga di comando", created.empty() ? "" : "; creato ora");
+			if (ok && auth && !auth->Configured())
+				std::printf("  Primo avvio: apri l'interfaccia web e crea il tuo account. Codice di impostazione (serve una volta sola): %s\n", token.c_str());
 			std::fflush(stdout);
 		}
 		if (ok) {

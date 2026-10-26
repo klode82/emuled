@@ -121,7 +121,7 @@ sudo dnf install ./emuled-<version>-1.x86_64.rpm
 systemctl --user enable --now emuled
 ```
 
-Open <http://127.0.0.1:8765> and paste the token found in `~/.emuled/profile/emuled.token`. Configuration lives in `~/.emuled/config.yaml` (created on first start).
+Open <http://127.0.0.1:8765>, create your account (the setup code is printed by `journalctl --user -u emuled`) and sign in. Configuration lives in `~/.emuled/config.yaml` (created on first start).
 
 ### Docker
 
@@ -140,7 +140,7 @@ docker run -d --name emuled --restart unless-stopped \
 docker exec emuled cat /data/.emuled/profile/emuled.token     # the login token
 ```
 
-Then open <http://127.0.0.1:8765> and paste the token.
+Then open <http://127.0.0.1:8765>, create your account with the setup code from `docker logs emuled` (or the token above) and sign in.
 
 - **Data**: profile, configuration and downloads live in the `emuled-data` volume (`/data`); you can rebuild the image without losing anything.
 - **Ports**: inside the container the eD2K ports are random until you set them. In *Preferences → Connection* set **55662 (TCP)** and **55672 (UDP)** to match the `-p` mappings, and forward them on your router.
@@ -191,6 +191,7 @@ cmake --build build --target emuled
 - **Configuration**: `~/.emuled/config.yaml` (keys `config`, `api_port`, `api_bind`, `templates_dir`, `mediainfo`), environment variables `EMULED_*`, or command-line options. Full reference: [`docs/MANUALE.md`](docs/MANUALE.md) (section B5).
 - **Real network ports** are the usual eMule ones: TCP 55662, UDP 55672 (forward them on your router, or enable UPnP in the preferences).
 - **Existing eMule profile**: point `--profile` at it. Paths written by Windows can be translated with `--pathmap 'Y:\eMule=/home/you/eMule'`. Always try it on a *copy* first.
+- **Signing in**: the web UI uses a **username and password**. On the first start it asks you to create the account; it needs the *setup code* that emuled prints in the terminal (with the service: `journalctl --user -u emuled`; with Docker: `docker logs emuled`). You stay signed in on that browser. **Forgot the password?** Run `emuled --reset-user` in a terminal on the computer where emuled runs. Scripts and tools can still use the token in `~/.emuled/profile/emuled.token`.
 - **Add a download**: paste an `ed2k://` link in the search box, or use *Add*.
 
 ## Web interface and templates

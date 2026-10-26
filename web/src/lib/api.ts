@@ -9,6 +9,26 @@ export class ApiError extends Error {
 type Json = Record<string, unknown> | unknown[]
 const base = '/api/v1'
 
+// Account dell'interfaccia (nome utente + password): queste tre chiamate sono pubbliche, non mandano il Bearer.
+export interface AuthStatus { configured: boolean; setup_required: boolean }
+export interface AuthSession { token: string; username: string; expires_in: number }
+async function authReq<T>(method: string, path: string, body?: Json): Promise<T> {
+  let res: Response
+  try {
+    res = await fetch(base + path, { method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined })
+  } catch {
+    throw new ApiError(0, t('errors.noDaemon'))
+  }
+  const text = await res.text()
+  let data: unknown = null
+  if (text) { try { data = JSON.parse(text) } catch { /* risposta non JSON */ } }
+  if (!res.ok) { const d = data as { error?: string; code?: string } | null; throw new ApiError(res.status, d?.error ?? (text || `Errore ${res.status}`), d?.code ?? '') }
+  return data as T
+}
+export const authStatus = () => authReq<AuthStatus>('GET', '/auth/status')
+export const authLogin = (username: string, password: string) => authReq<AuthSession>('POST', '/auth/login', { username, password })
+export const authSetup = (setup_code: string, username: string, password: string) => authReq<AuthSession>('POST', '/auth/setup', { setup_code, username, password })
+
 export class Api {
   onUnauthorized: () => void = () => {}
   constructor(public token: string) {}

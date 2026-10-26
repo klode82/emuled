@@ -1706,6 +1706,15 @@ CString CDownloadQueue::GetOptimalTempDir(UINT nCat, EMFileSize nFileSize)
 						}
 				}
 			}
+			break;
+		// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+		case PS_COMPLETE:
+		case PS_COMPLETING:
+		case PS_ERROR:
+		case PS_HASHING:
+		case PS_PAUSED:
+		case PS_UNKNOWN:
+			break;
 		}
 	}
 

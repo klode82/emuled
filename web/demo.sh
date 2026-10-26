@@ -30,7 +30,7 @@ cat <<MSG
   emuled (demo, offline) in ascolto.
     Indirizzo:  http://127.0.0.1:$PORT/
     Token:      $TOKEN
-  Incolla il token nella schermata di accesso. Ctrl-C per fermare e cancellare tutto.
+  Al primo avvio crea il tuo account con questo token come codice di impostazione (poi entri con nome utente e password). Ctrl-C per fermare e cancellare tutto.
 
 MSG
 wait "$PID"

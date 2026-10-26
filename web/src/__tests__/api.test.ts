@@ -1,4 +1,4 @@
-import { Api, ApiError } from '@/lib/api'
+import { Api, ApiError, authLogin, authSetup, authStatus } from '@/lib/api'
 import { EventsClient } from '@/lib/events'
 import { setLang } from '@/i18n'
 
@@ -47,5 +47,23 @@ describe('EventsClient', () => {
     FakeWs.all[0].close(); vi.advanceTimersByTime(999); expect(FakeWs.all).toHaveLength(1); vi.advanceTimersByTime(1); expect(FakeWs.all).toHaveLength(2)
     FakeWs.all[1].close(); vi.advanceTimersByTime(1999); expect(FakeWs.all).toHaveLength(2); vi.advanceTimersByTime(1); expect(FakeWs.all).toHaveLength(3)
     c.stop(); vi.advanceTimersByTime(60000); expect(FakeWs.all).toHaveLength(3); expect(states).toContain('closed')
+  })
+  it('account: le chiamate di accesso non mandano il Bearer e portano il codice dell\'errore', async () => {
+    const f = reply(200, { token: 's1.ab.cd', username: 'mario', expires_in: 100 }); vi.stubGlobal('fetch', f)
+    expect(await authLogin('mario', 'segreta-123')).toMatchObject({ token: 's1.ab.cd' })
+    const [url, init] = f.mock.calls[0] as unknown as [string, { method: string; headers: Record<string, string>; body: string }]
+    expect(url).toBe('/api/v1/auth/login'); expect(init.method).toBe('POST'); expect(init.headers.Authorization).toBeUndefined()
+    expect(JSON.parse(init.body)).toEqual({ username: 'mario', password: 'segreta-123' })
+    vi.stubGlobal('fetch', reply(401, { error: 'nome utente o password errati', code: 'bad_credentials' }))
+    await expect(authLogin('mario', 'x')).rejects.toMatchObject({ status: 401, code: 'bad_credentials' })
+    vi.stubGlobal('fetch', reply(429, { error: 'troppi tentativi sbagliati: riprova fra un minuto', code: 'too_many_attempts' }))
+    await expect(authLogin('mario', 'x')).rejects.toMatchObject({ status: 429, code: 'too_many_attempts' })
+  })
+  it('account: stato e primo account', async () => {
+    vi.stubGlobal('fetch', reply(200, { configured: false, setup_required: true }))
+    expect(await authStatus()).toEqual({ configured: false, setup_required: true })
+    const f = reply(201, { token: 't', username: 'mario', expires_in: 1 }); vi.stubGlobal('fetch', f)
+    await authSetup('CODICE', 'mario', 'segreta-123')
+    expect(JSON.parse(((f.mock.calls[0] as unknown as [string, { body: string }])[1]).body)).toEqual({ setup_code: 'CODICE', username: 'mario', password: 'segreta-123' })
   })
 })

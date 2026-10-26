@@ -52,6 +52,7 @@ per tutti (i tre del mockup, Manrope, Public Sans e DM Sans, non sono installati
 | `TEMPLATE=studio npm run dev` | sviluppo di un template (predefinito `console`) |
 | `npm run typecheck` | solo il controllo dei tipi |
 | `npm test` | test di unità (Vitest): formati (italiano e inglese), store, client API, WebSocket, traduzioni |
+| `npm run e2e:templates` | prova nel browser della scelta del template (pagina d'ingresso, Preferenze, avviso, emergenza): vedi la testa di `e2e/templates.mjs` |
 | `npm run e2e` | prova nel browser vero (Chrome + puppeteer-core) contro un demone acceso: vedi `e2e/flow.mjs` (usa `EMULED_URL=…/t/console/`) |
 
 ## Com'è fatta

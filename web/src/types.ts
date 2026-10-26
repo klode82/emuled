@@ -23,6 +23,11 @@ export interface KadState {
   running: boolean; connected: boolean; tcp_firewalled?: boolean; udp_firewalled?: boolean; udp_verified?: boolean; contacts?: number; users?: number
 }
 export interface Transfers { downloads: number; download_speed: number; upload_speed: number; uploading: number; waiting: number }
+export interface TemplateInfo {
+  id: string; dir_name: string; name: string; version: string; description: string; author: string; license: string; api: number
+  source: 'system' | 'user' | 'dev'; valid: boolean; errors: string[]; reserved: boolean; url: string | null; preview: string | null
+}
+export interface TemplateList { templates: TemplateInfo[]; api_version: number; dirs: { system?: string; user?: string; extra?: string } }
 export interface StreamLink { path: string; name: string; size: number; expires_in: number; mime: string }
 export interface FileNames { current: string; names: { name: string; count: number }[] }
 export interface FileComment { network: 'ed2k' | 'kad'; rating: number; comment: string; file_name: string; user: string }

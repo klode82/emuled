@@ -1,6 +1,6 @@
 // Client dell'API REST di emuled. Il token e' un Bearer; con 401 si avvisa chi ascolta (la sessione torna alla schermata di accesso).
 import { t } from '@/i18n'
-import type { LogPage, Category, Directories, Download, Parts, Source, ServerPriority, NewSearch, Preferences, PrefsPatchResult, Search, Server, Shared, Status, Uploads, KadState, Priority, ServerUpdate, KadBootstrap, Details, Content, FileNames, FileComments, StreamLink } from '@/types'
+import type { LogPage, Category, Directories, Download, Parts, Source, ServerPriority, NewSearch, Preferences, PrefsPatchResult, Search, Server, Shared, Status, Uploads, KadState, Priority, ServerUpdate, KadBootstrap, Details, Content, FileNames, FileComments, StreamLink, TemplateList } from '@/types'
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public code = '') { super(message) }
@@ -48,6 +48,8 @@ export class Api {
   sources = (h: string) => this.get<Source[]>(`/downloads/${h}/sources`)
   findSources = (h: string) => this.post<{ server: boolean; kad: boolean; paused: boolean; wait_s: number }>(`/downloads/${h}/find-sources`)
   parts = (h: string) => this.get<Parts>(`/downloads/${h}/parts`)
+  templates = () => this.get<TemplateList>('/templates')
+  rescanTemplates = () => this.post<TemplateList>('/templates/rescan')
   streamLink = (h: string) => this.post<StreamLink>(`/downloads/${h}/stream`)
   names = (h: string) => this.get<FileNames>(`/downloads/${h}/names`)
   comments = (h: string) => this.get<FileComments>(`/downloads/${h}/comments`)

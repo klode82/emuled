@@ -3,6 +3,7 @@ import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { usePrefs } from '@/stores/prefs'
+import { useTemplates } from '@/stores/templates'
 import { useUi, type Theme } from '@/stores/ui'
 import { PREFS, PREF_GROUPS, type PrefMeta } from '@/lib/prefsMeta'
 import { LANGS, setLang, type Lang } from '@/i18n'
@@ -11,8 +12,8 @@ import Icon from '@/components/Icon.vue'
 
 const { t, te, locale } = useI18n()
 const route = useRoute()
-const p = usePrefs(), ui = useUi()
-onMounted(async () => { await Promise.all([p.load(), p.loadDirs()]); await nextTick(); if (route.hash) document.querySelector(route.hash)?.scrollIntoView() })
+const p = usePrefs(), ui = useUi(), tpl = useTemplates()
+onMounted(async () => { await Promise.all([p.load(), p.loadDirs(), tpl.load()]); await nextTick(); if (route.hash) document.querySelector(route.hash)?.scrollIntoView() })
 const known = new Set(PREFS.map((m) => m.key))
 const groups = computed(() => PREF_GROUPS.map((g) => ({ name: g, items: PREFS.filter((m) => m.group === g && m.key in p.draft) })).filter((g) => g.items.length))
 const others = computed(() => Object.keys(p.draft).filter((k) => !known.has(k)))
@@ -125,6 +126,31 @@ const nChanges = computed(() => Object.keys(p.changes).length)
         <label class="flex flex-col gap-1 text-xs text-mute sm:col-span-2">{{ t('prefs.catComment') }}<input v-model="form.comment" class="rounded-lg border border-line bg-bg px-3 py-2 text-sm text-fg" /></label>
         <div class="flex justify-end gap-2 sm:col-span-2"><button type="button" class="rounded-lg border border-line px-4 py-2 text-sm hover:bg-surface" @click="editing = null">{{ t('common.cancel') }}</button><button class="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-onaccent" :disabled="!form.title?.trim()">{{ t('prefs.saveCategory') }}</button></div>
       </form>
+    </section>
+
+    <section id="template" class="rounded-xl border border-line bg-surface">
+      <header class="flex flex-wrap items-center justify-between gap-2 border-b border-line px-5 py-3"><h2 class="text-sm font-semibold">{{ t('template.title') }}</h2>
+        <button class="inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-xs hover:bg-sunk" @click="tpl.rescan()"><Icon name="refresh" class="!size-3.5" />{{ t('template.rescan') }}</button></header>
+      <p class="px-5 pt-3 text-xs text-mute">{{ t('template.hint', { user: tpl.dirs.user ?? '~/.emuled/templates' }) }}</p>
+      <p v-if="tpl.loaded && !tpl.list.some((x) => x.valid)" class="px-5 py-4 text-sm text-mute">{{ t('template.noneYet') }}</p>
+      <ul class="grid gap-3 p-5 sm:grid-cols-2" :aria-label="t('template.title')">
+        <li v-for="x in tpl.list.filter((y) => y.valid)" :key="x.id" class="flex flex-col overflow-hidden rounded-xl border" :class="x.id === tpl.current ? 'border-accent' : 'border-line'">
+          <img v-if="x.preview" :src="x.preview" :alt="t('template.noPreview')" class="aspect-[16/10] w-full bg-sunk object-cover object-top" loading="lazy" />
+          <div v-else class="grid aspect-[16/10] w-full place-items-center bg-sunk text-xs text-mute">{{ t('template.noPreview') }}</div>
+          <div class="flex flex-1 flex-col gap-1.5 p-3">
+            <div class="flex flex-wrap items-center gap-1.5"><h3 class="text-sm font-semibold">{{ x.name }}</h3><span class="text-xs tabular-nums text-mute">{{ x.version }}</span>
+              <span v-if="x.id === tpl.current" class="rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold text-onaccent">{{ t('template.inUse') }}</span>
+              <span class="rounded-full bg-sunk px-2 py-0.5 text-[10px] font-semibold text-mute">{{ x.reserved ? t('template.stock') : x.source === 'user' ? t('template.yours') : t('template.dev') }}</span></div>
+            <p v-if="x.description" class="text-xs text-mute">{{ x.description }}</p>
+            <p v-if="x.author" class="text-xs text-mute">{{ t('template.by', { author: x.author }) }}</p>
+            <button class="mt-auto self-start rounded-lg border border-line px-3 py-1.5 text-xs font-medium hover:bg-sunk disabled:opacity-50" :disabled="x.id === tpl.current" @click="tpl.confirmAndChoose(x)">{{ t('template.use') }}</button>
+          </div>
+        </li>
+      </ul>
+      <div v-if="tpl.list.some((y) => !y.valid)" class="border-t border-line px-5 py-3 text-xs">
+        <h3 class="font-semibold">{{ t('template.invalid') }} <span class="tabular-nums text-mute">{{ tpl.list.filter((y) => !y.valid).length }}</span></h3><p class="pb-2 text-mute">{{ t('template.invalidHint') }}</p>
+        <ul class="flex flex-col gap-2"><li v-for="x in tpl.list.filter((y) => !y.valid)" :key="x.source + x.dir_name" class="rounded-lg bg-sunk p-2"><p class="font-mono">{{ x.dir_name }} <span class="text-mute">({{ x.source }})</span></p><p v-for="(e, i) in x.errors" :key="i" class="text-bad">{{ e }}</p></li></ul>
+      </div>
     </section>
 
     <section class="rounded-xl border border-line bg-surface">

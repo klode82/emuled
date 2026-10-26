@@ -52,6 +52,13 @@ const en: Messages = {
     studio: { search: 'Add a link or search…', count: 'no transfers | {n} transfer | {n} transfers', pick: 'Pick a download to see its details.' },
     mobile: { search: 'Search for a file or paste an ed2k link' },
   },
+  template: {
+    title: 'Look', hint: 'Choose how emuled looks. The choice only applies to this browser: without one, “Console” is used. Copy your own templates into {user}.',
+    inUse: 'In use', stock: 'Built-in', yours: 'Yours', dev: 'Development', use: 'Use this one', noPreview: 'No preview', by: 'by {author}', rescan: 'Rescan folders', rescanned: 'Folders rescanned: {n} templates',
+    invalid: 'Not loaded', invalidHint: 'These templates are in the folders but cannot be used:', yoursDir: 'Your templates folder', systemDir: 'Built-in templates',
+    warnTitle: 'Use this template?', warnText: '“{name}” is not a built-in template. A template is a program that runs in the page and can read the daemon’s access code: only use templates you trust.',
+    noneYet: 'No templates found.',
+  },
   shell: {
     linkDown: 'Live updates interrupted: trying to reconnect. Meanwhile the data refreshes every 5 seconds.',
     searchLabel: 'Search files or paste an ed2k link', searchPlaceholder: 'Search files or paste an ed2k:// link',

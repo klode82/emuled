@@ -9,7 +9,8 @@
     "build:template": "node build-templates.mjs",
     "typecheck": "vue-tsc --noEmit",
     "test": "vitest run",
-    "e2e": "node e2e/flow.mjs"
+    "e2e": "node e2e/flow.mjs",
+    "e2e:templates": "node e2e/templates.mjs"
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "^5.1.1",

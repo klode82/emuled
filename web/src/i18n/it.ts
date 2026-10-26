@@ -51,6 +51,13 @@ const it = {
     studio: { search: 'Aggiungi link o cerca…', count: 'nessun trasferimento | {n} trasferimento | {n} trasferimenti', pick: 'Scegli un download per vederne i dettagli.' },
     mobile: { search: 'Cerca un file o incolla un link ed2k' },
   },
+  template: {
+    title: 'Aspetto', hint: 'Scegli come appare emuled. La scelta vale solo per questo browser: senza una scelta si usa «Console». I template tuoi si copiano in {user}.',
+    inUse: 'In uso', stock: 'Di serie', yours: 'Tuo', dev: 'Di sviluppo', use: 'Usa questo', noPreview: 'Nessuna anteprima', by: 'di {author}', rescan: 'Rileggi le cartelle', rescanned: 'Cartelle rilette: {n} template',
+    invalid: 'Non caricati', invalidHint: 'Questi template sono nelle cartelle ma non si possono usare:', yoursDir: 'Cartella dei tuoi template', systemDir: 'Template di serie',
+    warnTitle: 'Usare questo template?', warnText: '«{name}» non è un template di serie. Un template è un programma che gira nella pagina e può leggere il codice di accesso al demone: usa solo template di cui ti fidi.',
+    noneYet: 'Nessun template trovato.',
+  },
   shell: {
     linkDown: 'Aggiornamento in diretta interrotto: provo a ricollegarmi, intanto i dati si aggiornano ogni 5 secondi.',
     searchLabel: 'Cerca file o incolla un link ed2k', searchPlaceholder: 'Cerca file o incolla un link ed2k://',

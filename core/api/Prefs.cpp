@@ -63,6 +63,7 @@ const std::vector<Pref> &Prefs()
 		B("auto_down_priority", false, thePrefs.GetNewAutoDown(), thePrefs.SetNewAutoDown),
 		B("transfer_full_chunks", false, thePrefs.TransferFullChunks(), thePrefs.SetTransferFullChunks),
 		B("remove_finished_downloads", false, thePrefs.GetRemoveFinishedDownloads(), thePrefs.SetRemoveFinishedDownloads),
+		Pref{"comment_filter", "string", 0, 0, false, [] { return json(S(thePrefs.GetCommentFilter())); }, [](const json &v) { CString s(v.get<std::string>().c_str()); s.MakeLower(); thePrefs.SetCommentFilter(s); }},
 		B("verbose_log", false, thePrefs.GetVerbose(), thePrefs.SetVerbose),
 		B("save_log_to_disk", false, thePrefs.GetLog2Disk(), thePrefs.SetLog2Disk),
 		B("save_debug_to_disk", false, thePrefs.GetDebug2DiskSetting(), thePrefs.SetDebug2Disk),

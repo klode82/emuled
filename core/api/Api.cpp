@@ -24,6 +24,12 @@
 #include "util/Net.h"
 #include "net/EventLoop.h"
 #include "kademlia/kademlia/Kademlia.h"
+#include "kademlia/kademlia/Entry.h"
+#include "kademlia/kademlia/Search.h"
+#include "kademlia/kademlia/SearchManager.h"
+#include <map>
+#include <random>
+#include <chrono>
 #include "kademlia/kademlia/UDPFirewallTester.h"
 #include "kademlia/routing/RoutingZone.h"
 #include "openapi_json.h"
@@ -61,6 +67,11 @@ json DownloadJson(CPartFile *f)
 	j["size"] = (uint64)f->GetFileSize();
 	j["completed"] = (uint64)f->GetCompletedSize();
 	j["percent"] = f->GetPercentCompleted();
+	{	// operazione sul file in corso (verifica degli hash, copia...): la barra verde sopra quella del completamento
+		static const char *const ops[] = {"none", "hashing", "copying", "uncompressing", "import_parts"};
+		unsigned op = (unsigned)f->GetFileOp(); j["file_op"] = ops[op < 5 ? op : 0];
+		j["file_op_percent"] = op ? (int)std::min<WPARAM>(f->GetFileOpProgress(), 100) : 0;
+	}
 	j["status"] = StatusName(f->GetStatus());
 	j["stopped"] = f->IsStopped();
 	j["sources"] = f->GetSourceCount(); j["sources_other_files"] = f->GetSrcA4AFCount();
@@ -154,7 +165,7 @@ json CompletedJson(const emule::CompletedDownload &c)
 {
 	json j;
 	j["hash"] = c.hash; j["name"] = c.name; j["size"] = c.size; j["completed"] = c.size; j["percent"] = 100.0; j["status"] = "complete"; j["stopped"] = false;
-	j["sources"] = 0; j["sources_transferring"] = 0; j["speed"] = 0; j["priority"] = PriorityName(c.priority, c.auto_priority); j["category"] = c.category;
+	j["file_op"] = "none"; j["file_op_percent"] = 0; j["sources"] = 0; j["sources_transferring"] = 0; j["speed"] = 0; j["priority"] = PriorityName(c.priority, c.auto_priority); j["category"] = c.category;
 	j["part_file"] = ""; j["completed_at"] = c.completed_at; j["path"] = c.path;
 	return j;
 }
@@ -203,6 +214,74 @@ json SourcesJson(CPartFile *f)
 		a.push_back(j);
 	}
 	return a;
+}
+// i nomi con cui le fonti chiamano il file (scheda "Nome" di eMule): nome -> quante fonti lo usano, i piu' diffusi per primi
+json NamesJson(CPartFile *f)
+{
+	std::map<std::string, int> m;
+	for (POSITION pos = f->srclist.GetHeadPosition(); pos;) { const CString &n = f->srclist.GetNext(pos)->GetClientFilename(); if (!n.IsEmpty()) ++m[S(n)]; }
+	std::vector<std::pair<std::string, int>> v(m.begin(), m.end());
+	std::stable_sort(v.begin(), v.end(), [](const auto &a, const auto &b) { return a.second > b.second; });
+	json a = json::array(); for (auto &e : v) a.push_back({{"name", e.first}, {"count", e.second}});
+	return {{"current", S(f->GetFileName())}, {"names", a}};
+}
+// commenti e valutazioni (scheda "Tutti i commenti"): quelli ricevuti dalle fonti (ed2k) e le note trovate su Kad
+json CommentsJson(CPartFile *f)
+{
+	json a = json::array();
+	for (POSITION pos = f->srclist.GetHeadPosition(); pos;) {
+		const CUpDownClient *c = f->srclist.GetNext(pos);
+		if (c->HasFileRating() || !c->GetFileComment().IsEmpty())
+			a.push_back({{"network", "ed2k"}, {"rating", c->GetFileRating()}, {"comment", S(c->GetFileComment())}, {"file_name", S(c->GetClientFilename())}, {"user", std::string(c->GetUserName() ? c->GetUserName() : "")}});
+	}
+	for (POSITION pos = f->getNotes().GetHeadPosition(); pos;) {
+		const Kademlia::CEntry *e = f->getNotes().GetNext(pos);
+		a.push_back({{"network", "kad"}, {"rating", (int)e->GetIntTagValue(Kademlia::CKadTagNameString(TAG_FILERATING))}, {"comment", S(CString((CString)e->GetStrTagValue(Kademlia::CKadTagNameString(TAG_DESCRIPTION))))}, {"file_name", S(CString((CString)e->GetCommonFileName()))}, {"user", ""}});
+	}
+	return {{"comments", a}, {"kad_connected", Kademlia::CKademlia::IsConnected()}, {"kad_searching", f->IsKadCommentSearchRunning() || Kademlia::CSearchManager::AlreadySearchingFor(Kademlia::CUInt128(f->GetFileHash()))}, {"filter", S(thePrefs.GetCommentFilter())}};
+}
+// ---- streaming: un link temporaneo (ticket) che un player locale (VLC, mpv...) apre senza il token Bearer. Il ticket vale per UN file, scade, e dal link non si puo' risalire al token.
+// Il file si legge con richieste a intervalli (Range). Un download in corso si serve solo dove i byte sono gia' su disco: oltre si risponde 503 (il player riprova).
+struct StreamTicket { std::string hash; std::chrono::steady_clock::time_point expires; };
+std::map<std::string, StreamTicket> g_tickets;		// solo nel thread degli eventi, come tutta l'API
+constexpr int kStreamTicketSeconds = 6 * 3600; constexpr size_t kMaxTickets = 64;
+std::string NewTicketId() { std::random_device rd; char b[40]; snprintf(b, sizeof b, "%08x%08x%08x%08x", rd(), rd(), rd(), rd()); return b; }
+std::string PercentEncode(const std::string &s)		// tutto tranne i caratteri non riservati (RFC 3986): il nome non puo' rompere il percorso (? # & ...)
+{
+	std::string o; char b[4];
+	for (unsigned char c : s) { if (isalnum(c) || c == '-' || c == '.' || c == '_' || c == '~') o += (char)c; else { snprintf(b, sizeof b, "%%%02X", c); o += b; } }
+	return o;
+}
+std::string StreamMime(const std::string &name)
+{
+	static const std::map<std::string, const char *> m = {{"mkv", "video/x-matroska"}, {"mp4", "video/mp4"}, {"m4v", "video/mp4"}, {"avi", "video/x-msvideo"}, {"webm", "video/webm"}, {"mov", "video/quicktime"},
+		{"mpg", "video/mpeg"}, {"mpeg", "video/mpeg"}, {"wmv", "video/x-ms-wmv"}, {"flv", "video/x-flv"}, {"ts", "video/mp2t"}, {"mp3", "audio/mpeg"}, {"flac", "audio/flac"}, {"ogg", "audio/ogg"},
+		{"m4a", "audio/mp4"}, {"wav", "audio/wav"}, {"opus", "audio/ogg"}, {"pdf", "application/pdf"}, {"jpg", "image/jpeg"}, {"jpeg", "image/jpeg"}, {"png", "image/png"}, {"gif", "image/gif"},
+		{"txt", "text/plain; charset=utf-8"}, {"zip", "application/zip"}};
+	size_t dot = name.rfind('.'); if (dot == std::string::npos) return "application/octet-stream";
+	std::string e = name.substr(dot + 1); for (auto &ch : e) ch = (char)std::tolower((unsigned char)ch);
+	auto it = m.find(e); return it == m.end() ? "application/octet-stream" : it->second;
+}
+// primo byte (da `off` in poi) che NON e' ancora su disco in un download in corso; size se tutto il resto c'e'
+uint64_t AvailEnd(CPartFile *f, uint64_t off, uint64_t size)
+{
+	if (off >= size || !f->IsCompleteBD(off, off)) return off;
+	uint64_t lo = off, hi = size - 1;		// ricerca binaria dell'ultimo byte e tale che [off, e] e' tutto su disco
+	while (lo < hi) { uint64_t mid = lo + (hi - lo + 1) / 2; if (f->IsCompleteBD(off, mid)) lo = mid; else hi = mid - 1; }
+	return lo + 1;
+}
+// intervallo richiesto "bytes=a-b" | "bytes=a-" | "bytes=-n"; false = non valido o piu' intervalli
+bool ParseRange(const std::string &h, uint64_t size, uint64_t &a, uint64_t &b)
+{
+	if (h.rfind("bytes=", 0) != 0 || h.find(',') != std::string::npos) return false;
+	std::string v = h.substr(6); size_t dash = v.find('-'); if (dash == std::string::npos) return false;
+	std::string s1 = v.substr(0, dash), s2 = v.substr(dash + 1);
+	auto num = [](const std::string &s, uint64_t &o) { if (s.empty() || s.size() > 18) return false; o = 0; for (char c : s) { if (c < '0' || c > '9') return false; o = o * 10 + (uint64_t)(c - '0'); } return true; };
+	if (s1.empty()) { uint64_t n; if (!num(s2, n) || n == 0) return false; a = n >= size ? 0 : size - n; b = size - 1; return true; }
+	if (!num(s1, a)) return false;
+	if (s2.empty()) b = size - 1; else if (!num(s2, b)) return false;
+	if (b >= size) b = size - 1;
+	return a <= b || a >= size;		// a >= size: l'intervallo e' fuori dal file (416, lo decide il chiamante)
 }
 // i blocchi (chunk) di eMule: PARTSIZE = 9 728 000 byte; per ognuno quanti byte mancano e in quante fonti c'e'
 json PartsJson(CPartFile *f)
@@ -289,6 +368,50 @@ void RegisterRoutes(HttpServer &srv, double started_s, const DaemonHooks &hooks)
 	});
 	srv.Route("GET", "/api/v1/downloads/:hash/details", [](const Request &r) { Response e; CPartFile *f = FindDownload(r, e); return f ? Ok(DetailsJson(f)) : e; });
 	srv.Route("GET", "/api/v1/downloads/:hash/sources", [](const Request &r) { Response e; CPartFile *f = FindDownload(r, e); return f ? Ok(SourcesJson(f)) : e; });
+	srv.Route("GET", "/api/v1/downloads/:hash/names", [](const Request &r) { Response e; CPartFile *f = FindDownload(r, e); return f ? Ok(NamesJson(f)) : e; });
+	srv.Route("GET", "/api/v1/downloads/:hash/comments", [](const Request &r) { Response e; CPartFile *f = FindDownload(r, e); return f ? Ok(CommentsJson(f)) : e; });
+	srv.Route("POST", "/api/v1/downloads/:hash/comments/search-kad", [](const Request &r) {		// "Ricerca in Kad": chiede le note degli altri utenti
+		Response e; CPartFile *f = FindDownload(r, e); if (!f) return e;
+		if (!Kademlia::CKademlia::IsConnected()) return Response::Error(422, "Kad non connesso");
+		if (!Kademlia::CSearchManager::PrepareLookup(Kademlia::CSearch::NOTES, true, Kademlia::CUInt128(f->GetFileHash()))) return Response::Error(409, "una ricerca di note per questo file e' gia' in corso");
+		f->SetKadCommentSearchRunning(true); Audit("Kad notes search: " + S(f->GetFileName()));
+		return Ok({{"started", true}}, 202);
+	});
+	srv.Route("POST", "/api/v1/downloads/:hash/stream", [](const Request &r) {		// crea il link di streaming
+		std::string name; uint64_t size = 0;
+		if (const auto *c = CompletedOnly(r.params.at("hash"))) { name = c->name; size = c->size; }
+		else { Response e; CPartFile *f = FindDownload(r, e); if (!f) return e; name = S(f->GetFileName()); size = (uint64_t)f->GetFileSize(); f->SetPreviewPrio(true); }		// anteprima: prima e ultima parte per prime, come in eMule
+		auto now = std::chrono::steady_clock::now();
+		for (auto it = g_tickets.begin(); it != g_tickets.end();) it = it->second.expires < now ? g_tickets.erase(it) : std::next(it);
+		if (g_tickets.size() >= kMaxTickets) g_tickets.erase(g_tickets.begin());
+		std::string hash = r.params.at("hash"); for (auto &ch : hash) ch = (char)std::toupper((unsigned char)ch);
+		std::string id = NewTicketId(); g_tickets[id] = {hash, now + std::chrono::seconds(kStreamTicketSeconds)};
+		Audit("stream link created: " + name);
+		return Ok({{"path", "/api/v1/stream/" + id + "/" + PercentEncode(name)}, {"name", name}, {"size", size}, {"expires_in", kStreamTicketSeconds}, {"mime", StreamMime(name)}}, 201);
+	});
+	srv.Route("GET", "/api/v1/stream/:id/:name", [](const Request &r) {		// senza token Bearer: il ticket nel percorso e' l'autorizzazione
+		auto it = g_tickets.find(r.params.at("id"));
+		if (it == g_tickets.end() || it->second.expires < std::chrono::steady_clock::now()) return Response::Error(403, "link di streaming scaduto o non valido");
+		const std::string hash = it->second.hash; std::string path, name; uint64_t size = 0; CPartFile *part = nullptr;
+		uchar hb[16];
+		if (ParseHash(hash, hb) && (part = theApp.downloadqueue->GetFileByID(hb)) != nullptr) { path = S(part->GetFullName()); if (path.size() > 4) path.resize(path.size() - 4); name = S(part->GetFileName()); size = (uint64_t)part->GetFileSize(); }
+		else if (const auto *c = emule::CompletedDownloads::Find(hash)) { path = c->path; name = c->name; size = c->size; }
+		else return Response::Error(404, "download non trovato");
+		struct stat st{}; if (::stat(path.c_str(), &st) != 0 || size == 0) return Response::Error(404, "file inesistente");
+		uint64_t a = 0, b = size - 1; bool ranged = false;
+		auto rh = r.headers.find("range");
+		if (rh != r.headers.end()) { if (!ParseRange(rh->second, size, a, b)) { Response x = Response::Error(416, "intervallo non valido"); x.headers["Content-Range"] = "bytes */" + std::to_string(size); return x; } ranged = true; }
+		if (a >= size) { Response x = Response::Error(416, "intervallo oltre la fine del file"); x.headers["Content-Range"] = "bytes */" + std::to_string(size); return x; }
+		if (part) {
+			const uint64_t end = AvailEnd(part, a, size);
+			if (end <= a) { Response x = Response::Error(503, "questa parte del file non e' ancora scaricata"); x.headers["Retry-After"] = "3"; return x; }
+			if (b >= end) { b = end - 1; ranged = true; }		// solo cio' che c'e' gia': il player chiedera' il resto
+		}
+		Response x; x.status = ranged ? 206 : 200; x.content_type = StreamMime(name); x.file_path = path; x.file_offset = a; x.file_len = b - a + 1;
+		x.headers["Accept-Ranges"] = "bytes";
+		if (ranged) x.headers["Content-Range"] = "bytes " + std::to_string(a) + "-" + std::to_string(b) + "/" + std::to_string(size);
+		return x;
+	});
 	srv.Route("GET", "/api/v1/downloads/:hash/parts", [](const Request &r) { Response e; CPartFile *f = FindDownload(r, e); return f ? Ok(PartsJson(f)) : e; });
 	srv.Route("POST", "/api/v1/downloads/clear-completed", [](const Request &) { size_t n = emule::CompletedDownloads::Clear(); Audit("completed list cleared (" + std::to_string(n) + " items)"); return Ok({{"removed", n}}); });
 	srv.Route("POST", "/api/v1/downloads", [](const Request &r) {
@@ -322,6 +445,14 @@ void RegisterRoutes(HttpServer &srv, double started_s, const DaemonHooks &hooks)
 			pr = p == "auto" ? PR_AUTO : p == "very_low" ? PR_VERYLOW : p == "low" ? PR_LOW : p == "normal" ? PR_NORMAL : p == "high" ? PR_HIGH : p == "release" ? PR_VERYHIGH : -1;
 			if (pr < 0) return Response::Error(422, "priority: auto | very_low | low | normal | high | release");
 		}
+		std::string newName;
+		if (b.contains("name")) {
+			newName = b["name"].is_string() ? b["name"].get<std::string>() : "";
+			while (!newName.empty() && (newName.back() == ' ' || newName.back() == '.')) newName.pop_back();
+			if (newName.empty() || newName.size() > 255 || newName.find('/') != std::string::npos || newName.find('\0') != std::string::npos) return Response::Error(422, "name: nome del file, non vuoto, senza \"/\", al massimo 255 byte");
+		}
+		if (!newName.empty() && f->GetStatus() != PS_READY && f->GetStatus() != PS_EMPTY && f->GetStatus() != PS_PAUSED) return Response::Error(409, "non si rinomina un file mentre e' in verifica o in completamento");
+		if (!newName.empty()) { f->SetFileName(CString(newName.c_str()), true, true); f->SavePartFile(); Audit("download renamed: " + S(f->GetFileName())); }
 		if (b.contains("category")) f->SetCategory(b["category"].get<UINT>());
 		if (pr == PR_AUTO) { f->SetAutoDownPriority(true); f->SetDownPriority(PR_HIGH); }
 		else if (pr >= 0) { f->SetAutoDownPriority(false); f->SetDownPriority((uint8)pr); }

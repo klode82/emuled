@@ -147,6 +147,21 @@
             "type": "integer",
             "description": "posizione in coda piu' vicina tra tutte le fonti; 0 = nessuna fonte in coda"
           },
+          "file_op": {
+            "type": "string",
+            "enum": [
+              "none",
+              "hashing",
+              "copying",
+              "uncompressing",
+              "import_parts"
+            ],
+            "description": "operazione in corso sul file: verifica degli hash, copia, decompressione, importazione di parti"
+          },
+          "file_op_percent": {
+            "type": "integer",
+            "description": "avanzamento dell'operazione, 0-100 (0 se file_op e' none)"
+          },
           "speed": {
             "type": "integer",
             "description": "byte al secondo"
@@ -477,7 +492,7 @@
       },
       "Preferences": {
         "type": "object",
-        "description": "Chiavi: nick, tcp_port, udp_port, max_download_kbps, max_upload_kbps (0 = illimitato), max_connections, max_connections_per_5s, max_sources_per_file, network_ed2k, network_kademlia, auto_connect, reconnect, add_servers_from_server, add_servers_from_clients, use_server_priorities, safe_server_connect, static_servers_only, dead_server_retries, crypt_supported, crypt_requested, crypt_required, secure_ident, credit_system, add_new_downloads_paused, auto_up_priority, auto_down_priority, transfer_full_chunks, remove_finished_downloads, verbose_log, save_log_to_disk, save_debug_to_disk",
+        "description": "Chiavi: nick, tcp_port, udp_port, max_download_kbps, max_upload_kbps (0 = illimitato), max_connections, max_connections_per_5s, max_sources_per_file, network_ed2k, network_kademlia, auto_connect, reconnect, add_servers_from_server, add_servers_from_clients, use_server_priorities, safe_server_connect, static_servers_only, dead_server_retries, crypt_supported, crypt_requested, crypt_required, secure_ident, credit_system, add_new_downloads_paused, auto_up_priority, auto_down_priority, transfer_full_chunks, remove_finished_downloads, verbose_log, save_log_to_disk, save_debug_to_disk, comment_filter (testo: parole separate da |, in minuscolo; i commenti che le contengono si scartano)",
         "additionalProperties": {
           "oneOf": [
             {
@@ -1319,6 +1334,307 @@
         ]
       }
     },
+    "/api/v1/downloads/{hash}/stream": {
+      "post": {
+        "summary": "Crea il link di streaming",
+        "description": "Crea un link temporaneo (valido 6 ore, per UN file) che un player locale come VLC o mpv apre senza il token. Risposta: path (da aggiungere all'indirizzo del demone), name, size, mime, expires_in. Per un download in corso accende anche la priorita' di anteprima (prima e ultima parte per prime). Funziona anche per i completati.",
+        "responses": {
+          "201": {
+            "description": "Link creato"
+          },
+          "404": {
+            "description": "Download non trovato",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": [
+          "Download"
+        ],
+        "parameters": [
+          {
+            "name": "hash",
+            "in": "path",
+            "required": true,
+            "description": "MD4 del file: 32 caratteri esadecimali",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9A-Fa-f]{32}$"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/stream/{id}/{name}": {
+      "get": {
+        "summary": "Streaming del file (senza token)",
+        "description": "Serve il file con richieste a intervalli (Range, risposta 206). Non vuole il token: l'autorizzazione e' l'id nel percorso. Per un download in corso si serve solo cio' che e' gia' su disco: se l'intervallo chiesto comincia in una parte non ancora scaricata risponde 503 con Retry-After (il player riprova), e un intervallo che va oltre i byte presenti viene accorciato. 403 se il link e' scaduto o sconosciuto; 416 per un intervallo non valido.",
+        "responses": {
+          "200": {
+            "description": "Il file intero"
+          },
+          "206": {
+            "description": "Una parte del file"
+          },
+          "403": {
+            "description": "Link scaduto o non valido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Download o file non trovato",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "416": {
+            "description": "Intervallo non valido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Parte non ancora scaricata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "tags": [
+          "Download"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "solo il nome, per i player: non conta",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/downloads/{hash}/names": {
+      "get": {
+        "summary": "Nomi del file usati dalle fonti",
+        "description": "La scheda «Nome» di eMule: i nomi con cui le fonti chiamano il file, con quante fonti usano ognuno (i piu' diffusi per primi), e il nome attuale (current). Elenco vuoto se nessuna fonte ha ancora risposto. 404 se il download non c'e' o e' gia' completato.",
+        "responses": {
+          "200": {
+            "description": "Nomi"
+          },
+          "404": {
+            "description": "Download non trovato",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": [
+          "Download"
+        ],
+        "parameters": [
+          {
+            "name": "hash",
+            "in": "path",
+            "required": true,
+            "description": "MD4 del file: 32 caratteri esadecimali",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9A-Fa-f]{32}$"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/downloads/{hash}/comments": {
+      "get": {
+        "summary": "Commenti e valutazioni",
+        "description": "La scheda «Tutti i commenti» di eMule: commenti e valutazioni (1 falso ... 5 eccellente) ricevuti dalle fonti (network ed2k) e le note trovate su Kad (network kad), con kad_connected, kad_searching e il filtro antispam in uso (filter).",
+        "responses": {
+          "200": {
+            "description": "Commenti"
+          },
+          "404": {
+            "description": "Download non trovato",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": [
+          "Download"
+        ],
+        "parameters": [
+          {
+            "name": "hash",
+            "in": "path",
+            "required": true,
+            "description": "MD4 del file: 32 caratteri esadecimali",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9A-Fa-f]{32}$"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/downloads/{hash}/comments/search-kad": {
+      "post": {
+        "summary": "Cerca i commenti su Kad",
+        "description": "Chiede a Kad le note degli altri utenti su questo file (il pulsante «Ricerca in Kad»). I risultati arrivano piano piano e si leggono con GET .../comments.",
+        "responses": {
+          "202": {
+            "description": "Ricerca partita"
+          },
+          "404": {
+            "description": "Download non trovato",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Una ricerca di note per questo file e' gia' in corso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Kad non e' collegato",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": [
+          "Download"
+        ],
+        "parameters": [
+          {
+            "name": "hash",
+            "in": "path",
+            "required": true,
+            "description": "MD4 del file: 32 caratteri esadecimali",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9A-Fa-f]{32}$"
+            }
+          }
+        ]
+      }
+    },
     "/api/v1/downloads/{hash}/details": {
       "get": {
         "summary": "Dettagli di un download",
@@ -1857,8 +2173,8 @@
         ]
       },
       "patch": {
-        "summary": "Cambia categoria o priorita'",
-        "description": "Corpo: \"category\" (id di una categoria) e/o \"priority\" (auto, very_low, low, normal, high, release).",
+        "summary": "Cambia categoria, priorita' o nome",
+        "description": "Corpo: \"category\" (id di una categoria), \"priority\" (auto, very_low, low, normal, high, release) e/o \"name\" (nuovo nome del file: non vuoto, senza \"/\", al massimo 255 byte; vale subito e anche a download completato; 409 se il file e' in verifica o in completamento).",
         "responses": {
           "200": {
             "description": "Il download",
@@ -1938,6 +2254,9 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "name": {
+                    "type": "string"
+                  },
                   "category": {
                     "type": "integer"
                   },

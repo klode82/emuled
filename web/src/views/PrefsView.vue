@@ -20,7 +20,7 @@ const hint = (m: PrefMeta) => (te(`prefs.items.${m.key}.hint`) ? t(`prefs.items.
 const invalid = (m: PrefMeta) => {
   const v = p.draft[m.key]
   if (m.type === 'int') return typeof v !== 'number' || !Number.isInteger(v) || v < (m.min ?? -Infinity) || v > (m.max ?? Infinity)
-  if (m.type === 'string') return typeof v !== 'string' || !v.trim()
+  if (m.type === 'string') return typeof v !== 'string' || (!m.optional && !v.trim())
   return false
 }
 const anyInvalid = computed(() => PREFS.some((m) => m.key in p.draft && invalid(m)))

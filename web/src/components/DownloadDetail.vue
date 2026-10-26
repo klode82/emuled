@@ -5,12 +5,12 @@ import { useI18n } from 'vue-i18n'
 import { useDownloads } from '@/stores/downloads'
 import { usePrefs } from '@/stores/prefs'
 import { useSession } from '@/stores/session'
-import { useToasts } from '@/stores/toasts'
+import { errText, useToasts } from '@/stores/toasts'
 import { useUi } from '@/stores/ui'
 import { bytes, dateTime, duration, ed2kLink, eta, number, percent, speed } from '@/lib/format'
 import { useCore } from '@/stores/core'
 import { PRIORITIES, priorityKey, statusInfo, toneClass } from '@/lib/labels'
-import type { Content, ContentTrack, Details, Parts, Priority, Source } from '@/types'
+import type { Content, ContentTrack, Details, FileComments, FileNames, Parts, Priority, Source } from '@/types'
 import Icon from './Icon.vue'
 import ProgressBar from './ProgressBar.vue'
 import PartsMap from './PartsMap.vue'
@@ -27,10 +27,10 @@ const done = computed(() => info.value?.key === 'done')
 
 // blocchi e fonti: si rileggono ogni 3 secondi finche' il pannello e' aperto (l'API non li manda come eventi)
 const parts = ref<Parts | null>(null), sources = ref<Source[]>([]), det = ref<Details | null>(null)
-type TabKey = 'general' | 'progress' | 'sources' | 'content' | 'ed2k'
-const TABS: readonly TabKey[] = ['general', 'progress', 'sources', 'content', 'ed2k']
+type TabKey = 'general' | 'progress' | 'sources' | 'names' | 'comments' | 'content' | 'ed2k'
+const TABS: readonly TabKey[] = ['general', 'progress', 'sources', 'names', 'comments', 'content', 'ed2k']
 const tab = ref<TabKey>('general')
-const tabs = computed<readonly TabKey[]>(() => (done.value ? TABS.filter((x) => x !== 'sources' && x !== 'progress') : TABS))
+const tabs = computed<readonly TabKey[]>(() => (done.value ? TABS.filter((x) => x !== 'sources' && x !== 'progress' && x !== 'names' && x !== 'comments') : TABS))
 watch(tabs, (v) => { if (!v.includes(tab.value)) tab.value = 'general' })
 
 // scheda Contenuto: mediainfo legge il file (anche il .part, se c'e' l'intestazione); la lettura parte quando si apre la scheda
@@ -57,7 +57,38 @@ async function refresh() {
   const api = session.getApi()
   try { [parts.value, sources.value, det.value] = await Promise.all([api.parts(props.hash), api.sources(props.hash), api.details(props.hash)]) } catch { /* il download puo' essere appena sparito */ }
 }
-onMounted(() => { void refresh(); timer = setInterval(() => void refresh(), 3000) })
+// schede Nome e Commenti: i dati si leggono solo mentre la scheda e' aperta
+const names = ref<FileNames | null>(null), comments = ref<FileComments | null>(null)
+const newName = ref(''), nameTouched = ref(false), renaming = ref(false)
+const filterOpen = ref(false), filterText = ref(''), kadBusy = ref(false)
+async function refreshExtra() {
+  if (!d.value || done.value) return
+  const api = session.getApi(), h = props.hash
+  try {
+    if (tab.value === 'names') { const r = await api.names(h); if (props.hash === h) { names.value = r; if (!nameTouched.value) newName.value = r.current } }
+    else if (tab.value === 'comments') { const r = await api.comments(h); if (props.hash === h) comments.value = r }
+  } catch { /* il download puo' essere appena sparito */ }
+}
+watch(tab, () => void refreshExtra())
+const canRename = computed(() => !renaming.value && !!newName.value.trim() && newName.value.trim() !== d.value?.name)
+async function rename() {
+  if (!canRename.value) return
+  renaming.value = true
+  try { dl.items[props.hash] = await session.getApi().patchDownload(props.hash, { name: newName.value.trim() }); nameTouched.value = false; toasts.ok(t('fd.renamed')); await refreshExtra() } catch (e) { toasts.error(errText(e)) } finally { renaming.value = false }
+}
+function clearName() { newName.value = ''; nameTouched.value = true }
+function pickName(n: string) { newName.value = n; nameTouched.value = true }
+async function searchKad() {
+  kadBusy.value = true
+  try { await session.getApi().searchKadComments(props.hash); toasts.ok(t('fd.kadStarted')); await refreshExtra() } catch (e) { toasts.error(errText(e)) } finally { kadBusy.value = false }
+}
+function openFilter() { filterText.value = comments.value?.filter ?? ''; filterOpen.value = !filterOpen.value }
+async function saveFilter() {
+  try { await session.getApi().patchPreferences({ comment_filter: filterText.value }); filterOpen.value = false; toasts.ok(t('fd.filterSaved')); await refreshExtra() } catch (e) { toasts.error(errText(e)) }
+}
+const stars = (n: number) => (n >= 1 && n <= 5 ? t('fd.rating.' + n) : '—')
+watch(() => props.hash, () => { names.value = null; comments.value = null; nameTouched.value = false; filterOpen.value = false; void refreshExtra() })
+onMounted(() => { void refresh(); timer = setInterval(() => { void refresh(); void refreshExtra() }, 3000) })
 onUnmounted(() => clearInterval(timer))
 watch(() => props.hash, () => { parts.value = null; sources.value = []; det.value = null; void refresh() })
 
@@ -78,6 +109,19 @@ async function copy() {
 const ago = (unix: number) => (unix > 0 ? t('detail.ago', { d: duration(Math.max(0, Date.now() / 1000 - unix)) }) : '')
 const dash = (unix: number) => (unix > 0 ? `${dateTime(unix)}  (${ago(unix)})` : t('detail.never'))
 const pct1 = (n: number) => `${n.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`
+// streaming: un link temporaneo (senza il token) che un player locale apre; si scarica una playlist .m3u che il sistema apre col player predefinito
+async function streamUrl() { const r = await session.getApi().streamLink(props.hash); return { url: location.origin + r.path, name: r.name } }
+async function openPlayer() {
+  try {
+    const { url, name } = await streamUrl()
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(new Blob([`#EXTM3U\n#EXTINF:-1,${name}\n${url}\n`], { type: 'audio/x-mpegurl' })); a.download = name.replace(/[\\/]/g, '_') + '.m3u'; a.click(); URL.revokeObjectURL(a.href)
+    toasts.ok(t('detail.playlistSaved'))
+  } catch (e) { toasts.error(errText(e)) }
+}
+async function copyStream() {
+  try { await navigator.clipboard.writeText((await streamUrl()).url); toasts.ok(t('detail.streamCopied')) } catch (e) { toasts.error(errText(e)) }
+}
 async function cancel() {
   if (!d.value) return
   if (done.value) { await dl.remove([d.value.hash]); return }
@@ -102,7 +146,7 @@ const sortedSources = computed(() => [...own.value].sort((a, b) => stateOrder(a)
       <button class="rounded-md p-2 text-mute hover:bg-sunk hover:text-fg" :aria-label="t('detail.close')" @click="emit('close')"><Icon name="x" /></button>
     </header>
     <nav class="flex gap-1 overflow-x-auto border-b border-line px-3 text-xs" role="tablist" :aria-label="t('fd.tabs')">
-      <button v-for="x in tabs" :key="x" role="tab" :aria-selected="tab === x" class="whitespace-nowrap border-b-2 px-3 py-2" :class="tab === x ? 'border-accent font-medium' : 'border-transparent text-mute hover:text-fg'" @click="tab = x">
+      <button v-for="x in tabs" :key="x" role="tab" :aria-selected="tab === x" class="whitespace-nowrap border-b-2 px-2 py-2" :class="tab === x ? 'border-accent font-medium' : 'border-transparent text-mute hover:text-fg'" @click="tab = x">
         {{ t('fd.tab.' + x) }}<span v-if="x === 'sources' && !done" class="ml-1 tabular-nums text-mute">{{ own.length }}</span></button>
     </nav>
     <div class="flex flex-1 flex-col gap-5 overflow-y-auto p-5">
@@ -170,6 +214,35 @@ const sortedSources = computed(() => [...own.value].sort((a, b) => stateOrder(a)
         </ul>
       </template>
 
+      <template v-else-if="tab === 'names'">
+        <h3 class="text-xs font-semibold uppercase tracking-wide text-mute">{{ t('fd.namesTitle') }}</h3>
+        <p v-if="!names || !names.names.length" class="rounded-lg border border-line px-3 py-4 text-center text-sm text-mute">{{ t('fd.noNames') }}</p>
+        <ul v-else class="divide-y divide-line rounded-lg border border-line text-sm">
+          <li v-for="n in names.names" :key="n.name"><button class="flex w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-sunk" :title="t('fd.useName')" @click="pickName(n.name)"><span class="min-w-0 break-words">{{ n.name }}</span><span class="shrink-0 text-xs tabular-nums text-mute">{{ t('fd.nSources', n.count) }}</span></button></li>
+        </ul>
+        <label class="flex flex-col gap-1 text-xs text-mute">{{ t('fd.newName') }}
+          <span class="flex gap-2"><input v-model="newName" type="text" maxlength="255" class="min-w-0 flex-1 rounded-lg border border-line bg-bg px-3 py-2 text-sm text-fg" @input="nameTouched = true" @keydown.enter="rename" />
+            <button class="rounded-lg border border-line px-3 py-2 text-sm text-fg hover:bg-sunk" @click="clearName">{{ t('fd.clear') }}</button>
+            <button class="rounded-lg bg-accent px-3 py-2 text-sm font-medium text-onaccent disabled:opacity-50" :disabled="!canRename" @click="rename">{{ t('fd.rename') }}</button></span></label>
+        <p class="text-xs text-mute">{{ t('fd.renameHint') }}</p>
+      </template>
+
+      <template v-else-if="tab === 'comments'">
+        <div class="flex flex-wrap items-center justify-between gap-2"><h3 class="text-xs font-semibold uppercase tracking-wide text-mute">{{ t('fd.tab.comments') }} <span class="font-normal tabular-nums">{{ comments?.comments.length ?? 0 }}</span></h3>
+          <span class="flex flex-wrap gap-2">
+            <button class="rounded-lg border border-line px-2.5 py-1 text-xs hover:bg-sunk" @click="openFilter">{{ t('fd.editFilter') }}</button>
+            <button class="rounded-lg border border-line px-2.5 py-1 text-xs hover:bg-sunk disabled:opacity-50" :disabled="!comments?.kad_connected || comments.kad_searching || kadBusy" :title="comments && !comments.kad_connected ? t('fd.kadOff') : ''" @click="searchKad">{{ comments?.kad_searching ? t('fd.kadSearching') : t('fd.searchKad') }}</button></span></div>
+        <div v-if="filterOpen" class="flex flex-col gap-2 rounded-lg border border-line p-3 text-xs">
+          <label class="flex flex-col gap-1 text-mute">{{ t('fd.filterLabel') }}<input v-model="filterText" type="text" class="rounded-lg border border-line bg-bg px-3 py-2 font-mono text-xs text-fg" @keydown.enter="saveFilter" /></label>
+          <p class="text-mute">{{ t('fd.filterHint') }}</p>
+          <span class="flex justify-end gap-2"><button class="rounded-lg border border-line px-3 py-1.5 hover:bg-sunk" @click="filterOpen = false">{{ t('common.cancel') }}</button><button class="rounded-lg bg-accent px-3 py-1.5 font-medium text-onaccent" @click="saveFilter">{{ t('fd.saveFilter') }}</button></span></div>
+        <p v-if="!comments || !comments.comments.length" class="rounded-lg border border-line px-3 py-4 text-center text-sm text-mute">{{ t('fd.noComments') }}</p>
+        <ul v-else class="divide-y divide-line rounded-lg border border-line text-sm">
+          <li v-for="(c, i) in comments.comments" :key="i" class="flex flex-col gap-0.5 px-3 py-2"><p class="break-words">{{ c.comment || '—' }}</p>
+            <p class="break-words text-xs text-mute"><span class="font-medium text-fg">{{ stars(c.rating) }}</span> · {{ c.network === 'kad' ? 'Kad' : 'eD2K' }}<template v-if="c.user"> · {{ c.user }}</template><template v-if="c.file_name"> · {{ c.file_name }}</template></p></li>
+        </ul>
+      </template>
+
       <template v-else-if="tab === 'content'">
         <div class="flex items-center justify-between"><h3 class="text-xs font-semibold uppercase tracking-wide text-mute">{{ t('fd.tab.content') }}</h3>
           <button class="inline-flex items-center gap-1 rounded-lg border border-line px-2.5 py-1 text-xs hover:bg-sunk" @click="loadContent"><Icon name="refresh" class="!size-3.5" />{{ t('fd.reread') }}</button></div>
@@ -220,6 +293,8 @@ const sortedSources = computed(() => [...own.value].sort((a, b) => stateOrder(a)
     <footer class="flex flex-wrap gap-2 border-t border-line px-5 py-3">
       <button v-if="!done" class="inline-flex items-center gap-1.5 rounded-lg border border-line px-3.5 py-2 text-sm hover:bg-sunk" @click="paused ? dl.resume([d.hash]) : dl.pause([d.hash])"><Icon :name="paused ? 'play' : 'pause'" />{{ paused ? t('common.resume') : t('common.pause') }}</button>
       <button v-if="!done && !paused" class="inline-flex items-center gap-1.5 rounded-lg border border-line px-3.5 py-2 text-sm hover:bg-sunk" :title="t('detail.stopHint')" @click="dl.stop([d.hash])"><Icon name="stop" />{{ t('common.stop') }}</button>
+      <button class="inline-flex items-center gap-1.5 rounded-lg border border-line px-3.5 py-2 text-sm hover:bg-sunk" :title="t('detail.openPlayerHint')" @click="openPlayer"><Icon name="play" />{{ t('detail.openPlayer') }}</button>
+      <button class="inline-flex items-center gap-1.5 rounded-lg border border-line px-3.5 py-2 text-sm hover:bg-sunk" :title="t('detail.copyStreamHint')" @click="copyStream"><Icon name="copy" />{{ t('detail.copyStream') }}</button>
       <button class="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-line px-3.5 py-2 text-sm hover:bg-sunk" :class="done ? '' : 'text-bad'" @click="cancel"><Icon :name="done ? 'x' : 'trash'" />{{ done ? t('detail.removeFromList') : t('common.cancelDownload') }}</button>
     </footer>
   </section>

@@ -7,6 +7,7 @@
 #include <cstring>
 #include <filesystem>
 #include <fcntl.h>
+#include <sys/types.h>
 #include <fstream>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
@@ -67,8 +68,8 @@ std::string Lower(std::string s) { for (auto &c : s) c = (char)tolower((unsigned
 std::string Trim(const std::string &s) { size_t a = s.find_first_not_of(" \t"), b = s.find_last_not_of(" \t\r"); return a == std::string::npos ? "" : s.substr(a, b - a + 1); }
 const char *Reason(int s)
 {
-	switch (s) { case 101: return "Switching Protocols"; case 200: return "OK"; case 201: return "Created"; case 204: return "No Content"; case 400: return "Bad Request"; case 401: return "Unauthorized";
-		case 403: return "Forbidden"; case 404: return "Not Found"; case 405: return "Method Not Allowed"; case 409: return "Conflict"; case 413: return "Payload Too Large";
+	switch (s) { case 101: return "Switching Protocols"; case 200: return "OK"; case 201: return "Created"; case 204: return "No Content"; case 206: return "Partial Content"; case 400: return "Bad Request"; case 401: return "Unauthorized";
+		case 403: return "Forbidden"; case 404: return "Not Found"; case 405: return "Method Not Allowed"; case 409: return "Conflict"; case 413: return "Payload Too Large"; case 416: return "Range Not Satisfiable";
 		case 422: return "Unprocessable Entity"; case 500: return "Internal Server Error"; case 503: return "Service Unavailable"; default: return "OK"; }
 }
 bool ConstEq(const std::string &a, const std::string &b)
@@ -107,7 +108,7 @@ static std::string ErrorCode(int status, const std::string &m)
 		{"Kad non partita", "kad_unavailable"}, {"Kad non disponibile", "kad_unavailable"}, {"Kad non e' acceso", "kad_off"}, {"Kad non connesso", "kad_not_connected"},
 		{"Kad e' gia' collegato", "kad_already_connected"}, {"non connesso a un server", "ed2k_not_connected"}, {"ne' un server", "no_network"},
 		{"il server e' gia' in lista", "server_exists"}, {"il file e' gia' in download", "already_downloading"}, {"metodo non consentito", "method_not_allowed"},
-		{"percorso inesistente", "route_not_found"}, {"nessuna interfaccia web", "no_web_ui"}, {"file non condiviso", "not_shared"}, {"download non trovato", "download_not_found"},
+		{"percorso inesistente", "route_not_found"}, {"link di streaming", "stream_expired"}, {"questa parte del file", "range_not_ready"}, {"nessuna interfaccia web", "no_web_ui"}, {"file non condiviso", "not_shared"}, {"download non trovato", "download_not_found"},
 		{"categoria non trovata", "category_not_found"}, {"percorso non consentito", "forbidden_path"}, {"corpo troppo grande", "body_too_large"}, {"errore interno", "internal"},
 		{"temp:", "bad_directories"}, {"shared:", "bad_directories"}, {"la cartella", "bad_directories"}, {"cartella", "bad_directories"}, {"il percorso deve", "bad_directories"},
 	};
@@ -163,6 +164,7 @@ private:
 	{
 		if (fd_ < 0) return;
 		closed_ = true;
+		if (ffd_ >= 0) { ::close(ffd_); ffd_ = -1; fleft_ = 0; }
 		loop_->Del(loop_id_, fd_);
 		::close(fd_); fd_ = -1;
 	}
@@ -184,21 +186,36 @@ private:
 		if (ws_ && out_.size() > kMaxWsBacklog) { Close(); return; }		// consumatore troppo lento
 		Flush();
 	}
+	// legge il prossimo pezzo del file (256 KB) in out_: un solo pezzo alla volta, cosi' un client lento non fa crescere la memoria
+	bool Pump()
+	{
+		size_t want = (size_t)std::min<uint64_t>(fleft_, 256u << 10);
+		std::string chunk(want, '\0');
+		ssize_t n = ::pread(ffd_, chunk.data(), want, (off_t)foff_);
+		if (n <= 0) { Close(); return false; }		// file accorciato o errore: la lunghezza era gia' promessa, si chiude
+		out_.append(chunk, 0, (size_t)n); foff_ += (uint64_t)n; fleft_ -= (uint64_t)n;
+		if (fleft_ == 0) { ::close(ffd_); ffd_ = -1; }
+		return true;
+	}
 	void Flush()
 	{
-		while (!out_.empty() && fd_ >= 0) {
+		while (fd_ >= 0) {
+			if (out_.empty() && fleft_ > 0 && !Pump()) return;
+			if (out_.empty()) break;
 			ssize_t n = ::send(fd_, out_.data(), out_.size(), MSG_NOSIGNAL);
 			if (n > 0) out_.erase(0, (size_t)n);
 			else { if (errno == EAGAIN || errno == EWOULDBLOCK) break; if (errno == EINTR) continue; Close(); return; }
 		}
 		if (fd_ < 0) return;
-		loop_->Update(loop_id_, fd_, EPOLLIN | EPOLLRDHUP | (out_.empty() ? 0 : EPOLLOUT));
-		if (out_.empty() && close_after_) Close();
+		const bool idle = out_.empty() && fleft_ == 0;
+		loop_->Update(loop_id_, fd_, EPOLLIN | EPOLLRDHUP | (idle ? 0 : EPOLLOUT));
+		if (idle && close_after_) { Close(); return; }
+		if (idle && !ws_ && !in_.empty()) ProcessHttp();		// richieste arrivate mentre il file andava via
 	}
 
 	void ProcessHttp()
 	{
-		while (!closed_ && !close_after_) {
+		while (!closed_ && !close_after_ && fleft_ == 0) {		// durante l'invio di un file le richieste successive aspettano
 			size_t he = in_.find("\r\n\r\n");
 			if (he == std::string::npos) { if (in_.size() > kMaxHeader) { Reply(Response::Error(400, "intestazioni troppo lunghe"), true); } return; }
 			if (he > kMaxHeader) { Reply(Response::Error(400, "intestazioni troppo lunghe"), true); return; }
@@ -240,12 +257,17 @@ private:
 	}
 	void Reply(const Response &resp, bool close, bool head = false)
 	{
-		std::string h = "HTTP/1.1 " + std::to_string(resp.status) + " " + Reason(resp.status) + "\r\nContent-Type: " + resp.content_type + "\r\nContent-Length: " + std::to_string(resp.body.size())
+		std::string h = "HTTP/1.1 " + std::to_string(resp.status) + " " + Reason(resp.status) + "\r\nContent-Type: " + resp.content_type + "\r\nContent-Length: " + std::to_string(resp.file_path.empty() ? resp.body.size() : (size_t)resp.file_len)
 			+ "\r\nX-Content-Type-Options: nosniff\r\nCache-Control: " + (resp.content_type == "application/json" ? "no-store" : "no-cache") + "\r\nConnection: " + (close ? "close" : "keep-alive") + "\r\n";
 		for (auto &kv : resp.headers) h += kv.first + ": " + kv.second + "\r\n";
 		h += "\r\n";
 		if (!head) h += resp.body;
 		if (close) close_after_ = true;
+		if (!head && !resp.file_path.empty() && resp.file_len > 0) {
+			int f = ::open(resp.file_path.c_str(), O_RDONLY | O_CLOEXEC);
+			if (f < 0) { Reply(Response::Error(500, "errore interno: file non leggibile"), true); return; }
+			ffd_ = f; foff_ = resp.file_offset; fleft_ = resp.file_len;
+		}
 		Write(h);
 	}
 
@@ -286,6 +308,7 @@ private:
 
 	HttpServer *srv_; EventLoop *loop_ = nullptr; int fd_; uint64_t id_, loop_id_ = 0; std::string peer_, in_, out_, frag_; double last_;
 	bool ws_ = false, closed_ = false, close_after_ = false;
+	int ffd_ = -1; uint64_t foff_ = 0, fleft_ = 0;			// file in invio (risposta da file)
 };
 
 class HttpServer::Listener : public IoSource
@@ -368,7 +391,7 @@ bool HttpServer::Authorized(const Request &r) const
 Response HttpServer::Dispatch(Request &r)
 {
 	if (r.path.rfind("/api/", 0) == 0 || r.path == "/api") {
-		if (r.path != "/api/v1/ping" && r.path != "/api/v1/openapi.json" && !Authorized(r)) { Response x = Response::Error(401, "token mancante o errato"); x.headers["WWW-Authenticate"] = "Bearer"; return x; }
+		if (r.path != "/api/v1/ping" && r.path != "/api/v1/openapi.json" && r.path.rfind("/api/v1/stream/", 0) != 0 && !Authorized(r)) { Response x = Response::Error(401, "token mancante o errato"); x.headers["WWW-Authenticate"] = "Bearer"; return x; }
 		std::vector<std::string> parts; { std::stringstream ss(r.path); std::string p; while (std::getline(ss, p, '/')) if (!p.empty()) parts.push_back(p); }
 		bool pathMatched = false;
 		for (auto &e : routes_) {

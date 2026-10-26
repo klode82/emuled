@@ -67,9 +67,28 @@ int main()
 	srv.Route("GET", "/api/v1/hello/:name", [](const Request &r) { return Response::Json(200, "{\"hello\":\"" + r.params.at("name") + "\",\"q\":\"" + (r.query.count("x") ? r.query.at("x") : "") + "\"}"); });
 	srv.Route("POST", "/api/v1/echo", [](const Request &r) { return Response::Json(201, r.body); });
 	srv.Route("GET", "/api/v1/boom", [](const Request &) -> Response { throw std::runtime_error("guasto"); });
+	// risposte da file (streaming): file piu' grande di un pezzo da 256 KB, intervallo, HEAD, richiesta in coda dopo il file
+	std::string big(700000, 'x'); for (size_t i = 0; i < big.size(); ++i) big[i] = (char)('a' + i % 26);
+	{ std::ofstream(base / "grande.bin", std::ios::binary) << big; }
+	srv.Route("GET", "/api/v1/stream/:id/:name", [&](const Request &r) {		// percorso /api/v1/stream/: raggiungibile SENZA token
+		Response x; x.status = 206; x.content_type = "video/mp4"; x.file_path = (base / "grande.bin").string();
+		x.file_offset = r.query.count("off") ? std::stoull(r.query.at("off")) : 0; x.file_len = r.query.count("len") ? std::stoull(r.query.at("len")) : big.size();
+		return x;
+	});
 	CHECK(srv.Start("127.0.0.1", 0)); uint16_t port = srv.port(); CHECK(port != 0);
 	auto call = [&](const std::string &r, int n = 1) { return Pump(loop, [&] { return Raw(port, r, n); }); };
 
+	{
+		auto r = call(Req("GET", "/api/v1/stream/abc/film.mp4"));
+		CHECK(Status(r) == 206 && Body(r).size() == big.size() && Body(r) == big);						// 700 KB: piu' pezzi, tutti i byte, nessun token
+		r = call(Req("GET", "/api/v1/stream/abc/film.mp4?off=1000&len=300000"));
+		CHECK(Status(r) == 206 && Body(r) == big.substr(1000, 300000));
+		r = call(Req("HEAD", "/api/v1/stream/abc/film.mp4"));
+		CHECK(Status(r) == 206 && r.find("Content-Length: 700000") != std::string::npos && Body(r).empty());	// HEAD: intestazioni, niente corpo
+		r = call(Req("GET", "/api/v1/stream/abc/f.mp4?off=5&len=10") + Req("GET", "/api/v1/ping"), 2);		// la seconda richiesta aspetta la fine del file e poi riceve la sua risposta
+		CHECK(r.find(big.substr(5, 10) + "HTTP/1.1 200") != std::string::npos && r.find("{\"pong\":true}") != std::string::npos);
+		CHECK(Status(call(Req("GET", "/api/v1/hello/x"))) == 401);										// il resto di /api/ resta protetto
+	}
 	// ping senza token; il resto di /api/ richiede il token
 	CHECK(Status(call(Req("GET", "/api/v1/ping"))) == 200);
 	CHECK(Status(call(Req("GET", "/api/v1/hello/mondo"))) == 401);

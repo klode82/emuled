@@ -122,7 +122,7 @@ Quando un download finisce esce dalla coda, ma — come nella finestra di eMule 
 
 ### `GET /api/v1/downloads/{hash}/sources` — le fonti
 
-Ogni download ha anche `best_queue_rank`: la posizione in coda più vicina tra tutte le sue fonti (0 = nessuna in coda).
+Ogni download ha anche `best_queue_rank`: la posizione in coda più vicina tra tutte le sue fonti (0 = nessuna in coda), e `file_op` / `file_op_percent`: l'operazione in corso sul file (`none`, `hashing` = verifica degli hash, `copying`, `uncompressing`, `import_parts`) con il suo avanzamento 0-100. L'interfaccia la mostra come barra verde sopra quella del completamento.
 
 Oltre alle fonti del file, l'elenco comprende quelle **«per un altro file»** (A4AF, *Ask For Another File*): utenti che hanno anche questo file ma che eMule sta già usando per un altro download dello stesso utente (tipico con gli episodi di una serie). Hanno il campo `other_file` con il download per cui sono usate adesso, e non contano in `sources` del download (che ha il campo `sources_other_files`).
 
@@ -131,6 +131,24 @@ Per ogni fonte: `name`, `software` (es. «eMule v0.50a»), `ip`, `port`, `low_id
 ### `POST /api/v1/downloads/{hash}/find-sources` — cerca fonti adesso
 
 Di solito eMule chiede nuove fonti al server ogni **15 minuti** e a Kad con attese fino a **1 ora** per tentativo: un download con 0 fonti può restare fermo a lungo. Questa chiamata azzera quelle attese: al giro dopo il demone le chiede subito. Risponde **202** con `server` e `kad` (`false` se non sei collegato a quella rete: la richiesta per lei non parte), `paused` (un download fermo cerca quando riparte) e `wait_s`: **il server accetta un gruppo di richieste di fonti ogni 5 minuti** (protezione dell'originale, 15 file × 20 s), quindi la richiesta in coda parte fra `wait_s` secondi, non subito. **404/409** come le altre chiamate sui download.
+
+### `POST /api/v1/downloads/{hash}/stream` e `GET /api/v1/stream/{id}/{nome}` — streaming
+
+Per guardare o ascoltare un file **mentre scarica** (o dopo) con un player locale (VLC, mpv…). `POST …/stream` crea un **link temporaneo** e risponde **201** con `path` (da aggiungere all'indirizzo del demone, es. `http://127.0.0.1:8765` + `path`), `name`, `size`, `mime` e `expires_in` (secondi: 6 ore). Il link vale per **un solo file** e **non contiene il token**: l'autorizzazione è l'`id` nel percorso (128 bit casuali), quindi si può dare a un player senza esporre il resto dell'API. Per un download in corso accende anche la *priorità di anteprima*: eMule scarica per prime la **prima e l'ultima parte** del file, che a molti formati servono per partire.
+
+`GET /api/v1/stream/{id}/{nome}` serve il file con richieste a intervalli (`Range`, risposta **206**; `Accept-Ranges: bytes`). `{nome}` è solo il nome del file, per i player: non conta. Per un **download in corso** si manda solo ciò che è già su disco: un intervallo che comincia in una parte non ancora scaricata dà **503** con `Retry-After: 3` (il player riprova), e uno che supera i byte presenti viene accorciato. **403** = link scaduto o sconosciuto, **416** = intervallo non valido. Funziona anche per i completati.
+
+### `GET /api/v1/downloads/{hash}/names` — i nomi usati dalle fonti
+
+È la scheda «Nome» di eMule: `current` (il nome attuale) e `names`, l'elenco dei nomi con cui le fonti chiamano il file, ognuno con `count` (quante fonti lo usano), i più diffusi per primi. L'elenco è vuoto finché nessuna fonte ha risposto. **404** se il download non c'è o è già completato. Per cambiare il nome: `PATCH /api/v1/downloads/{hash}` con `{"name": "nuovo nome.mkv"}` (non vuoto, senza `/`, al massimo 255 byte; vale subito e anche a download completato; **409** se il file è in verifica o in completamento; **422** se il nome non è valido).
+
+### `GET /api/v1/downloads/{hash}/comments` — commenti e valutazioni
+
+È la scheda «Tutti i commenti» di eMule. `comments` è un elenco di `{network, rating, comment, file_name, user}`: `network` è `ed2k` (arrivato da una fonte) o `kad` (nota trovata su Kad), `rating` va da 1 (falso) a 5 (eccellente), 0 = nessuna valutazione. Ci sono anche `kad_connected`, `kad_searching` (una ricerca di note è in corso) e `filter` (il filtro antispam in uso, vedi la preferenza `comment_filter`).
+
+### `POST /api/v1/downloads/{hash}/comments/search-kad` — cerca i commenti su Kad
+
+Il pulsante «Ricerca in Kad»: chiede a Kad le note degli altri utenti su questo file. Risponde **202** con `{"started": true}`; i risultati arrivano piano piano e si leggono con `GET …/comments`. **422** se Kad non è collegato, **409** se una ricerca di note per questo file è già in corso.
 
 ### `GET /api/v1/downloads/{hash}/details` — i dettagli
 
@@ -294,6 +312,7 @@ Un oggetto piatto chiave/valore. Le chiavi (stesse del dialogo Preferenze di eMu
 | `upnp_close_on_exit` | sì/no | UPnP: toglie le regole dal router quando il demone si ferma |
 | `verbose_log` | sì/no | scrivere nel registro anche i messaggi di debug (sono molti: serve per cercare un problema) |
 | `save_log_to_disk` | sì/no | scrivere il registro anche nel file `logs/emuled.log` del profilo (resta dopo un riavvio o un arresto improvviso; a 20 MB passa a `emuled.log.1`) |
+| `comment_filter` | testo | filtro antispam dei commenti: parole separate da `\|` (in minuscolo) che fanno scartare un commento di un altro utente; predefinito: `http://\|https://\|ftp://\|www.\|ftp.` |
 | `save_debug_to_disk` | sì/no | scrivere nel file anche le righe di debug (vale solo con `verbose_log` acceso) |
 
 ### `PATCH /api/v1/preferences` — cambia

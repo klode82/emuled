@@ -31,6 +31,8 @@ struct Response
 	std::string body;
 	std::string content_type = "application/json";
 	std::map<std::string, std::string> headers;
+	// risposta da file (streaming): body resta vuoto; il server legge dal file a pezzi, man mano che il client riceve. Content-Length = file_len.
+	std::string file_path; uint64_t file_offset = 0, file_len = 0;
 	static Response Json(int status, const std::string &json) { Response r; r.status = status; r.body = json; return r; }
 	static Response Error(int status, const std::string &message);		// {"error":"testo in italiano","code":"codice_stabile"}
 };

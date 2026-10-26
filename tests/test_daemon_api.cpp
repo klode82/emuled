@@ -119,6 +119,22 @@ int main(int argc, char **argv)
 		Http(port, "GET", "/api/v1/downloads/xyz", token, "", s); CHECK(s == 400);
 		// il .part esiste in Temp/
 		CHECK(fs::exists(base / "Temp" / "001.part"));
+		// streaming: link temporaneo; un download senza dati su disco risponde 503 (il player riprova), un link sconosciuto 403
+		r = Http(port, "POST", "/api/v1/downloads/" + hash + "/stream", token, "", s); CHECK(s == 201);
+		{ std::string sp = json::parse(r)["path"]; CHECK(sp.rfind("/api/v1/stream/", 0) == 0 && json::parse(r)["expires_in"] > 0);
+		  Http(port, "GET", sp, "", "", s); CHECK(s == 503); }
+		Http(port, "GET", "/api/v1/stream/00000000000000000000000000000000/x.mkv", "", "", s); CHECK(s == 403);
+		Http(port, "POST", "/api/v1/downloads/00000000000000000000000000000000/stream", token, "", s); CHECK(s == 404);
+		// nomi, commenti, rinomina (nessuna fonte: elenchi vuoti)
+		r = Http(port, "GET", "/api/v1/downloads/" + hash + "/names", token, "", s); CHECK(s == 200 && json::parse(r)["names"].empty() && json::parse(r)["current"] == "prova uno.bin");
+		r = Http(port, "GET", "/api/v1/downloads/" + hash + "/comments", token, "", s); CHECK(s == 200 && json::parse(r)["comments"].empty() && json::parse(r)["kad_connected"] == false);
+		Http(port, "POST", "/api/v1/downloads/" + hash + "/comments/search-kad", token, "", s); CHECK(s == 422);		// Kad non collegato (demone di prova offline)
+		Http(port, "GET", "/api/v1/downloads/00000000000000000000000000000000/names", token, "", s); CHECK(s == 404);
+		Http(port, "PATCH", "/api/v1/downloads/" + hash, token, "{\"name\":\"a/b\"}", s); CHECK(s == 422);
+		Http(port, "PATCH", "/api/v1/downloads/" + hash, token, "{\"name\":\"  \"}", s); CHECK(s == 422);
+		r = Http(port, "PATCH", "/api/v1/downloads/" + hash, token, "{\"name\":\"nuovo nome.bin\"}", s); CHECK(s == 200 && json::parse(r)["name"] == "nuovo nome.bin");
+		r = Http(port, "GET", "/api/v1/downloads/" + hash + "/names", token, "", s); CHECK(json::parse(r)["current"] == "nuovo nome.bin");
+		r = Http(port, "PATCH", "/api/v1/preferences", token, "{\"comment_filter\":\"Spam|http://\"}", s); CHECK(s == 200 && json::parse(r)["preferences"]["comment_filter"] == "spam|http://");
 		r = Http(port, "POST", "/api/v1/downloads/" + hash + "/pause", token, "", s); CHECK(s == 200 && json::parse(r)["status"] == "paused");
 		r = Http(port, "POST", "/api/v1/downloads/" + hash + "/resume", token, "", s); CHECK(s == 200 && json::parse(r)["status"] != "paused");
 		r = Http(port, "DELETE", "/api/v1/downloads/" + hash, token, "", s); CHECK(s == 200);

@@ -1,4 +1,4 @@
-# Stato del lavoro (aggiornato il 26/10/2026)
+# Stato del lavoro (aggiornato il 26/10/2026, sera)
 
 L'elenco dei punti aperti e' su Bench (progetto 10): `tools/bench.py list`. Qui le cose che a Bench non stanno.
 
@@ -9,8 +9,10 @@ Interfaccia (modello A "Console"): Trasferimenti (Download/Upload con sottomenu)
 
 AICH vero chiuso il 26/10/2026 (task 591, 652): recupero provato dal vivo su 3 parti (117, 43, 110). Un danno fatto a mano all'avvio viene rilevato e la parte riscaricata, senza AICH (serve connessione e fonti). Da tenere d'occhio: parti corrotte da piu' fonti insieme (possibile errore di scrittura dei blocchi).
 
+Fatti il 26/10 (dopo AICH): registro su file (`logs/emuled.log`, task 757); 677 provato dal vivo (la sorveglianza funziona, i due file non hanno fonti in rete); 754 (rimanente nella colonna Dimensione); 752 (barra verde `file_op`: NON vista dal vivo); 755/756 (schede Nome e Commenti, rinomina, filtro antispam `comment_filter`, ricerca note Kad: provate offline, da provare con fonti vere); 607 (streaming verso un player locale: link temporaneo + Range, provato coi test, NON con un .part vero e un player vero). Il demone dell'utente va riavviato con la nuova build per vedere le novita' dell'API.
+
 ## Da fare (vedi Bench per il dettaglio)
-Wrong header (678) da ricatturare con Debug acceso. IP filter (608) rimandato. Tab Nomi e Commenti del dettaglio (755, 756). Features Addon: Scheduler, UploadSpeedSense, UPnP (prova col router), modelli B/C/D, chat. Fasi 8 e 9 dopo. Manuale (647) a fine progetto.
+Wrong header (678) da ricatturare (ora il log su file lo conserva). Messaggi UDP 'magicvalue mismatch' (694): raccogliere casi dal log su file. Notifiche (611) sospese. IP filter (608) rimandato. Features Addon: Scheduler, UploadSpeedSense, UPnP (prova col router), modelli B/C/D, chat. Fasi 8 e 9 dopo. Manuale (647) a fine progetto.
 
 ## Cose imparate (non ovvie)
 - Le porte inoltrate 55662/55672 sono nell'intervallo delle porte temporanee di Linux (32768-60999): un altro programma (e' successo con megasync) puo' prenderle come porta locale. Soluzione: `sudo sysctl -w net.ipv4.ip_local_reserved_ports=55662,55672` (+ file in /etc/sysctl.d/). Il demone dice chi occupa la porta e riprova 2 minuti.

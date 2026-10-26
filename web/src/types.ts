@@ -7,6 +7,7 @@ export interface Download {
   hash: string; name: string; size: number; completed: number; percent: number
   status: DownloadStatus; stopped: boolean; sources: number; sources_transferring: number
   sources_other_files: number; best_queue_rank: number
+  file_op?: 'none' | 'hashing' | 'copying' | 'uncompressing' | 'import_parts'; file_op_percent?: number   // operazione sul file in corso (barra verde)
   speed: number; priority: Priority; category: number; part_file: string
   completed_at?: number; path?: string   // solo per i completati
 }
@@ -22,6 +23,10 @@ export interface KadState {
   running: boolean; connected: boolean; tcp_firewalled?: boolean; udp_firewalled?: boolean; udp_verified?: boolean; contacts?: number; users?: number
 }
 export interface Transfers { downloads: number; download_speed: number; upload_speed: number; uploading: number; waiting: number }
+export interface StreamLink { path: string; name: string; size: number; expires_in: number; mime: string }
+export interface FileNames { current: string; names: { name: string; count: number }[] }
+export interface FileComment { network: 'ed2k' | 'kad'; rating: number; comment: string; file_name: string; user: string }
+export interface FileComments { comments: FileComment[]; kad_connected: boolean; kad_searching: boolean; filter: string }
 export interface Details {
   name: string; part_met: string; part_met_path: string; hash: string; aich_hash: string | null
   aich_status: 'error' | 'empty' | 'untrusted' | 'trusted' | 'verified' | 'complete'

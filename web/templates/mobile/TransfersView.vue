@@ -34,7 +34,7 @@ onMounted(() => { void prefs.loadCategories() })
           <button class="flex w-full items-center gap-3 rounded-2xl p-3 text-left hover:bg-sunk" :class="dl.detail === d.hash ? 'lg:!bg-soft' : ''" @click="dl.detail = dl.detail === d.hash ? null : d.hash">
             <Ring :value="d.percent" :size="48" :tone="statusInfo(d).key === 'done' ? 'ok' : 'accent'" />
             <span class="min-w-0 flex-1"><span class="line-clamp-2 break-words text-[15px] font-semibold leading-snug" :title="d.name">{{ d.name }}</span>
-              <span class="block text-xs tabular-nums text-mute"><template v-if="statusInfo(d).key === 'active'">{{ speed(d.speed) }} · </template><span :class="toneClass(statusInfo(d).tone)">{{ t(statusInfo(d).labelKey) }}</span> · {{ bytes(d.size, 2, true) }}</span></span>
+              <span class="block text-xs tabular-nums text-mute"><template v-if="statusInfo(d).key === 'active'">{{ speed(d.speed) }} · </template><span :class="toneClass(statusInfo(d).tone)">{{ t(statusInfo(d).labelKey) }}</span> · {{ bytes(d.size, 2, true) }}<template v-if="d.completed < d.size && statusInfo(d).key !== 'done'"> · <span :title="t('transfers.left', { size: bytes(d.size - d.completed, 2, true) })">−{{ bytes(d.size - d.completed, 2, true) }}</span></template></span></span>
             <Icon name="chevron" class="!size-4 text-mute" />
           </button>
         </li>

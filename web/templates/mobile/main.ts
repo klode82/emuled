@@ -8,5 +8,6 @@ import '@fontsource/dm-sans/700.css'
 import '@fontsource/ibm-plex-mono/400.css'
 import Shell from './Shell.vue'
 import TransfersView from './TransfersView.vue'
+import UploadsView from './UploadsView.vue'
 
-createTemplateApp({ shell: Shell, transfers: TransfersView })
+createTemplateApp({ shell: Shell, transfers: TransfersView, uploads: UploadsView })

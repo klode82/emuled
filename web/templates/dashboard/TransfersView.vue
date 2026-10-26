@@ -59,7 +59,7 @@ function pick(hash: string, e: MouseEvent) {
           <div class="flex items-start gap-3">
             <Ring :value="d.percent" :size="52" :tone="statusInfo(d).key === 'done' ? 'ok' : 'accent'" />
             <div class="min-w-0 flex-1"><h3 class="line-clamp-2 break-words text-sm font-semibold leading-snug" :title="d.name">{{ d.name }}</h3>
-              <p class="pt-0.5 text-xs text-mute tabular-nums">{{ bytes(d.size, 2, true) }}<template v-if="catName(d.category)"> · {{ catName(d.category) }}</template></p></div>
+              <p class="pt-0.5 text-xs text-mute tabular-nums">{{ bytes(d.size, 2, true) }}<template v-if="d.completed < d.size && statusInfo(d).key !== 'done'"> · <span :title="t('transfers.left', { size: bytes(d.size - d.completed, 2, true) })">−{{ bytes(d.size - d.completed, 2, true) }}</span></template><template v-if="catName(d.category)"> · {{ catName(d.category) }}</template></p></div>
             <button class="rounded-lg p-1.5 text-mute hover:bg-sunk hover:text-fg" :title="t('skin.dashboard.details')" :aria-label="t('skin.dashboard.details')" @click="dl.detail = d.hash"><Icon name="info" /></button>
           </div>
           <div class="grid grid-cols-3 gap-2 rounded-xl bg-sunk p-2 text-center text-xs">

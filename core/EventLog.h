@@ -4,6 +4,7 @@
 #pragma once
 #include "Log.h"
 #include <cstdint>
+#include <cstdio>
 #include <deque>
 #include <mutex>
 #include <string>
@@ -39,6 +40,8 @@ private:
 	std::deque<LogLine> lines_;
 	size_t cap_;
 	uint64_t next_ = 1;
+	std::FILE *file_ = nullptr; uint64_t fileSize_ = 0;		// file di log su disco (preferenze save_log_to_disk / save_debug_to_disk); sotto m_
+	void WriteToDisk(const LogLine &l);
 };
 
 const char *LevelName(log::Level l);

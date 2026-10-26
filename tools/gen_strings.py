@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Genera core/Strings.h: tutti i testi IDS_ inglesi di emule.rc (tranne quelli gia' in ServerStrings.h/SearchStrings.h).
 import re,sys
-rc=open('../srchybrid/emule.rc',encoding='cp1252',errors='replace').read().replace('\r','')
+rc=open(__import__('os').path.join(__import__('os').path.dirname(__import__('os').path.abspath(__file__)),'..','upstream','srchybrid','emule.rc'),encoding='cp1252',errors='replace').read().replace('\r','')
 have=set()
 for f in ('core/ServerStrings.h','core/search/SearchStrings.h'):
     have|=set(re.findall(r'#define (IDS_\w+)',open(f,encoding='utf-8').read()))

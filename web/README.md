@@ -7,14 +7,14 @@ nel frattempo, interroga l'API ogni 5 secondi.
 ## Vederla subito
 
 ```bash
-cd linux/web && npm install && ./demo.sh        # avvia un demone OFFLINE su una cartella temporanea, con download e server d'esempio
+cd web && npm install && ./demo.sh        # avvia un demone OFFLINE su una cartella temporanea, con download e server d'esempio
 ```
 Stampa l'indirizzo e il token; Ctrl-C ferma tutto e cancella la cartella temporanea. Il tuo profilo non viene toccato.
 
 ## Provarla con il tuo profilo
 
 ```bash
-cd linux/web
+cd web
 npm install
 npm run build                                   # crea dist/
 emuled --profile CONFIG --web-dir dist    # il demone serve l'API e la pagina sulla stessa porta (8765)

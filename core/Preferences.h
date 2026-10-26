@@ -1440,6 +1440,9 @@ public:
 	static void		SetServerUDPPort(uint16 v)			{ nServerUDPPort = v; }
 	static void		SetKadUDPKey(uint32 v)				{ m_dwKadUDPKey = v; }
 	static void		SetVerbose(bool v)					{ m_bVerbose = v; }
+	static void		SetLog2Disk(bool v)					{ log2disk = v; }
+	static void		SetDebug2Disk(bool v)				{ debug2disk = v; }
+	static bool		GetDebug2DiskSetting()				{ return debug2disk; }
 	static void		SetFilterLANIPs(bool v)				{ filterLANIPs = v; }
 	static void		SetDebugClientKadUDPLevel(int v)	{ m_iDebugClientKadUDPLevel = v; }
 	static void		SetDebugClientTCPLevel(int v)		{ m_iDebugClientTCPLevel = v; }

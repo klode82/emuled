@@ -477,7 +477,7 @@
       },
       "Preferences": {
         "type": "object",
-        "description": "Chiavi: nick, tcp_port, udp_port, max_download_kbps, max_upload_kbps (0 = illimitato), max_connections, max_connections_per_5s, max_sources_per_file, network_ed2k, network_kademlia, auto_connect, reconnect, add_servers_from_server, add_servers_from_clients, use_server_priorities, safe_server_connect, static_servers_only, dead_server_retries, crypt_supported, crypt_requested, crypt_required, secure_ident, credit_system, add_new_downloads_paused, auto_up_priority, auto_down_priority, transfer_full_chunks, remove_finished_downloads, verbose_log",
+        "description": "Chiavi: nick, tcp_port, udp_port, max_download_kbps, max_upload_kbps (0 = illimitato), max_connections, max_connections_per_5s, max_sources_per_file, network_ed2k, network_kademlia, auto_connect, reconnect, add_servers_from_server, add_servers_from_clients, use_server_priorities, safe_server_connect, static_servers_only, dead_server_retries, crypt_supported, crypt_requested, crypt_required, secure_ident, credit_system, add_new_downloads_paused, auto_up_priority, auto_down_priority, transfer_full_chunks, remove_finished_downloads, verbose_log, save_log_to_disk, save_debug_to_disk",
         "additionalProperties": {
           "oneOf": [
             {

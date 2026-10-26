@@ -59,7 +59,7 @@ Stato di ciò che citano le voci: **[usato]** è già nel codice; **[previsto]**
 
 **cmake / CMake** — Strumento che legge `CMakeLists.txt` e genera i file per compilare il progetto. **[usato]**.
 
-**compat** — La cartella `linux/compat/`: lo strato che sostituisce le classi di Windows (MFC) con equivalenti Linux, senza cambiare il codice di eMule. Vedi B3.
+**compat** — La cartella `compat/`: lo strato che sostituisce le classi di Windows (MFC) con equivalenti Linux, senza cambiare il codice di eMule. Vedi B3.
 
 **contratto di distruzione** — Regola per i socket pilotati dal throttler: la classe più derivata deve chiamare `StopThrottling()` come prima istruzione del suo distruttore, perché il throttler (un altro thread) chiama funzioni virtuali del socket finché questo è nelle sue code.
 
@@ -247,7 +247,7 @@ Stato di ciò che citano le voci: **[usato]** è già nel codice; **[previsto]**
 
 **theApp / thePrefs** — I due oggetti globali di eMule: l'applicazione (`theApp`, con le code, i server, i client...) e le preferenze (`thePrefs`). Tutto il codice originale li chiama direttamente.
 
-**Registro (log)** — L'elenco cronologico di ciò che il programma fa e dei problemi che incontra ("mi collego al server…", "connessione rifiutata", "file completato"). In eMule è la scheda *Registro*. Nel demone è un buffer in memoria (le ultime 3000 righe) letto con `GET /log` e seguito in diretta dall'evento WebSocket `log`; ogni riga ha un numero progressivo, l'ora, il livello (debug, info, avviso, errore) e la fonte (generale, server, api). Le righe di *debug* ci sono solo con la preferenza `verbose_log`. *Qui:* **[scritto]**.
+**Registro (log)** — L'elenco cronologico di ciò che il programma fa e dei problemi che incontra ("mi collego al server…", "connessione rifiutata", "file completato"). In eMule è la scheda *Registro*. Nel demone è un buffer in memoria (le ultime 3000 righe) letto con `GET /log` e seguito in diretta dall'evento WebSocket `log`; ogni riga ha un numero progressivo, l'ora, il livello (debug, info, avviso, errore) e la fonte (generale, server, api). Le righe di *debug* ci sono solo con la preferenza `verbose_log`. Con `save_log_to_disk` ogni riga va anche in `logs/emuled.log` (resta dopo un riavvio o un arresto improvviso; a 20 MB il file diventa `emuled.log.1`), con `save_debug_to_disk` anche il debug. *Qui:* **[scritto]**.
 
 **thread** — Un filone di esecuzione dentro un processo. Il modello scelto (Bench #560): un thread "logico" che tocca i dati, più thread di lavoro (hash, disco) che non toccano i dati condivisi.
 
@@ -629,20 +629,20 @@ ASan+UBSan stanno insieme; **TSan va da solo** (non si combina con ASan). Altri 
 | id3lib → TagLib | — | tag MP3 (MediaInfo) | opzionale |
 | ResizableLib | — | layout delle finestre MFC | **non si porta** |
 
-Compilatore: g++ 13.3, C++20. Costruzione: CMake 3.28 + Ninja 1.11. Elenco dei pacchetti di sistema: `linux/requirements-apt.txt`.
+Compilatore: g++ 13.3, C++20. Costruzione: CMake 3.28 + Ninja 1.11. Elenco dei pacchetti di sistema: `requirements-apt.txt`.
 
 ## B9. Le directory del progetto
 
 | Cartella | Contenuto |
 |---|---|
-| `linux/compat/` | lo strato MFC/Windows → Linux (B3); `ci/` = symlink generati |
-| `linux/core/` | sorgenti di eMule portati e codice nuovo (`met/`, `known/`, `profile/`, `guardian/`, `net/`, `util/`) e i sostituti provvisori degli oggetti globali |
-| `linux/daemon/` | `emuled.cpp` |
-| `linux/web/` | **l'interfaccia web** (Vue 3 + Vite + TypeScript + Pinia + Tailwind + vue-i18n): `src/lib` (client API, WebSocket, formati), `src/stores` (stato), `src/components`, `src/views` (schermate comuni), `src/i18n` (italiano e inglese), `src/skins/console` (modello A); `./demo.sh` la mostra con dati d'esempio; vedi `web/README.md` |
-| `linux/tests/` | i 19 test e i costruttori di file di prova |
-| `linux/tools/` | `fix_case.py` |
-| `linux/docs/` | questo manuale, l'inventario dei cast non allineati |
-| `linux/web/` | l'interfaccia web (vuota fino alla Fase 7) |
+| `compat/` | lo strato MFC/Windows → Linux (B3); `ci/` = symlink generati |
+| `core/` | sorgenti di eMule portati e codice nuovo (`met/`, `known/`, `profile/`, `guardian/`, `net/`, `util/`) e i sostituti provvisori degli oggetti globali |
+| `daemon/` | `emuled.cpp` |
+| `web/` | **l'interfaccia web** (Vue 3 + Vite + TypeScript + Pinia + Tailwind + vue-i18n): `src/lib` (client API, WebSocket, formati), `src/stores` (stato), `src/components`, `src/views` (schermate comuni), `src/i18n` (italiano e inglese), `src/skins/console` (modello A); `./demo.sh` la mostra con dati d'esempio; vedi `web/README.md` |
+| `tests/` | i 19 test e i costruttori di file di prova |
+| `tools/` | `fix_case.py` |
+| `docs/` | questo manuale, l'inventario dei cast non allineati |
+| `web/` | l'interfaccia web (vuota fino alla Fase 7) |
 | `srchybrid/` | il sorgente Windows originale: **non si modifica** |
 
 ---
@@ -732,7 +732,7 @@ L'orchestrazione e' la `GlobalSearch` (nell'originale sta nella finestra dei ris
 
 ## B10. Regola di porting per ogni file (lista di controllo)
 
-Ogni file di eMule portato da `srchybrid/` a `linux/core/` passa per questi punti. `srchybrid/` non si modifica mai: si importa con `tools/import_src.py` (toglie i CR e converte da cp1252 a UTF-8) e poi si corregge la copia.
+Ogni file di eMule portato da `upstream/srchybrid/` a `core/` passa per questi punti. `srchybrid/` non si modifica mai: si importa con `tools/import_src.py` (toglie i CR e converte da cp1252 a UTF-8) e poi si corregge la copia.
 
 1. **Struct con `#pragma pack`** (quelle che finiscono su disco o in rete): `static_assert` sulla dimensione. Esempio: `Preferences_Ext_Struct` di `preferences.dat` deve restare di 61 byte.
 2. **Letture non allineate**: `memcpy`, mai un cast di puntatore a `uint32*` su un buffer di byte.

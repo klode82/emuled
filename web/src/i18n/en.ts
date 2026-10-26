@@ -198,6 +198,8 @@ const en: Messages = {
       auto_down_priority: { label: 'Automatic download priority for new files' },
       transfer_full_chunks: { label: 'Finish the current block', hint: 'Completes the block before moving to another user.' },
       verbose_log: { label: 'Also record debug messages', hint: 'Writes debug messages to the log too (many). Useful when hunting for a problem.' },
+      save_log_to_disk: { label: 'Save the log to a file', hint: 'Also writes the log to logs/emuled.log in the profile folder, so it survives a restart or a crash. At 20 MB the old file becomes emuled.log.1.' },
+      save_debug_to_disk: { label: 'Save debug messages to the file too', hint: 'Works only with “Also record debug messages” on. Many lines: turn it on only while hunting for a problem.' },
       remove_finished_downloads: { label: 'Remove finished downloads from the list', hint: 'When off, completed items stay in the list as “Completed” until you remove them.' },
     },
     categories: 'Categories', defaultCategory: 'None (default)', editCat: 'Edit {name}', deleteCat: 'Delete {name}',

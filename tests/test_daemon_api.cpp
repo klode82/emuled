@@ -185,6 +185,8 @@ int main(int argc, char **argv)
 		r = Http(port, "GET", "/api/v1/status", token, "", s); CHECK(json::parse(r)["upnp"]["enabled"] == true && json::parse(r)["upnp"]["state"] == "offline");
 		Http(port, "PATCH", "/api/v1/preferences", token, "{\"upnp_enabled\":false}", s); CHECK(s == 200);
 		Http(port, "PATCH", "/api/v1/preferences", token, "{\"verbose_log\":false}", s); CHECK(s == 200);
+		r = Http(port, "PATCH", "/api/v1/preferences", token, "{\"save_log_to_disk\":true,\"save_debug_to_disk\":true}", s); CHECK(s == 200 && json::parse(r)["preferences"]["save_log_to_disk"] == true && json::parse(r)["preferences"]["save_debug_to_disk"] == true);
+		Http(port, "PATCH", "/api/v1/preferences", token, "{\"save_log_to_disk\":false,\"save_debug_to_disk\":false}", s); CHECK(s == 200);
 		Http(port, "PATCH", "/api/v1/preferences", token, "{\"max_upload_kbps\":5,\"inesistente\":1}", s); CHECK(s == 422);
 		r = Http(port, "GET", "/api/v1/preferences", token, "", s); CHECK(json::parse(r)["max_upload_kbps"] == 0);	// niente e' cambiato dalla richiesta rifiutata
 		Http(port, "PATCH", "/api/v1/preferences", token, "{\"tcp_port\":70000}", s); CHECK(s == 422);

@@ -29,7 +29,7 @@ Dati misurati sul sorgente (srchybrid/): 242 `.cpp`, 210k righe. 114 `.cpp` tocc
 Struttura del progetto:
 
 ```
-linux/
+emuled/
   ROADMAP.md
   CMakeLists.txt
   compat/        # strato CString/CFile/CArray/... (vedi 0.2)

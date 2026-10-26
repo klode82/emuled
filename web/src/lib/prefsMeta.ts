@@ -40,4 +40,6 @@ export const PREFS: PrefMeta[] = [
   { key: 'remove_finished_downloads', group: 'downloads', type: 'bool' },
 
   { key: 'verbose_log', group: 'diagnostics', type: 'bool' },
+  { key: 'save_log_to_disk', group: 'diagnostics', type: 'bool' },
+  { key: 'save_debug_to_disk', group: 'diagnostics', type: 'bool' },
 ]

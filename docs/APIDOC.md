@@ -293,6 +293,8 @@ Un oggetto piatto chiave/valore. Le chiavi (stesse del dialogo Preferenze di eMu
 | `upnp_enabled` | sì/no | UPnP: chiede al router di inoltrare le porte TCP e UDP (si accende e si spegne subito, senza riavvio; lo stato è in `GET /status`, campo `upnp`) |
 | `upnp_close_on_exit` | sì/no | UPnP: toglie le regole dal router quando il demone si ferma |
 | `verbose_log` | sì/no | scrivere nel registro anche i messaggi di debug (sono molti: serve per cercare un problema) |
+| `save_log_to_disk` | sì/no | scrivere il registro anche nel file `logs/emuled.log` del profilo (resta dopo un riavvio o un arresto improvviso; a 20 MB passa a `emuled.log.1`) |
+| `save_debug_to_disk` | sì/no | scrivere nel file anche le righe di debug (vale solo con `verbose_log` acceso) |
 
 ### `PATCH /api/v1/preferences` — cambia
 Corpo: solo le chiavi da cambiare, es. `{"max_upload_kbps": 50}`. **Si controlla tutto prima**: se una chiave non esiste o un valore non va (tipo, limiti) risponde **422** e non cambia nulla. Risposta: `preferences` (tutte, aggiornate), `restart_required` (le chiavi cambiate che valgono dal prossimo avvio) e `saved`.

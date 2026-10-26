@@ -3,6 +3,8 @@
 #include "EventLog.h"
 #include "Preferences.h"
 #include <chrono>
+#include <ctime>
+#include <filesystem>
 
 namespace emule {
 
@@ -28,8 +30,29 @@ void EventLog::Add(log::Level level, std::string text, bool debug)
 	l.time_ms = (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 	std::lock_guard<std::mutex> g(m_);
 	l.id = next_++;
+	if (l.level == log::Level::Debug ? thePrefs.GetDebug2Disk() : thePrefs.GetLog2Disk()) WriteToDisk(l);
 	lines_.push_back(std::move(l));
 	while (lines_.size() > cap_) lines_.pop_front();
+}
+
+// Una riga per messaggio, come l'esportazione dell'interfaccia: "2026-10-26T05:25:03.183Z [info] [general] testo". File logs/emuled.log; oltre 20 MB diventa emuled.log.1 (uno solo, il vecchio si perde).
+// ponytail: scrittura sotto il mutex del registro; se il disco rallenta rallenta anche chi scrive il log. Un thread dedicato solo se si vede nei profili.
+void EventLog::WriteToDisk(const LogLine &l)
+{
+	namespace fs = std::filesystem;
+	constexpr uint64_t kMax = 20ull << 20;
+	std::error_code ec;
+	fs::path dir = std::string((LPCTSTR)thePrefs.GetMuleDirectory(EMULE_LOGDIR)), path = dir / "emuled.log";
+	if (file_ && fileSize_ >= kMax) { std::fclose(file_); file_ = nullptr; fs::rename(path, dir / "emuled.log.1", ec); }
+	if (!file_) {
+		fs::create_directories(dir, ec);
+		file_ = std::fopen(path.c_str(), "a"); if (!file_) return;
+		fileSize_ = fs::exists(path, ec) ? (uint64_t)fs::file_size(path, ec) : 0;
+	}
+	std::time_t t = (std::time_t)(l.time_ms / 1000); std::tm tm; gmtime_r(&t, &tm);
+	char ts[40]; size_t n = std::strftime(ts, sizeof ts, "%Y-%m-%dT%H:%M:%S", &tm);
+	int w = std::fprintf(file_, "%s.%03uZ [%s] [%s] %s\n", ts, (unsigned)(l.time_ms % 1000), LevelName(l.level), l.source.c_str(), l.text.c_str());
+	std::fflush(file_); (void)n; if (w > 0) fileSize_ += (uint64_t)w;
 }
 
 std::vector<LogLine> EventLog::Last(size_t limit, log::Level min) const

@@ -197,6 +197,8 @@ const it = {
       auto_down_priority: { label: 'Priorità di download automatica per i file nuovi' },
       transfer_full_chunks: { label: 'Finisci il blocco in corso', hint: 'Completa il blocco prima di passare a un altro utente.' },
       verbose_log: { label: 'Registra anche il debug', hint: 'Scrive nel registro anche i messaggi di debug (molti). Serve per cercare un problema.' },
+      save_log_to_disk: { label: 'Salva il registro su file', hint: 'Scrive il registro anche in logs/emuled.log nella cartella del profilo, cosi\' resta dopo un riavvio o un arresto improvviso. A 20 MB il file vecchio diventa emuled.log.1.' },
+      save_debug_to_disk: { label: 'Salva su file anche il debug', hint: 'Vale solo con «Registra anche il debug» acceso. Sono molte righe: accendilo solo mentre cerchi un problema.' },
       remove_finished_downloads: { label: 'Togli dalla lista i download finiti', hint: 'Se spento, i completati restano in lista come «Completato» finché non li togli.' },
     },
     categories: 'Categorie', defaultCategory: 'Nessuna (predefinita)', editCat: 'Modifica {name}', deleteCat: 'Cancella {name}',

@@ -1877,6 +1877,64 @@
         ]
       }
     },
+    "/api/v1/templates": {
+      "get": {
+        "summary": "Elenco dei template d'interfaccia",
+        "description": "I template trovati in /usr/share/emuled/templates (system), ~/.emuled/templates (user) e nella cartella extra --templates-dir (dev), anche quelli non validi con il motivo (errors). Per ognuno: id, name, version, description, author, license, api, source, valid, errors, reserved, dir_name, url (/t/<id>/) e preview. dirs dice dove cercarli; api_version e' la versione dei template che il demone capisce. La scelta del template sta solo nel browser.",
+        "responses": {
+          "200": {
+            "description": "Elenco"
+          },
+          "401": {
+            "description": "Token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": [
+          "Template"
+        ]
+      }
+    },
+    "/api/v1/templates/rescan": {
+      "post": {
+        "summary": "Rilegge le cartelle dei template",
+        "description": "Da usare dopo aver copiato o tolto un template. Risponde con lo stesso elenco di GET /templates.",
+        "responses": {
+          "200": {
+            "description": "Elenco"
+          },
+          "401": {
+            "description": "Token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": [
+          "Template"
+        ]
+      }
+    },
     "/api/v1/log": {
       "get": {
         "summary": "Leggi il registro degli eventi",

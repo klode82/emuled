@@ -5,7 +5,7 @@ All'inizio di una sessione leggi anche `.claude/memory/*.md` (le note di lavoro:
 Il token di Bench NON e' nel progetto (per scelta): chiedilo all'utente e usalo solo come variabile d'ambiente `BT`.
 
 ## Cos'e'
-Demone `emuled` (C++20) con API REST/JSON + WebSocket sulla stessa porta (127.0.0.1:8765, token Bearer in `<profilo>/emuled.token`), interfaccia web Vue 3 servita con `web_dir`.
+Demone `emuled` (C++20) con API REST/JSON + WebSocket sulla stessa porta (127.0.0.1:8765, token Bearer in `<profilo>/emuled.token`), interfaccia web Vue 3 fatta di **template** (cartelle con `template.yaml`; quelli di serie in `/usr/share/emuled/templates/`, quelli dell'utente in `~/.emuled/templates/`, `templates_dir` per sviluppo; vedi `docs/TEMPLATES.md`).
 Mantiene compatibili i formati di profilo di eMule Windows. L'utente scrive in italiano.
 
 ## Cartelle
@@ -14,8 +14,8 @@ Mantiene compatibili i formati di profilo di eMule Windows. L'utente scrive in i
 - `upstream/srchybrid` e `upstream/mbedtls`: i sorgenti ORIGINALI di eMule per Windows. **Sola lettura: non modificarli mai.** Servono da riferimento e ai generatori in `tools/`.
 
 ## Come si lavora
-- Compilare: `tools/rebuild.sh` (emuled + web/dist; toglie da build/ i programmi di prova). Tutto con i test: `ninja` in `build/` poi `ctest` (40 test). Si usa **Ninja**, mai `make`.
-- Web: `npx vue-tsc --noEmit`, `npx vitest run`, prove nel browser `npm run e2e` (serve un demone `emuled --fake-profile --offline --api-port 18765 --web-dir dist` con un profilo che ha `server.met`; vedi la testa di `web/e2e/flow.mjs`).
+- Compilare: `tools/rebuild.sh` (emuled + web/dist; toglie da build/ i programmi di prova). Tutto con i test: `ninja` in `build/` poi `ctest` (42 test). Si usa **Ninja**, mai `make`.
+- Web: `npx vue-tsc --noEmit`, `npx vitest run`, prove nel browser `npm run e2e` (serve un demone `emuled --fake-profile --offline --api-port 18765 --templates-dir dist/templates` con un profilo che ha `server.met`, indirizzo `…/t/console/`; vedi la testa di `web/e2e/flow.mjs`). Costruire l'interfaccia: `npm run build` in `web/` (un template per cartella in `dist/templates/`).
 - Bug di memoria: build ASan+UBSan **senza asserzioni** (`-fsanitize=address,undefined -DNDEBUG`), come in produzione; TSan con `setarch x86_64 -R`.
 - `grep` della shell e' ugrep e salta i file non UTF-8: usare `command grep -a`. Non usare `pkill -f` con testi presenti nel proprio comando (uccide la propria shell).
 - Un `ps` mostra la CPU media dall'avvio: per la CPU di adesso usare `top`.

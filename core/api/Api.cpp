@@ -361,6 +361,11 @@ void RegisterRoutes(HttpServer &srv, double started_s, const DaemonHooks &hooks)
 	srv.Route("GET", "/api/v1/status", [started_s, hooks](const Request &) { return Ok(StatusJson(started_s, hooks)); });
 
 	// ---- download
+	srv.Route("GET", "/api/v1/templates", [hooks](const Request &) { return hooks.templates ? Ok(hooks.templates(false)) : Ok({{"templates", json::array()}, {"api_version", 1}, {"dirs", json::object()}}); });
+	srv.Route("POST", "/api/v1/templates/rescan", [hooks](const Request &) {		// rilegge le cartelle dei template (dopo averne copiato uno)
+		if (!hooks.templates) return Response::Error(409, "i template non sono disponibili");
+		Audit("templates rescan requested"); return Ok(hooks.templates(true));
+	});
 	srv.Route("GET", "/api/v1/downloads", [](const Request &) { return Ok(AllDownloadsJson()); });
 	srv.Route("GET", "/api/v1/downloads/:hash", [](const Request &r) {
 		if (const auto *c = CompletedOnly(r.params.at("hash"))) return Ok(CompletedJson(*c));

@@ -12,7 +12,8 @@ namespace emule::api {
 
 // Registra le rotte /api/v1/... su server. started = istante di avvio del demone (per "uptime").
 // Cio' che solo il demone sa fare: avviare e fermare Kad a caldo (vuoti = non disponibile)
-struct DaemonHooks { std::function<bool()> kad_start; std::function<void()> kad_stop; std::function<bool()> save_prefs; std::function<void(bool)> upnp_apply; std::function<void()> shared_changed; std::string mediainfo; std::function<nlohmann::json()> upnp_state; };	// save_prefs: scrive le preferenze nel profilo; vuoto o false = solo in memoria (identita' o porte temporanee)
+struct DaemonHooks { std::function<bool()> kad_start; std::function<void()> kad_stop; std::function<bool()> save_prefs; std::function<void(bool)> upnp_apply; std::function<void()> shared_changed; std::string mediainfo; std::function<nlohmann::json()> upnp_state;
+	std::function<nlohmann::json(bool rescan)> templates; };		// templates(rescan): l'elenco dei template d'interfaccia (rileggendo le cartelle se rescan); vuoto = nessun registro	// save_prefs: scrive le preferenze nel profilo; vuoto o false = solo in memoria (identita' o porte temporanee)
 void RegisterRoutes(HttpServer &server, double started_s, const DaemonHooks &hooks = {});
 void RegisterTransferRoutes(HttpServer &server, const DaemonHooks &hooks);
 void RegisterPrefsRoutes(HttpServer &server, const DaemonHooks &hooks);

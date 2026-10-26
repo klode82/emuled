@@ -290,6 +290,7 @@ int RunDaemonCmd(int argc, char **argv)
 		if (st.api_port) o.api_port = *st.api_port;
 		if (st.api_bind) o.api_bind = *st.api_bind;
 		if (st.web_dir) o.web_dir = *st.web_dir;
+		if (st.templates_dir) o.templates_dir = *st.templates_dir;
 		if (st.mediainfo) o.mediainfo = *st.mediainfo;
 	}
 	for (int i = 1; i < argc; ++i) {
@@ -315,6 +316,7 @@ int RunDaemonCmd(int argc, char **argv)
 		else if (s == "--api-bind") { const char *v = next(); if (!v) return 2; o.api_bind = v; }
 		else if (s == "--api-token") { const char *v = next(); if (!v) return 2; o.api_token = v; }
 		else if (s == "--web-dir") { const char *v = next(); if (!v) return 2; o.web_dir = v; }
+		else if (s == "--templates-dir") { const char *v = next(); if (!v) return 2; o.templates_dir = v; }
 		else { std::fprintf(stderr, "emuled --run: opzione sconosciuta '%s'\n", s.c_str()); return 2; }
 	}
 	if (prof.empty()) { std::fprintf(stderr, "emuled --run vuole la cartella di configurazione: --profile CARTELLA, oppure EMULED_CONFIG, oppure config: ... nel file di configurazione (~/.emuled/config.yaml)\n"); return 2; }

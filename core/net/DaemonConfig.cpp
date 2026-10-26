@@ -38,7 +38,7 @@ bool ParseConfigFile(const std::string &path, std::map<std::string, std::string>
 {
 	std::ifstream f(path);
 	if (!f) { err = "file di configurazione non leggibile: " + path; return false; }
-	static const char *const keys[] = {"config", "api_port", "api_bind", "web_dir", "mediainfo"};
+	static const char *const keys[] = {"config", "api_port", "api_bind", "web_dir", "templates_dir", "mediainfo"};
 	std::string line; int n = 0;
 	while (std::getline(f, line)) {
 		++n;
@@ -50,9 +50,9 @@ bool ParseConfigFile(const std::string &path, std::map<std::string, std::string>
 		std::string k = Trim(line.substr(0, eq)), v = Trim(line.substr(eq + 1));
 		if (v.size() >= 2 && ((v.front() == '"' && v.back() == '"') || (v.front() == '\'' && v.back() == '\''))) v = v.substr(1, v.size() - 2);
 		bool known = false; for (const char *x : keys) if (k == x) known = true;
-		if (!known) { err = path + ":" + std::to_string(n) + ": chiave sconosciuta \"" + k + "\" (valide: config, api_port, api_bind, web_dir, mediainfo)"; return false; }
+		if (!known) { err = path + ":" + std::to_string(n) + ": chiave sconosciuta \"" + k + "\" (valide: config, api_port, api_bind, web_dir, templates_dir, mediainfo)"; return false; }
 		if (v.empty()) { err = path + ":" + std::to_string(n) + ": \"" + k + "\" senza valore"; return false; }
-		out[k] = (k == "config" || k == "web_dir") ? ExpandHome(v) : v;
+		out[k] = (k == "config" || k == "web_dir" || k == "templates_dir") ? ExpandHome(v) : v;
 	}
 	return true;
 }
@@ -96,6 +96,10 @@ bool EnsureDefaultConfigFile(const EnvGetter &env, std::string &created, std::st
 		 "# cartella dell'interfaccia web compilata (web/dist); senza, l'API risponde ma non serve la pagina\n"
 		 "# web_dir: /percorso/di/web/dist\n"
 		 "\n"
+		 "# template d'interfaccia: quelli di serie stanno in /usr/share/emuled/templates e i tuoi in ~/.emuled/templates (si cercano da soli).\n"
+		 "# templates_dir e' una cartella IN PIU' dove cercarli (sviluppo, Docker con una cartella montata). web_dir serve invece UNA sola interfaccia a \"/\" (senza scelta).\n"
+		 "# templates_dir: /percorso/dei/template\n"
+		 "\n"
 		 "# programma mediainfo per la scheda Contenuto dei file (vuoto = si cerca nel PATH); installarlo: sudo apt install mediainfo\n"
 		 "# mediainfo: /usr/bin/mediainfo\n";
 	f.close();
@@ -110,6 +114,7 @@ bool ApplyFile(DaemonSettings &s, const std::map<std::string, std::string> &kv, 
 		else if (k == "api_port") { uint16_t p; if (!ParsePort(v, p)) { err = "api_port non valida nel file: " + v; return false; } s.api_port = p; }
 		else if (k == "api_bind") s.api_bind = v;
 		else if (k == "web_dir") s.web_dir = v;
+		else if (k == "templates_dir") s.templates_dir = v;
 		else if (k == "mediainfo") s.mediainfo = v;
 	}
 	return true;
@@ -122,6 +127,7 @@ bool ApplyEnv(DaemonSettings &s, const EnvGetter &env, std::string &err)
 	if (std::string v = get("EMULED_API_PORT"); !v.empty()) { uint16_t p; if (!ParsePort(v, p)) { err = "EMULED_API_PORT non valida: " + v; return false; } s.api_port = p; }
 	if (std::string v = get("EMULED_API_BIND"); !v.empty()) s.api_bind = v;
 	if (std::string v = get("EMULED_WEB_DIR"); !v.empty()) s.web_dir = v;
+	if (std::string v = get("EMULED_TEMPLATES_DIR"); !v.empty()) s.templates_dir = v;
 	if (std::string v = get("EMULED_MEDIAINFO"); !v.empty()) s.mediainfo = v;
 	return true;
 }

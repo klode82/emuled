@@ -1,0 +1,9 @@
+# Un template minimo: mostra lo stato del demone e l'elenco dei download. Vedi docs/TEMPLATES.md.
+id: ciao
+name: Ciao mondo
+version: 1.0.0
+description: Il template d'esempio piu' piccolo possibile, senza strumenti di costruzione: una sola pagina.
+author: emuled
+license: MIT
+api: 1
+entry: index.html

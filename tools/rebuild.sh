@@ -17,4 +17,4 @@ if [ "${1:-}" = "--test" ]; then
   echo "== test dell'interfaccia"; ( cd web && npm test )
 fi
 echo
-echo "Pronto:  $PWD/build/emuled   e   $PWD/web/dist"
+echo "Pronto:  $PWD/build/emuled   e   $PWD/web/dist/templates  (un template per cartella; templates_dir nel config.yaml)"

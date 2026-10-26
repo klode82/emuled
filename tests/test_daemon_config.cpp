@@ -77,6 +77,14 @@ int main(int argc, char **argv)
 	CHECK(!ParsePort("65536", p) && !ParsePort("", p) && !ParsePort("12a", p) && !ParsePort("-1", p) && !ParsePort("1234567", p));
 	DaemonSettings s; std::map<std::string, std::string> f = {{"config", "/dal/file"}, {"api_port", "1111"}, {"web_dir", "/web/file"}};
 	CHECK(ApplyFile(s, f, err) && s.config == "/dal/file" && *s.api_port == 1111);
+	{	// templates_dir: dal file (con ~/), l'ambiente vince sul file, senza niente resta vuoto; il valore sconosciuto vicino non passa
+		std::map<std::string, std::string> kvt; std::string e2; const std::string yaml = (base / "t.yaml").string();
+		Write(base / "t.yaml", "templates_dir: ~/miei-template\n"); CHECK(ParseConfigFile(yaml, kvt, e2) && kvt.count("templates_dir"));
+		DaemonSettings st; CHECK(!st.templates_dir && ApplyFile(st, kvt, e2) && st.templates_dir && !st.templates_dir->empty());
+		std::map<std::string, std::string> em = {{"EMULED_TEMPLATES_DIR", "/da/ambiente"}}; EnvGetter eg = [&](const char *n) -> const char * { auto it = em.find(n); return it == em.end() ? nullptr : it->second.c_str(); };
+		CHECK(ApplyEnv(st, eg, e2) && *st.templates_dir == "/da/ambiente");
+		Write(base / "t2.yaml", "template_dir: x\n"); kvt.clear(); CHECK(!ParseConfigFile((base / "t2.yaml").string(), kvt, e2) && e2.find("templates_dir") != std::string::npos);		// il refuso e' un errore e la chiave giusta e' nell'elenco
+	}
 	std::map<std::string, std::string> envm = {{"EMULED_CONFIG", "/dall/ambiente"}, {"EMULED_API_PORT", "2222"}};
 	EnvGetter env = [&](const char *n) -> const char * { auto it = envm.find(n); return it == envm.end() ? nullptr : it->second.c_str(); };
 	CHECK(ApplyEnv(s, env, err) && s.config == "/dall/ambiente" && *s.api_port == 2222 && *s.web_dir == "/web/file");		// l'ambiente vince sul file, il resto resta

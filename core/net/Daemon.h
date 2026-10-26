@@ -31,7 +31,8 @@ struct DaemonOptions
 	std::string api_bind = "127.0.0.1";		// solo la macchina stessa; aprire ad altri indirizzi e' una scelta esplicita
 	uint16_t api_port = 8765;
 	std::string api_token;					// vuoto: si legge/crea <profilo>/emuled.token (permessi 0600)
-	std::string web_dir;					// file statici della web UI (vuoto = nessuna)
+	std::string web_dir;					// file statici della web UI (vuoto = nessuna): un'interfaccia singola, come prima dei template
+	std::string templates_dir;				// cartella in piu' dove cercare template d'interfaccia (sviluppo, Docker); vuoto = solo quelle standard
 };
 
 int RunDaemon(const DaemonOptions &opt);	// ritorna il codice di uscita del processo

@@ -39,6 +39,10 @@ curl -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8765/api/v1/status
 
 **Limiti di sicurezza.** Intestazioni fino a 16 KB, corpo fino a 1 MB, 64 connessioni insieme, connessioni inattive chiuse dopo 60 secondi. Dai percorsi dei file statici non si può uscire dalla cartella della web UI (`..` e `%2e%2e` sono rifiutati).
 
+### Gli altri indirizzi del demone (fuori da `/api/`)
+
+Il demone serve anche le pagine dell'interfaccia, **senza token**: `/t/<id>/…` è la cartella del template `<id>` (con la sua pagina d'ingresso anche per i percorsi senza estensione, come nelle applicazioni a pagina singola; `/t/<id>` senza barra finale rimanda a `/t/<id>/`; i percorsi che escono dalla cartella, anche tramite collegamenti simbolici, danno **403**; un template che non c'è o non è valido dà una pagina d'aiuto con **404**; un file oltre **32 MB** dà **413**). Le pagine dei template hanno le intestazioni `Content-Security-Policy` (richieste, script, stili, font e immagini solo verso lo stesso indirizzo), `Referrer-Policy: no-referrer` e `X-Frame-Options: DENY`. `/` è una paginetta che legge dal browser la scelta salvata (`localStorage`, chiave `emuled.template`; senza scelta `console`) e porta a `/t/<id>/`, conservando la parte dopo `#`. `/?template=<id>` imposta la scelta (anche per condividerla) e `/?template=console` è l'**indirizzo di emergenza** che riporta al template predefinito anche se quello scelto è rotto. Se il demone è avviato con `web_dir`, `/` serve quella cartella come prima (un'interfaccia sola). I template si cercano in `/usr/share/emuled/templates/`, `~/.emuled/templates/` e nella cartella extra (`--templates-dir`).
+
 ## 2. Stato
 
 ### `GET /api/v1/ping` — il demone è acceso? *(senza token)*
@@ -364,6 +368,20 @@ Le righe di **debug** compaiono solo con la preferenza `verbose_log` accesa (son
 
 Toglie tutte le righe (`{"removed": N}`); la numerazione continua. Per seguire il registro in diretta basta il WebSocket (evento `log`).
 
-## 13. Ancora da fare
+## 13. Template d'interfaccia
+
+Un *template* è una cartella con una piccola applicazione web che parla solo con questa API; si sceglie dalle Preferenze e la scelta si ricorda nel browser (vedi «Gli altri indirizzi del demone» all'inizio). Il demone li cerca in `/usr/share/emuled/templates/` (di serie), `~/.emuled/templates/` (dell'utente) e nella cartella extra `--templates-dir`; ogni sottocartella con un `template.yaml` è un candidato.
+
+### `GET /api/v1/templates` — l'elenco
+
+Risposta: `templates` (un elemento per cartella trovata, **anche quelle non valide**, per spiegare all'utente perché non compaiono), `api_version` (la versione dell'API dei template che il demone capisce: 1) e `dirs` (le cartelle cercate: `system`, `user`, `extra`; utile per dire all'utente dove copiare un template). Per ogni template: `id`, `name`, `version`, `description`, `author`, `license`, `api` (versione richiesta), `source` (`system`, `user` o `dev` = cartella extra), `valid`, `errors` (elenco di frasi, vuoto se valido), `reserved` (nome riservato ai template di serie), `dir_name`, `url` (`/t/<id>/`, `null` se non valido) e `preview` (indirizzo dell'immagine di anteprima, `null` se manca).
+
+### `POST /api/v1/templates/rescan` — rilegge le cartelle
+
+Da usare dopo aver copiato o tolto un template. Risponde con lo stesso elenco. Nel Registro compare il riassunto («Template: N caricati, M non validi») e un avviso per ogni template non valido.
+
+La scelta del template **non** passa dall'API: sta solo nel browser.
+
+## 14. Ancora da fare
 
 Amici. Ogni gruppo avrà la sua sezione qui e le sue voci in `openapi.json` quando esisterà: il manuale descrive solo ciò che c'è.

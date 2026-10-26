@@ -6,6 +6,7 @@
 #include "net/ServerProbe.h"
 #include "api/Api.h"
 #include "api/HttpServer.h"
+#include "templates/Registry.h"
 #include <fcntl.h>
 #include <fstream>
 #include <random>
@@ -250,12 +251,36 @@ int RunDaemon(const DaemonOptions &opt)
 			hooks.save_prefs = [origServerUdp] { thePrefs.SetServerUDPPort(origServerUdp); bool failed = thePrefs.Save(); thePrefs.SetServerUDPPort(0); return !failed; };		// Save() ritorna true se c'e' stato un errore
 		if (udp) { hooks.kad_start = kadStart; hooks.kad_stop = kadStop; }
 
+		emule::templates::Registry templates;		// i template d'interfaccia (cartelle con template.yaml); deve vivere quanto il server HTTP
 		emule::api::HttpServer api;
 		std::unique_ptr<emule::api::EventPublisher> events;
 		if (ok && opt.api) {
 			std::string created; std::string token = LoadOrCreateToken(cfg, opt.api_token, created);
 			api.SetToken(token);
 			if (!opt.web_dir.empty()) api.SetStaticDir(opt.web_dir);
+			hooks.templates = [&templates, &opt](bool rescan) {
+				const char *home = std::getenv("HOME");
+				emule::templates::Dirs td = emule::templates::DefaultDirs(home ? home : ""); td.extra = opt.templates_dir;
+				if (rescan) templates.Scan(td);
+				nlohmann::json a = nlohmann::json::array();
+				for (auto &e : templates.entries()) {
+					nlohmann::json j = {{"id", e.id}, {"dir_name", e.dir_name}, {"source", emule::templates::SourceName(e.source)}, {"valid", e.valid}, {"errors", e.errors}, {"reserved", emule::templates::IsReservedId(e.id)}};
+					const emule::templates::Manifest &m = e.manifest;
+					j["name"] = e.valid ? m.name : e.dir_name; j["version"] = m.version; j["description"] = m.description; j["author"] = m.author; j["license"] = m.license; j["api"] = m.api;
+					j["url"] = e.valid ? nlohmann::json("/t/" + e.id + "/") : nlohmann::json(); j["preview"] = e.valid && e.has_preview ? nlohmann::json("/t/" + e.id + "/" + m.preview) : nlohmann::json();
+					a.push_back(std::move(j));
+				}
+				return nlohmann::json{{"templates", a}, {"api_version", emule::templates::kApiVersion}, {"dirs", {{"system", td.system}, {"user", td.user}, {"extra", td.extra}}}};
+			};
+			{	// template d'interfaccia: sistema, utente (~/.emuled/templates) ed extra; la pagina "/" porta al template scelto, salvo che sia indicata una cartella web_dir (un'interfaccia sola)
+				const char *home = std::getenv("HOME");
+				emule::templates::Dirs td = emule::templates::DefaultDirs(home ? home : ""); td.extra = opt.templates_dir;
+				templates.Scan(td);
+				api.SetTemplates([&templates](const std::string &id, emule::api::TemplateTarget &t) {
+					const auto *e = templates.Find(id); if (!e) return false;
+					t.dir = e->dir; t.entry = e->manifest.entry; return true;
+				}, opt.web_dir.empty());
+			}
 			emule::api::RegisterRoutes(api, NowS(), hooks);
 			if (!api.Start(opt.api_bind, opt.api_port)) { std::printf("  errore: API non avviata: %s\n", api.LastError().c_str()); ok = false; rc = 1; }
 			else events = std::make_unique<emule::api::EventPublisher>(api, NowS(), hooks);

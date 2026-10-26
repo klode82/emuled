@@ -89,6 +89,39 @@ int main()
 		CHECK(r.find(big.substr(5, 10) + "HTTP/1.1 200") != std::string::npos && r.find("{\"pong\":true}") != std::string::npos);
 		CHECK(Status(call(Req("GET", "/api/v1/hello/x"))) == 401);										// il resto di /api/ resta protetto
 	}
+	// template d'interfaccia: /t/<id>/ serve la cartella del template, senza token, e non esce mai dalla cartella
+	{
+		fs::path tdir = base / "tpl" / "ciao"; fs::create_directories(tdir / "assets"); fs::create_directories(tdir / "extra");
+		{ std::ofstream(tdir / "start.html") << "<html>CIAO</html>"; std::ofstream(tdir / "assets" / "a.js") << "console.log('ciao')"; std::ofstream(tdir / "extra" / "index.html") << "SOTTO"; }
+		fs::create_symlink(base / "segreto.txt", tdir / "fuga.txt");					// un collegamento che esce dalla cartella del template
+		fs::create_symlink(base / "web", tdir / "fuga-dir");
+		srv.SetTemplates([&](const std::string &id, TemplateTarget &t) { if (id != "ciao") return false; t.dir = tdir.string(); t.entry = "start.html"; return true; }, false);
+		auto r = call(Req("GET", "/t/ciao/")); CHECK(Status(r) == 200 && Body(r) == "<html>CIAO</html>" && r.find("text/html") != std::string::npos);
+		r = call(Req("GET", "/t/ciao/assets/a.js")); CHECK(Status(r) == 200 && Body(r) == "console.log('ciao')" && r.find("text/javascript") != std::string::npos);
+		r = call(Req("GET", "/t/ciao")); CHECK(Status(r) == 301 && r.find("Location: /t/ciao/\r\n") != std::string::npos);				// serve la barra finale
+		r = call(Req("GET", "/t/ciao/qualche/percorso/spa")); CHECK(Status(r) == 200 && Body(r) == "<html>CIAO</html>");					// senza estensione: pagina d'ingresso
+		r = call(Req("GET", "/t/ciao/manca.js")); CHECK(Status(r) == 404);
+		r = call(Req("GET", "/t/ciao/extra/")); CHECK(Status(r) == 200 && Body(r) == "SOTTO");												// una sottocartella ha il suo index.html
+		CHECK(Status(call(Req("GET", "/t/ciao/%2e%2e/segreto.txt"))) == 403);																// niente uscite dalla cartella
+		CHECK(Status(call(Req("GET", "/t/ciao/..%2fsegreto.txt"))) == 403);
+		CHECK(Status(call(Req("GET", "/t/ciao/fuga.txt"))) == 403);																			// ne' tramite collegamenti simbolici
+		CHECK(Status(call(Req("GET", "/t/ciao/fuga-dir/index.html"))) == 403);
+		r = call(Req("GET", "/t/nulla/")); CHECK(Status(r) == 404 && Body(r).find("Template non trovato") != std::string::npos && Body(r).find("/?template=console") != std::string::npos);
+		r = call(Req("GET", "/t/<b>x</b>/")); CHECK(Status(r) == 404 && Body(r).find("<b>") == std::string::npos);							// l'id nella pagina e' protetto
+		CHECK(Status(call(Req("POST", "/t/ciao/", "", "x"))) == 405);
+		// intestazioni di sicurezza: solo sulle pagine dei template (non sul resto); file enormi non si servono
+		r = call(Req("GET", "/t/ciao/")); CHECK(r.find("connect-src 'self'") != std::string::npos && r.find("frame-ancestors 'none'") != std::string::npos && r.find("Referrer-Policy: no-referrer") != std::string::npos && r.find("X-Frame-Options: DENY") != std::string::npos);
+		CHECK(call(Req("GET", "/api/v1/ping")).find("Content-Security-Policy") == std::string::npos);
+		{ std::ofstream(tdir / "enorme.bin", std::ios::binary).close(); fs::resize_file(tdir / "enorme.bin", (32u << 20) + 1); }
+		CHECK(Status(call(Req("GET", "/t/ciao/enorme.bin"))) == 413);
+		r = call(Req("HEAD", "/t/ciao/")); CHECK(Status(r) == 200 && Body(r).empty());
+		// senza launcher "/" resta la cartella web di prima; con il launcher e' la paginetta che porta al template scelto
+		r = call(Req("GET", "/")); CHECK(Status(r) == 200 && Body(r) == "<html>UI</html>");
+		srv.SetTemplates([&](const std::string &id, TemplateTarget &t) { if (id != "ciao") return false; t.dir = tdir.string(); t.entry = "start.html"; return true; }, true);
+		r = call(Req("GET", "/")); CHECK(Status(r) == 200 && Body(r).find("emuled.template") != std::string::npos && Body(r).find("/t/console/") != std::string::npos && Body(r).find("UI") == std::string::npos);
+		CHECK(Status(call(Req("GET", "/assets/app.js"))) == 200);																				// il resto della cartella web continua a servirsi
+		srv.SetTemplates(nullptr, false);
+	}
 	// ping senza token; il resto di /api/ richiede il token
 	CHECK(Status(call(Req("GET", "/api/v1/ping"))) == 200);
 	CHECK(Status(call(Req("GET", "/api/v1/hello/mondo"))) == 401);

@@ -24,6 +24,7 @@ using emule::net::IoSource;
 
 static constexpr size_t kMaxHeader = 16 * 1024, kMaxBody = 1 << 20, kMaxConns = 64, kMaxWsBacklog = 8u << 20;
 static constexpr int kIdleSeconds = 60;
+static constexpr uint64_t kMaxServedFile = 32u << 20;		// un file statico piu' grande non si serve (si legge tutto in memoria)
 
 // ---- SHA-1 e base64: servono solo all'handshake WebSocket (RFC 6455)
 namespace {
@@ -68,7 +69,7 @@ std::string Lower(std::string s) { for (auto &c : s) c = (char)tolower((unsigned
 std::string Trim(const std::string &s) { size_t a = s.find_first_not_of(" \t"), b = s.find_last_not_of(" \t\r"); return a == std::string::npos ? "" : s.substr(a, b - a + 1); }
 const char *Reason(int s)
 {
-	switch (s) { case 101: return "Switching Protocols"; case 200: return "OK"; case 201: return "Created"; case 204: return "No Content"; case 206: return "Partial Content"; case 400: return "Bad Request"; case 401: return "Unauthorized";
+	switch (s) { case 101: return "Switching Protocols"; case 200: return "OK"; case 201: return "Created"; case 204: return "No Content"; case 301: return "Moved Permanently"; case 206: return "Partial Content"; case 400: return "Bad Request"; case 401: return "Unauthorized";
 		case 403: return "Forbidden"; case 404: return "Not Found"; case 405: return "Method Not Allowed"; case 409: return "Conflict"; case 413: return "Payload Too Large"; case 416: return "Range Not Satisfiable";
 		case 422: return "Unprocessable Entity"; case 500: return "Internal Server Error"; case 503: return "Service Unavailable"; default: return "OK"; }
 }
@@ -408,28 +409,88 @@ Response HttpServer::Dispatch(Request &r)
 		return pathMatched ? Response::Error(405, "metodo non consentito") : Response::Error(404, "percorso inesistente");
 	}
 	if (r.method != "GET" && r.method != "HEAD") return Response::Error(405, "metodo non consentito");
+	if (templates_) {
+		if (r.path == "/t" || r.path.rfind("/t/", 0) == 0) return Template(r);
+		if (launcher_ && r.path == "/") return Launcher();
+	}
 	return Static(r);
 }
 
 Response HttpServer::Static(const Request &r) const
 {
 	if (static_dir_.empty()) return Response::Error(404, "nessuna interfaccia web configurata");
+	return ServeFrom(static_dir_, r.path, "index.html");
+}
+
+// serve un file da `root_dir`: i percorsi che escono dalla cartella (anche tramite collegamenti simbolici) sono rifiutati; una cartella o un percorso
+// senza estensione che non esiste danno la pagina d'ingresso (applicazioni a pagina singola)
+Response HttpServer::ServeFrom(const std::string &root_dir, const std::string &path, const std::string &entry) const
+{
 	std::error_code ec;
-	if (r.path.find('\0') != std::string::npos) return Response::Error(400, "percorso non valido");
-	fs::path root = fs::weakly_canonical(static_dir_, ec);
-	std::string rel = r.path; while (!rel.empty() && rel[0] == '/') rel.erase(0, 1);
+	if (path.find('\0') != std::string::npos) return Response::Error(400, "percorso non valido");
+	fs::path root = fs::weakly_canonical(root_dir, ec);
+	std::string rel = path; while (!rel.empty() && rel[0] == '/') rel.erase(0, 1);
 	fs::path p = fs::weakly_canonical(root / rel, ec);
 	auto inside = [&](const fs::path &x) { auto rs = root.string(); auto xs = x.string(); return xs == rs || xs.rfind(rs + "/", 0) == 0; };
 	if (ec || !inside(p)) return Response::Error(403, "percorso non consentito");
-	if (fs::is_directory(p, ec)) p /= "index.html";
+	if (fs::is_directory(p, ec)) p /= (p == root ? entry : "index.html");		// la cartella del template ha la sua pagina d'ingresso, le sottocartelle index.html
 	if (!fs::is_regular_file(p, ec)) {
 		if (fs::path(rel).has_extension()) return Response::Error(404, "file inesistente");
-		p = root / "index.html";													// percorsi dell'applicazione a pagina singola
-		if (!fs::is_regular_file(p, ec)) return Response::Error(404, "file inesistente");
+		p = fs::weakly_canonical(root / entry, ec);
+		if (ec || !inside(p) || !fs::is_regular_file(p, ec)) return Response::Error(404, "file inesistente");
 	}
+	if (!inside(fs::weakly_canonical(p, ec))) return Response::Error(403, "percorso non consentito");
+	uint64_t size = fs::file_size(p, ec);
+	if (ec || size > kMaxServedFile) return Response::Error(413, "file troppo grande per essere servito");
 	std::ifstream f(p, std::ios::binary); std::ostringstream ss; ss << f.rdbuf();
 	Response resp; resp.content_type = Mime(p.extension().string()); resp.body = ss.str();
 	return resp;
+}
+
+static std::string HtmlEscape(const std::string &s)
+{
+	std::string o; for (char c : s) { if (c == '<') o += "&lt;"; else if (c == '>') o += "&gt;"; else if (c == '&') o += "&amp;"; else if (c == '"') o += "&quot;"; else if (c == '\'') o += "&#39;"; else o += c; }
+	return o;
+}
+static Response Html(int status, const std::string &body)
+{
+	Response r; r.status = status; r.content_type = "text/html; charset=utf-8";
+	r.body = "<!doctype html><html lang=\"it\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta name=\"color-scheme\" content=\"light dark\"><title>emuled</title></head><body>" + body + "</body></html>";
+	r.headers["Cache-Control"] = "no-store";
+	return r;
+}
+
+// /t/<id>/... : la cartella del template
+Response HttpServer::Template(const Request &r) const
+{
+	std::string rest = r.path.size() > 3 ? r.path.substr(3) : "";		// dopo "/t/"
+	size_t slash = rest.find('/'); std::string id = rest.substr(0, slash);
+	TemplateTarget t;
+	if (id.empty() || !templates_(id, t))
+		return Html(404, "<h1>Template non trovato</h1><p>Il template &laquo;" + HtmlEscape(id) + "&raquo; non c'&egrave; o non &egrave; valido.</p>"
+			"<p>I template stanno in <code>/usr/share/emuled/templates/</code> (quelli di serie) e in <code>~/.emuled/templates/</code> (i tuoi); ogni template ha una cartella con un file <code>template.yaml</code>. Il Registro di emuled dice perch&eacute; un template non viene caricato.</p>"
+			"<p><a href=\"/?template=console\">Torna al template predefinito (console)</a></p>");
+	if (slash == std::string::npos) {		// /t/<id> senza barra finale: gli indirizzi relativi dentro il template funzionano solo con la barra
+		Response x; x.status = 301; x.content_type = "text/plain; charset=utf-8"; x.headers["Location"] = "/t/" + id + "/";
+		return x;
+	}
+	Response x = ServeFrom(t.dir, rest.substr(slash), t.entry);
+	// Un template e' codice che gira nella pagina e vede il token: queste intestazioni lo tengono dentro lo stesso indirizzo del demone (richieste solo verso se' stesso,
+	// niente script, stili, font o immagini da altri siti: un template funziona anche senza internet), non incorniciabile in altre pagine, niente 'Referer'.
+	// 'unsafe-inline' resta per script e stili: molti template (anche questo documento d'esempio) ne hanno. Non ferma tutto (un template puo' ancora spostare la pagina
+	// altrove) ma toglie le vie piu' facili per far uscire il token; vedi docs/TEMPLATES.md.
+	x.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'";
+	x.headers["Referrer-Policy"] = "no-referrer"; x.headers["X-Frame-Options"] = "DENY";
+	return x;
+}
+
+// "/" : sceglie il template in base a cio' che il browser ha salvato. ?template=<id> imposta la scelta (e' anche l'indirizzo di emergenza: /?template=console).
+Response HttpServer::Launcher() const
+{
+	return Html(200, "<p>Apro l'interfaccia&hellip;</p><noscript><p><a href=\"/t/console/\">Apri il template predefinito (console)</a></p></noscript>"
+		"<script>(function(){var k='emuled.template',ok=/^[a-z0-9][a-z0-9-]{1,31}$/,id='console',q=new URLSearchParams(location.search).get('template');"
+		"try{if(q!==null){if(ok.test(q)){localStorage.setItem(k,q);}else{localStorage.removeItem(k);}}var s=localStorage.getItem(k);if(s&&ok.test(s))id=s;}catch(e){}"
+		"if(q!==null&&ok.test(q))id=q;location.replace('/t/'+id+'/'+location.hash);})();</script>");
 }
 
 void HttpServer::Broadcast(const std::string &text)

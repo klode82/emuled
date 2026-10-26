@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Ciao mondo - emuled</title>
+</head>
+<body>
+<h1>Ciao mondo</h1>
+
+<!-- Accesso: il codice (token) sta nel browser alla chiave emuled.token, la stessa per tutti i template: se c'e' gia', non si chiede di nuovo -->
+<form id="login" hidden>
+  <p>Incolla il token (il file <code>emuled.token</code> nella cartella del profilo).</p>
+  <input id="token" type="password" autocomplete="off" aria-label="Token">
+  <button>Entra</button>
+  <p id="errore" role="alert"></p>
+</form>
+
+<section id="main" hidden>
+  <p id="stato">...</p>
+  <h2>Download</h2>
+  <ul id="lista"></ul>
+  <!-- Ogni template deve dare un modo per cambiare aspetto: /?template=console porta ad A, dove si sceglie dalle Preferenze -->
+  <p><a href="/?template=console">Cambia aspetto</a> &middot; <button id="esci">Esci</button></p>
+</section>
+
+<script>
+// Indirizzi RELATIVI al template (non cominciano con /): il template sta in /t/<id>/, ma l'API e' sempre a /api/v1/ (qui si scrive assoluto perche' e' del demone)
+var KEY = 'emuled.token';
+function token() { try { return localStorage.getItem(KEY) || ''; } catch (e) { return ''; } }
+function api(path) {
+  return fetch('/api/v1' + path, { headers: { Authorization: 'Bearer ' + token() } }).then(function (r) {
+    if (r.status === 401) { throw new Error('401'); }
+    return r.json();
+  });
+}
+function show(logged) { document.getElementById('login').hidden = logged; document.getElementById('main').hidden = !logged; }
+function aggiorna() {
+  Promise.all([api('/status'), api('/downloads')]).then(function (x) {
+    var s = x[0], d = x[1];
+    // textContent, mai innerHTML con dati del demone: i nomi dei file li decide chi li condivide
+    document.getElementById('stato').textContent = 'Scarico a ' + Math.round(s.transfers.download_speed / 1024) + ' KB/s, invio a ' + Math.round(s.transfers.upload_speed / 1024) + ' KB/s';
+    var ul = document.getElementById('lista'); ul.textContent = '';
+    d.forEach(function (f) { var li = document.createElement('li'); li.textContent = f.name + ' - ' + Math.floor(f.percent) + '%'; ul.appendChild(li); });
+  }).catch(function (e) {
+    if (String(e.message) === '401') {
+      try { localStorage.removeItem(KEY); } catch (z) {}
+      document.getElementById('token').value = '';
+      document.getElementById('errore').textContent = 'Token non valido: riprova.';
+      clearInterval(timer); show(false);
+    }
+  });
+}
+document.getElementById('login').addEventListener('submit', function (ev) {
+  ev.preventDefault();
+  document.getElementById('errore').textContent = '';
+  try { localStorage.setItem(KEY, document.getElementById('token').value.trim()); } catch (e) {}
+  start();
+});
+document.getElementById('esci').addEventListener('click', function () { try { localStorage.removeItem(KEY); } catch (e) {} start(); });
+var timer;
+function start() {
+  clearInterval(timer);
+  if (!token()) { show(false); return; }
+  show(true); aggiorna(); timer = setInterval(aggiorna, 3000);	// semplice: si rilegge ogni 3 secondi (il WebSocket /api/v1/events?token=... evita di interrogare)
+}
+start();
+</script>
+</body>
+</html>

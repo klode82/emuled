@@ -37,6 +37,10 @@ struct Response
 	static Response Error(int status, const std::string &message);		// {"error":"testo in italiano","code":"codice_stabile"}
 };
 
+// Un template d'interfaccia e' una cartella servita a /t/<id>/ (Bench 842): il resolver dice, dato l'id, dove sta la cartella e qual e' la pagina d'ingresso.
+struct TemplateTarget { std::string dir, entry; };
+using TemplateResolver = std::function<bool(const std::string &id, TemplateTarget &out)>;
+
 using Handler = std::function<Response(const Request &)>;
 using WsMessageHandler = std::function<void(uint64_t client, const std::string &text)>;
 
@@ -56,6 +60,9 @@ public:
 
 	void SetToken(const std::string &token) { token_ = token; }		// vuoto = nessuna autenticazione (solo prove)
 	void SetStaticDir(const std::string &dir) { static_dir_ = dir; }	// file statici (web UI) per i percorsi che non sono /api/
+	// template: /t/<id>/... serve la cartella del template (con la pagina d'ingresso per i percorsi senza estensione, come le applicazioni a pagina singola);
+	// con launcher == true la pagina "/" e' una paginetta incorporata che porta al template scelto nel browser (emuled.template, altrimenti console)
+	void SetTemplates(TemplateResolver r, bool launcher) { templates_ = std::move(r); launcher_ = launcher; }
 	void Route(const std::string &method, const std::string &pattern, Handler h);	// es. Route("GET", "/api/v1/downloads/:hash", ...)
 	void SetWsHandler(const std::string &path, WsMessageHandler h) { ws_path_ = path; ws_handler_ = std::move(h); }	// il WebSocket e' un solo percorso (/api/v1/events)
 
@@ -71,6 +78,9 @@ private:
 	bool Authorized(const Request &r) const;
 	Response Dispatch(Request &r);
 	Response Static(const Request &r) const;
+	Response ServeFrom(const std::string &root_dir, const std::string &path, const std::string &entry) const;
+	Response Template(const Request &r) const;
+	Response Launcher() const;
 	void Drop(uint64_t id);
 
 	struct RouteEntry { std::string method; std::vector<std::string> parts; Handler h; };
@@ -78,6 +88,7 @@ private:
 	std::map<uint64_t, std::unique_ptr<Conn>> conns_;
 	std::unique_ptr<Listener> listener_;
 	std::string token_, static_dir_, ws_path_, error_;
+	TemplateResolver templates_; bool launcher_ = false;
 	WsMessageHandler ws_handler_;
 	uint16_t port_ = 0;
 	uint64_t next_id_ = 1, idle_timer_ = 0;

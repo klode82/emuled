@@ -69,10 +69,18 @@ int main(int argc, char **argv)
 	fs::path base = fs::temp_directory_path() / ("daemonapi_" + std::to_string(getpid())); fs::create_directories(base / "config"); ::setenv("HOME", base.c_str(), 1);
 	{ fs::path mi = base / "finto-mediainfo.sh"; std::ofstream(mi) << "#!/bin/sh\necho '{\"media\":{\"track\":[{\"@type\":\"General\",\"Format\":\"Matroska\",\"Duration\":\"60\"},{\"@type\":\"Video\",\"Format\":\"AVC\",\"Width\":\"1280\",\"Height\":\"720\"}]}}'\n"; fs::permissions(mi, fs::perms::owner_all); ::setenv("EMULED_MEDIAINFO", mi.c_str(), 1); }		// scheda Contenuto: un mediainfo finto
 	{ std::ofstream(base / "config" / "searches.json") << R"({"next_id":8,"searches":[{"id":7,"query":"vecchia","scope":"kad","cancelled":false,"results":[{"hash":"AA","name":"x.bin","type":"","size":5,"sources":3,"complete_sources":0,"answers":1}]}]})"; }	// scheda salvata da una sessione precedente
+	// template d'interfaccia: uno dell'utente (HOME e' la cartella temporanea), uno extra (--templates-dir), uno rotto, uno con id riservato dalla cartella dell'utente
+	auto mkTpl = [&](const fs::path &root, const std::string &dir, const std::string &yaml, bool page = true, bool preview = false) {
+		fs::create_directories(root / dir); std::ofstream(root / dir / "template.yaml") << yaml; if (page) std::ofstream(root / dir / "index.html") << "<h1>" << dir << "</h1>"; if (preview) std::ofstream(root / dir / "anteprima.png") << "x"; };
+	fs::path tplUser = base / ".emuled" / "templates", tplExtra = base / "tpl-extra";
+	mkTpl(tplUser, "mio", "id: mio\nname: Il mio\nversion: 1.2.3\ndescription: prova\nauthor: io\npreview: anteprima.png\n", true, true);
+	mkTpl(tplUser, "rotto", "id: rotto\nname: Rotto\nversion: 1.0.0\n", false);
+	mkTpl(tplUser, "console", "id: console\nname: Falso\nversion: 1.0.0\n");
+	mkTpl(tplExtra, "dashboard", "id: dashboard\nname: Cruscotto\nversion: 1.0.0\n");
 	int pfd[2]; if (pipe(pfd) != 0) return 2;
 	posix_spawn_file_actions_t fa; posix_spawn_file_actions_init(&fa); posix_spawn_file_actions_adddup2(&fa, pfd[1], 1); posix_spawn_file_actions_addclose(&fa, pfd[0]);
 	std::string cfg = (base / "config").string(), tcp = std::to_string(12000 + getpid() % 15000), udp = std::to_string(12000 + (getpid() + 7) % 15000);
-	const char *args[] = {exe.c_str(), "--run", "--fake-profile", "--profile", cfg.c_str(), "--offline", "--api-port", "0", "--tcp-port", tcp.c_str(), "--udp-port", udp.c_str(), "--status-interval", "0", nullptr};
+	const char *args[] = {exe.c_str(), "--run", "--fake-profile", "--profile", cfg.c_str(), "--offline", "--api-port", "0", "--tcp-port", tcp.c_str(), "--udp-port", udp.c_str(), "--status-interval", "0", "--templates-dir", tplExtra.c_str(), nullptr};
 	pid_t pid; if (posix_spawn(&pid, exe.c_str(), &fa, nullptr, const_cast<char**>(args), environ) != 0) { std::printf("FAIL: emuled non avviato (%s)\n", exe.c_str()); return 1; }
 	close(pfd[1]);
 	// legge dal suo stdout la riga "API: http://127.0.0.1:PORTA/"
@@ -119,6 +127,21 @@ int main(int argc, char **argv)
 		Http(port, "GET", "/api/v1/downloads/xyz", token, "", s); CHECK(s == 400);
 		// il .part esiste in Temp/
 		CHECK(fs::exists(base / "Temp" / "001.part"));
+		// elenco dei template d'interfaccia
+		{	r = Http(port, "GET", "/api/v1/templates", token, "", s); CHECK(s == 200); json t = json::parse(r); json byId = json::object(); for (auto &e : t["templates"]) byId[e["source"].get<std::string>() + ":" + e["dir_name"].get<std::string>()] = e;
+			CHECK(t["api_version"] == 1 && t["dirs"]["extra"] == tplExtra.string() && t["dirs"]["user"] == (tplUser).string());
+			json mio = byId["user:mio"]; CHECK(mio["valid"] == true && mio["name"] == "Il mio" && mio["version"] == "1.2.3" && mio["author"] == "io" && mio["url"] == "/t/mio/" && mio["preview"] == "/t/mio/anteprima.png" && mio["reserved"] == false && mio["errors"].empty());
+			json rot = byId["user:rotto"]; CHECK(rot["valid"] == false && rot["url"].is_null() && rot["name"] == "rotto" && rot["errors"].size() == 1 && rot["errors"][0].get<std::string>().find("pagina d'ingresso") != std::string::npos);
+			json fin = byId["user:console"]; CHECK(fin["valid"] == false && fin["reserved"] == true && fin["errors"][0].get<std::string>().find("riservato") != std::string::npos);
+			json dev = byId["dev:dashboard"]; CHECK(dev["valid"] == true && dev["name"] == "Cruscotto" && dev["reserved"] == true && dev["preview"].is_null()); }
+		// il template si serve senza token; la riscansione vede un template aggiunto dopo l'avvio
+		Http(port, "GET", "/t/mio/", "", "", s); CHECK(s == 200); Http(port, "GET", "/t/nuovo/", "", "", s); CHECK(s == 404);
+		mkTpl(tplUser, "nuovo", "id: nuovo\nname: Nuovo\nversion: 0.0.1\n");
+		Http(port, "GET", "/t/nuovo/", "", "", s); CHECK(s == 404);																	// finche' non si rilegge, non c'e'
+		r = Http(port, "POST", "/api/v1/templates/rescan", token, "", s); CHECK(s == 200 && r.find("\"id\":\"nuovo\"") != std::string::npos);
+		Http(port, "GET", "/t/nuovo/", "", "", s); CHECK(s == 200);
+		Http(port, "GET", "/api/v1/templates", "", "", s); CHECK(s == 401);
+		r = Http(port, "GET", "/api/v1/log?level=info&limit=200", token, "", s); CHECK(r.find("Template: ") != std::string::npos && r.find("non caricato") != std::string::npos);	// il Registro lo dice
 		// streaming: link temporaneo; un download senza dati su disco risponde 503 (il player riprova), un link sconosciuto 403
 		r = Http(port, "POST", "/api/v1/downloads/" + hash + "/stream", token, "", s); CHECK(s == 201);
 		{ std::string sp = json::parse(r)["path"]; CHECK(sp.rfind("/api/v1/stream/", 0) == 0 && json::parse(r)["expires_in"] > 0);

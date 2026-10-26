@@ -71,6 +71,8 @@ add_library(emulecore STATIC
   ${FLEX_SearchScanner_OUTPUTS}
   core/net/KadProbe.cpp
   core/net/DaemonConfig.cpp
+  core/templates/Manifest.cpp
+  core/templates/Registry.cpp
   core/CompletedDownloads.cpp
   core/EventLog.cpp
   core/net/Profile.cpp
@@ -350,6 +352,14 @@ add_executable(test_daemon_config tests/test_daemon_config.cpp)
 target_link_libraries(test_daemon_config emulecore)
 add_dependencies(test_daemon_config emuled)
 add_test(NAME daemon_config COMMAND test_daemon_config $<TARGET_FILE:emuled>)
+
+add_executable(test_template_manifest tests/test_template_manifest.cpp)
+target_link_libraries(test_template_manifest emulecore)
+add_test(NAME template_manifest COMMAND test_template_manifest)
+
+add_executable(test_template_registry tests/test_template_registry.cpp)
+target_link_libraries(test_template_registry emulecore)
+add_test(NAME template_registry COMMAND test_template_registry)
 
 add_executable(test_eventlog tests/test_eventlog.cpp)
 target_link_libraries(test_eventlog emulecore)

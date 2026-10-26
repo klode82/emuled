@@ -43,7 +43,7 @@ watch(() => dl.list, (l) => { if (picked || !l.length) return; picked = true; if
           <button class="flex w-full flex-col gap-1.5 border-b border-line px-4 py-3 text-left hover:bg-sunk" :class="dl.detail === d.hash ? '!bg-soft' : ''" @click="dl.detail = dl.detail === d.hash && !wide() ? null : d.hash">
             <span class="flex items-center justify-between gap-3"><span class="line-clamp-2 break-words text-sm font-medium" :title="d.name">{{ d.name }}</span><span class="shrink-0 font-mono text-xs tabular-nums text-mute">{{ percent(d.percent) }}</span></span>
             <ProgressBar :value="d.percent" :tone="statusInfo(d).key === 'done' ? 'ok' : 'accent'" :label="d.name" />
-            <span class="flex justify-between gap-2 font-mono text-[11px] tabular-nums text-mute"><span>{{ bytes(d.size, 2, true) }}</span><span :class="statusInfo(d).key === 'active' ? '' : toneClass(statusInfo(d).tone)">{{ statusInfo(d).key === 'active' ? speed(d.speed) : t(statusInfo(d).labelKey) }} · {{ d.sources_transferring }}/{{ d.sources }}</span></span>
+            <span class="flex justify-between gap-2 font-mono text-[11px] tabular-nums text-mute"><span>{{ bytes(d.size, 2, true) }}<template v-if="d.completed < d.size && statusInfo(d).key !== 'done'"> · <span :title="t('transfers.left', { size: bytes(d.size - d.completed, 2, true) })">−{{ bytes(d.size - d.completed, 2, true) }}</span></template></span><span :class="statusInfo(d).key === 'active' ? '' : toneClass(statusInfo(d).tone)">{{ statusInfo(d).key === 'active' ? speed(d.speed) : t(statusInfo(d).labelKey) }} · {{ d.sources_transferring }}/{{ d.sources }}</span></span>
           </button>
         </li>
       </ul>

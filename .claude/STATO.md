@@ -11,6 +11,8 @@ AICH vero chiuso il 26/10/2026 (task 591, 652): recupero provato dal vivo su 3 p
 
 Fatti il 26/10 (dopo AICH): registro su file (`logs/emuled.log`, task 757); 677 provato dal vivo (la sorveglianza funziona, i due file non hanno fonti in rete); 754 (rimanente nella colonna Dimensione); 752 (barra verde `file_op`: NON vista dal vivo); 755/756 (schede Nome e Commenti, rinomina, filtro antispam `comment_filter`, ricerca note Kad: provate offline, da provare con fonti vere); 607 (streaming verso un player locale: link temporaneo + Range, provato coi test, NON con un .part vero e un player vero). Il demone dell'utente va riavviato con la nuova build per vedere le novita' dell'API.
 
+Modelli B Cruscotto, C Studio, D Mobile first (683-685): fatti e provati con screenshot sul demone di prova (src/skins/dashboard, studio, mobile); si scelgono con ?skin=a|b|c|d, il selettore e' 686. Da guardare dall'utente con dati veri.
+
 ## Da fare (vedi Bench per il dettaglio)
 Wrong header (678) da ricatturare (ora il log su file lo conserva). Messaggi UDP 'magicvalue mismatch' (694): raccogliere casi dal log su file. Notifiche (611) sospese. IP filter (608) rimandato. Features Addon: Scheduler, UploadSpeedSense, UPnP (prova col router), modelli B/C/D, chat. Fasi 8 e 9 dopo. Manuale (647) a fine progetto.
 

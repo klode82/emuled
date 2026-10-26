@@ -18,7 +18,7 @@ export const router = createRouter({
   scrollBehavior: (to) => (to.hash ? false : { top: 0 }),
   routes: [
     { path: '/', redirect: '/transfers' },
-    { path: '/transfers', name: 'transfers', component: () => import('@/skins/console/TransfersView.vue') },
+    { path: '/transfers', name: 'transfers', component: () => import('@/views/TransfersSwitch.vue') },
     { path: '/transfers/uploads', name: 'uploads', component: () => import('@/views/UploadsView.vue') },
     { path: '/search', name: 'search', component: () => import('@/views/SearchView.vue') },
     { path: '/servers', name: 'servers', component: () => import('@/views/ServersView.vue') },

@@ -23,6 +23,19 @@ emuled --profile CONFIG --web-dir dist    # il demone serve l'API e la pagina su
 
 In sviluppo (`npm run dev`) Vite serve la pagina sulla porta 5173 e gira `/api` (anche il WebSocket) verso il demone: `EMULED_API=http://127.0.0.1:8765 npm run dev`.
 
+## Modelli di interfaccia
+
+Ci sono quattro «gusci» con gli stessi dati, le stesse schermate comuni (Ricerca, Server, Condivisi, Kad, Registro, Statistiche, Preferenze) e lo stesso pannello di dettaglio del download; cambiano la cornice, i colori e la schermata Trasferimenti:
+
+| Modello | Cartella | Com'è |
+|---|---|---|
+| A · Console | `src/skins/console/` | barra laterale, tabella densa, barra di stato (predefinito) |
+| B · Cruscotto | `src/skins/dashboard/` | sezioni come pillole in alto, tessere di riepilogo (velocità con andamento, server ed2k, Kad), una scheda con anello per ogni download, dettaglio in un pannello a lato |
+| C · Studio | `src/skins/studio/` | schede in alto, casella comandi (Ctrl+K), elenco compatto a sinistra e dettaglio a destra, barra di stato a caratteri fissi |
+| D · Mobile first | `src/skins/mobile/` | grande casella di ricerca, righe con anello, dettaglio come foglio dal basso (telefono) o colonna a destra, barra in basso e pulsante + |
+
+Per ora si sceglie aggiungendo `?skin=a|b|c|d` all'indirizzo (es. `http://127.0.0.1:8765/?skin=b`); la scelta resta nel browser. Il selettore nelle Preferenze è il task 686. I colori di ogni modello sono token CSS (`data-skin` sulla radice, in `src/style.css`); il resto è solo classi Tailwind. I caratteri sono quelli del modello A: i tre caratteri del mockup (Manrope, Public Sans, DM Sans) non sono installati. Il codice comune dei gusci è in `src/lib/shell.ts` (casella cerca/link, stato ed2k e Kad) e `src/lib/transferActions.ts` (annulla, pausa).
+
 ## Comandi
 
 | Comando | Cosa fa |

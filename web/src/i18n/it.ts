@@ -46,6 +46,11 @@ const it = {
     help: 'Il token è nel file emuled.token dentro la cartella config del demone (cat config/emuled.token). Resta salvato in questo browser finché non esci.',
     invalidToken: 'Token non valido.', sessionExpired: 'La sessione non è più valida: inserisci di nuovo il token.',
   },
+  skin: {
+    dashboard: { summary: 'Riepilogo', download: 'Download', upload: 'Upload', ed2k: 'Server ed2k', activeFiles: 'nessun file attivo | {n} file attivo | {n} file attivi', served: 'nessun client servito | {n} client servito | {n} client serviti', inProgress: 'In corso e in coda', pasteLink: 'Incolla link', details: 'Dettagli', users: '{n} utenti', contacts: '{n} contatti', udpOpen: 'UDP aperta' },
+    studio: { search: 'Aggiungi link o cerca…', count: 'nessun trasferimento | {n} trasferimento | {n} trasferimenti', pick: 'Scegli un download per vederne i dettagli.' },
+    mobile: { search: 'Cerca un file o incolla un link ed2k' },
+  },
   shell: {
     linkDown: 'Aggiornamento in diretta interrotto: provo a ricollegarmi, intanto i dati si aggiornano ogni 5 secondi.',
     searchLabel: 'Cerca file o incolla un link ed2k', searchPlaceholder: 'Cerca file o incolla un link ed2k://',

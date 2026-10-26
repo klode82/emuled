@@ -2,44 +2,20 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
-import { SECTIONS } from '@/router'
-import { useCore } from '@/stores/core'
-import { useSession } from '@/stores/session'
+import { RouterLink, RouterView, useRoute } from 'vue-router'
 import { useUi } from '@/stores/ui'
-import { useSearch } from '@/stores/search'
+import { SECTIONS } from '@/router'
+import { useShellBar } from '@/lib/shell'
+import { useSession } from '@/stores/session'
 import { useShared } from '@/stores/shared'
-import { looksLikeLink, number, speed } from '@/lib/format'
+import { number, speed } from '@/lib/format'
 import Icon from '@/components/Icon.vue'
 
 const { t } = useI18n()
-const core = useCore(), session = useSession(), ui = useUi(), search = useSearch(), route = useRoute(), router = useRouter()
-const q = ref('')
+const session = useSession(), route = useRoute()
+const ui = useUi()
+const { q, st, ed2k, kad, go, onPaste } = useShellBar()
 const more = ref(false)
-const st = computed(() => core.status)
-const ed2k = computed(() => {
-  const e = st.value?.ed2k
-  if (!e) return { text: 'ed2k · …', tone: 'text-mute' }
-  if (e.connected) return { text: `ed2k · ${e.server?.name || t('shell.connected')} · ${t(e.high_id ? 'shell.highId' : 'shell.lowId')}`, tone: e.high_id ? 'text-accent' : 'text-warn' }
-  return { text: `ed2k · ${t(e.connecting ? 'shell.connecting' : 'shell.disconnected')}`, tone: e.connecting ? 'text-warn' : 'text-bad' }
-})
-const kad = computed(() => {
-  const k = st.value?.kad
-  if (!k?.running) return { text: `Kad · ${t('shell.off')}`, tone: 'text-mute' }
-  return k.connected ? { text: `Kad · ${t('shell.connected')}`, tone: 'text-accent' } : { text: `Kad · ${t('shell.connecting')}`, tone: 'text-warn' }
-})
-// invio nella casella: un link ed2k apre "Aggiungi", altro testo avvia la ricerca
-function go() {
-  const t = q.value.trim()
-  if (!t) return
-  if (looksLikeLink(t)) ui.openAdd(t)
-  else { search.form.query = t; void router.push('/search').then(() => search.start()) }
-  q.value = ''
-}
-function onPaste(e: ClipboardEvent) {
-  const t = e.clipboardData?.getData('text') ?? ''
-  if (looksLikeLink(t)) { e.preventDefault(); ui.openAdd(t) }
-}
 const shared = useShared()
 const ups = computed(() => shared.uploads.uploading.length)
 const linkBad = computed(() => session.link !== 'open')

@@ -47,6 +47,11 @@ const en: Messages = {
     help: 'The token is in the file emuled.token inside the daemon’s config folder (cat config/emuled.token). It stays saved in this browser until you log out.',
     invalidToken: 'Invalid token.', sessionExpired: 'The session is no longer valid: enter the token again.',
   },
+  skin: {
+    dashboard: { summary: 'Summary', download: 'Download', upload: 'Upload', ed2k: 'ed2k server', activeFiles: 'no active files | {n} active file | {n} active files', served: 'no clients served | {n} client served | {n} clients served', inProgress: 'In progress and queued', pasteLink: 'Paste link', details: 'Details', users: '{n} users', contacts: '{n} contacts', udpOpen: 'UDP open' },
+    studio: { search: 'Add a link or search…', count: 'no transfers | {n} transfer | {n} transfers', pick: 'Pick a download to see its details.' },
+    mobile: { search: 'Search for a file or paste an ed2k link' },
+  },
   shell: {
     linkDown: 'Live updates interrupted: trying to reconnect. Meanwhile the data refreshes every 5 seconds.',
     searchLabel: 'Search files or paste an ed2k link', searchPlaceholder: 'Search files or paste an ed2k:// link',

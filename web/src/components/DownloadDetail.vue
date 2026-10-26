@@ -56,7 +56,14 @@ let timer: ReturnType<typeof setInterval> | undefined
 async function refresh() {
   if (!d.value || done.value) { parts.value = null; sources.value = []; det.value = null; blocks.value = null; return }
   const api = session.getApi()
-  try { [parts.value, sources.value, det.value, blocks.value] = await Promise.all([api.parts(props.hash), api.sources(props.hash), api.details(props.hash), api.blocks(props.hash)]) } catch { /* il download puo' essere appena sparito */ }
+  // ogni dato si carica per conto suo: se una chiamata fallisce (il download e' appena sparito, o il demone e' una versione vecchia che non la conosce) gli altri si vedono lo stesso
+  const h = props.hash
+  const [pa, so, de, bl] = await Promise.allSettled([api.parts(h), api.sources(h), api.details(h), api.blocks(h)])
+  if (props.hash !== h) return
+  if (pa.status === 'fulfilled') parts.value = pa.value
+  if (so.status === 'fulfilled') sources.value = so.value
+  if (de.status === 'fulfilled') det.value = de.value
+  blocks.value = bl.status === 'fulfilled' ? bl.value : null
 }
 // schede Nome e Commenti: i dati si leggono solo mentre la scheda e' aperta
 const names = ref<FileNames | null>(null), comments = ref<FileComments | null>(null)

@@ -80,6 +80,7 @@ void CClientUDPSocket::OnReceive(int nErrorCode)
 	uint32 nReceiverVerifyKey;
 	uint32 nSenderVerifyKey;
 	int nPacketLen = DecryptReceivedClient(buffer, nRealLen, &pBuffer, sockAddr.sin_addr.s_addr, &nReceiverVerifyKey, &nSenderVerifyKey);
+	const bool junk = CEncryptedDatagramSocket::TakeUdpJunk();
 	if (nPacketLen > 0) {
 		CString strError;
 		try {
@@ -171,6 +172,7 @@ void CClientUDPSocket::OnReceive(int nErrorCode)
 			else
 				strClientInfo.Format(_T("%s:%hu"), (LPCTSTR)ipstr(sockAddr.sin_addr.s_addr), ntohs(sockAddr.sin_port));
 
+			if (!junk)
 			DebugLogWarning(_T("Client UDP socket: prot=0x%02x  opcode=0x%02x  sizeaftercrypt=%u realsize=%u  %s: %s")
 				, pBuffer[0], (nPacketLen > 1 ? pBuffer[1] : 0), nPacketLen, nRealLen, (LPCTSTR)strError, (LPCTSTR)strClientInfo);
 		}

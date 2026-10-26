@@ -194,7 +194,14 @@ if(MINIUPNPC_INCLUDE_DIR)
   target_include_directories(emulecore SYSTEM PUBLIC ${MINIUPNPC_INCLUDE_DIR})
 endif()
 find_package(Threads REQUIRED)
-find_library(MINIUPNPC_LIB miniupnpc REQUIRED)
+# Per un .deb unico che si installa su piu' distribuzioni (Ubuntu 24.04, Debian 13): la miniupnpc cambia versione di libreria tra una e l'altra
+# (libminiupnpc17 / 18), quindi la si incorpora nel binario. Gli altri pacchetti hanno lo stesso nome su entrambe.
+option(EMULED_STATIC_MINIUPNPC "incorpora miniupnpc nel binario (pacchetto .deb unico)" OFF)
+if(EMULED_STATIC_MINIUPNPC)
+  find_library(MINIUPNPC_LIB NAMES libminiupnpc.a REQUIRED)
+else()
+  find_library(MINIUPNPC_LIB miniupnpc REQUIRED)
+endif()
 target_link_libraries(emulecore PUBLIC PkgConfig::CRYPTOPP PkgConfig::CURL ZLIB::ZLIB Threads::Threads ${MINIUPNPC_LIB})
 
 enable_testing()

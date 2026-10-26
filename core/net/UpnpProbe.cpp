@@ -14,7 +14,12 @@ UpnpInfo UpnpDiscoverReadOnly(int timeout_ms)
 	if (!devs) { r.error = "nessun dispositivo UPnP ha risposto (UPnP disattivato sul router, o rete senza multicast)"; return r; }
 	for (UPNPDev *d = devs; d; d = d->pNext) ++r.devices_seen;
 	UPNPUrls urls{}; IGDdatas data{}; char lan[64] = {};
+#if MINIUPNPC_API_VERSION >= 18		// miniupnpc 2.3 (Debian 13, Fedora 44): UPNP_GetValidIGD restituisce anche l'IP WAN, che qui non serve
+	char wan[64] = {};
+	int rc = UPNP_GetValidIGD(devs, &urls, &data, lan, sizeof lan, wan, sizeof wan);
+#else
 	int rc = UPNP_GetValidIGD(devs, &urls, &data, lan, sizeof lan);
+#endif
 	freeUPNPDevlist(devs);
 	if (rc != 1) {
 		r.error = std::string("nessun router (IGD) valido trovato (codice ") + std::to_string(rc) + ")";

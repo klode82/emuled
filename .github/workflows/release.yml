@@ -1,4 +1,4 @@
-# On a vX.Y.Z tag (git tag v0.1.0 && git push origin v0.1.0): build the .deb and .rpm, install them in clean containers and start the daemon,
+# On a vX.Y.Z tag (git tag v0.1.0 && git push origin v0.1.0): build the .deb (one package for Ubuntu 24.04 and Debian 13) and the .rpm, install them in clean containers and start the daemon,
 # build and publish the Docker image, then attach the packages to a GitHub release. The tag must match EMULED_VERSION in CMakeLists.txt.
 name: Release
 on:
@@ -22,10 +22,11 @@ jobs:
         with: { node-version: 20 }
       - run: sudo apt-get update && grep -vE '^\s*(#|$)' requirements-apt.txt | xargs sudo apt-get install -y
       - run: python3 tools/fix_case.py && (cd web && npm ci --no-audit --no-fund && npm run build)
-      - run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build
+      # miniupnpc is linked statically (EMULED_STATIC_MINIUPNPC): its shared library has a different name on Ubuntu 24.04 (libminiupnpc17) and Debian 13 (libminiupnpc18)
+      - run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -DEMULED_STATIC_MINIUPNPC=ON && cmake --build build
       - run: ctest --test-dir build --output-on-failure --timeout 300 --repeat until-pass:3
       - run: (cd build && cpack -G DEB)
-      - name: Install the .deb in clean containers and start the daemon
+      - name: Install the same .deb in clean Ubuntu 24.04 and Debian 13 containers and start the daemon
         run: |
           for img in ubuntu:24.04 debian:13; do
             docker run --rm -v "$PWD/build":/pkgs:ro $img bash -c 'apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq /pkgs/*.deb && test -d /usr/share/emuled/templates/console && emuled --offline --max-seconds 3 --api-port 18790'

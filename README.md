@@ -111,7 +111,7 @@ Known gaps — please read before relying on it:
 Download the package from the [Releases](https://github.com/klode82/emuled/releases) page.
 
 ```sh
-# Debian / Ubuntu (24.04 or later)
+# Ubuntu 24.04 or Debian 13 (same package)
 sudo apt install ./emuled_<version>_amd64.deb
 
 # Fedora / RHEL family (untested)

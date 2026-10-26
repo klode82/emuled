@@ -23,6 +23,7 @@ public:
 	virtual	~CEncryptedDatagramSocket() = default;
 
 protected:
+	static bool TakeUdpJunk();	// LINUX: true se l'ultimo pacchetto decifrato non era eMule/Kad (gia' loggato, in forma riassunta)
 	static int DecryptReceivedClient(BYTE *pbyBufIn, int nBufLen, BYTE **ppbyBufOut, uint32 dwIP, uint32 *nReceiverVerifyKey, uint32 *nSenderVerifyKey);
 	static uint32 EncryptSendClient(uchar *pbyBuf, uint32 nBufLen, const uchar *pachClientHashOrKadID, bool bKad, uint32 nReceiverVerifyKey, uint32 nSenderVerifyKey);
 

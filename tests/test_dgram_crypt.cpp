@@ -8,6 +8,7 @@
 #include "Opcodes.h"
 #include "MD5Sum.h"
 #include "util/Crypto.h"
+#include "Log.h"
 #include <cstring>
 
 // costanti del formato (definite dentro EncryptedDatagramSocket.cpp, qui riscritte apposta: il test non deve dipendere dal codice che controlla)
@@ -24,6 +25,7 @@ struct D : CEncryptedDatagramSocket
 	using CEncryptedDatagramSocket::DecryptReceivedServer;
 	using CEncryptedDatagramSocket::EncryptSendServer;
 	using CEncryptedDatagramSocket::EncryptOverheadSize;
+	using CEncryptedDatagramSocket::TakeUdpJunk;
 };
 
 static std::vector<uchar> Make(const char *payload, uint32 head) { std::vector<uchar> b(head + strlen(payload) + 8); memcpy(&b[head], payload, strlen(payload)); return b; }
@@ -111,6 +113,18 @@ int main()
 		uint32 rk, sk; BYTE *out = nullptr;
 		CHECK(D::DecryptReceivedClient(p, 20, &out, 1, &rk, &sk) == 20 && out == p);
 		p[0] = OP_KADEMLIAHEADER; CHECK(D::DecryptReceivedClient(p, 20, &out, 1, &rk, &sk) == 20 && out == p);
+	}
+	// 5. traffico UDP che non e' eMule (QUIC, STUN): non si decifra, si logga UNA volta per indirizzo con la spiegazione, poi si riassume; TakeUdpJunk() lo segnala
+	{
+		emule::log::Capture cap;
+		uint32 rk, sk; BYTE *out = nullptr;
+		uchar quic[1200] = {0xC3, 0, 0, 0, 1, 8, 0x78, 0xE7};
+		for (int i = 0; i < 30; ++i) { CHECK(D::DecryptReceivedClient(quic, 1200, &out, 0x0A000001, &rk, &sk) == 1200); CHECK(D::TakeUdpJunk()); CHECK(!D::TakeUdpJunk()); }
+		int lines = 0; for (auto &l : cap.lines()) if (l.text.find("QUIC") != std::string::npos) ++lines;
+		CHECK(lines == 1);
+		uchar stun[24] = {0, 1, 0, 4, 0x21, 0x12, 0xA4, 0x42};
+		D::DecryptReceivedClient(stun, 24, &out, 0x0A000002, &rk, &sk); CHECK(cap.Contains("STUN") && D::TakeUdpJunk());
+		uchar ok[20] = {OP_EMULEPROT}; D::DecryptReceivedClient(ok, 20, &out, 0x0A000003, &rk, &sk); CHECK(!D::TakeUdpJunk());		// un pacchetto eMule vero non e' "junk"
 	}
 	Kademlia::CKademlia::Stop();
 	std::printf(fails ? "dgram_crypt: %d FAIL\n" : "dgram_crypt: OK\n", fails);

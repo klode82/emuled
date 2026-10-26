@@ -110,6 +110,8 @@
 #include "kademlia/kademlia/prefs.h"
 #include "kademlia/kademlia/kademlia.h"
 #include "cryptopp/osrng.h"
+#include <map>
+#include <ctime>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -144,6 +146,31 @@ struct Crypt_Header_Struct
 #define	MAGICVALUE_UDP_CLIENTSERVER		0x6B
 
 static CryptoPP::AutoSeededRandomPool cryptRandomGen;
+
+// LINUX: i pacchetti UDP che non sono eMule (ne' Kad) sulla nostra porta, di solito altri programmi che la sondano (STUN, QUIC/HTTP3, torrent...), non si loggano uno per uno:
+// il primo di ogni indirizzo si scrive subito con la spiegazione, poi al massimo un riepilogo al minuto. g_udpJunk dice a ClientUDPSocket di non ripetere "Unknown protocol".
+static bool g_udpJunk = false;
+bool CEncryptedDatagramSocket::TakeUdpJunk() { const bool j = g_udpJunk; g_udpJunk = false; return j; }
+static void NoteUdpJunk(uint32 dwIP, const BYTE *p, int n)
+{
+	struct Seen { unsigned count = 0, unreported = 0; time_t last = 0; };
+	static std::map<uint32, Seen> seen;
+	g_udpJunk = true;
+	if (seen.size() > 512) seen.clear();
+	const char *kind = "non riconosciuto";
+	if (n >= 20 && p[4] == 0x21 && p[5] == 0x12 && p[6] == 0xA4 && p[7] == 0x42) kind = "STUN";
+	else if (n >= 5 && (p[0] & 0xC0) == 0xC0 && !p[1] && !p[2] && !p[3] && p[4] == 1) kind = "QUIC (HTTP/3)";
+	Seen &e = seen[dwIP]; ++e.count; ++e.unreported;
+	const time_t now = time(nullptr);
+	if (e.count == 1) {
+		char hex[40] = ""; for (int i = 0; i < n && i < 12; ++i) snprintf(hex + strlen(hex), 4, "%02X ", p[i]);
+		DebugLogWarning(_T("Pacchetto UDP che non e' eMule ne' Kad da %s (%d byte, tipo: %s, inizio: %s): non si puo' decifrare, di solito e' un altro programma che sonda la nostra porta UDP. Gli altri da questo indirizzo si contano e si riassumono al massimo una volta al minuto."), (LPCTSTR)ipstr(dwIP), n, kind, hex);
+		e.last = now; e.unreported = 0;
+	} else if (now - e.last >= 60) {
+		DebugLogWarning(_T("Pacchetti UDP non eMule da %s: %u nell'ultimo minuto (%u in tutto; ultimo di tipo %s)"), (LPCTSTR)ipstr(dwIP), e.unreported, e.count, kind);
+		e.last = now; e.unreported = 0;
+	}
+}
 
 int CEncryptedDatagramSocket::DecryptReceivedClient(BYTE *pbyBufIn, int nBufLen, BYTE **ppbyBufOut, uint32 dwIP, uint32 *nReceiverVerifyKey, uint32 *nSenderVerifyKey)
 {
@@ -279,16 +306,7 @@ int CEncryptedDatagramSocket::DecryptReceivedClient(BYTE *pbyBufIn, int nBufLen,
 		//	, nReceiverVerifyKey != 0 ? *nReceiverVerifyKey : 0, nSenderVerifyKey != 0 ? *nSenderVerifyKey : 0) );
 	} else // pass through, let the Receive function do the error handling on this junk
 	{
-		// LINUX: in piu' del messaggio originale, la lunghezza e i primi byte del pacchetto (servono a capire chi lo manda: un pacchetto Kad/eMule vero o altro traffico UDP)
-		// STUN (RFC 5389: byte 4-7 = cookie 21 12 A4 42): un altro programma sta sondando la nostra porta UDP; si conta e se ne parla al massimo una volta al minuto
-		if (nBufLen >= 20 && pbyBufIn[4] == 0x21 && pbyBufIn[5] == 0x12 && pbyBufIn[6] == 0xA4 && pbyBufIn[7] == 0x42) {
-			static unsigned stunSkipped = 0; static time_t stunLast = 0;
-			++stunSkipped;
-			if (time(nullptr) - stunLast >= 60) { stunLast = time(nullptr); DebugLogWarning(_T("Pacchetti STUN ignorati: %u (ultimo da %s; non e' traffico eMule, qualcuno sonda la porta UDP)"), stunSkipped, (LPCTSTR)ipstr(dwIP)); stunSkipped = 0; }
-			return nResult;
-		}
-		char hex[40] = ""; for (int i = 0; i < nBufLen && i < 12; ++i) snprintf(hex + strlen(hex), 4, "%02X ", pbyBufIn[i]);
-		DebugLogWarning(_T("Obfuscated packet expected but magicvalue mismatch on UDP packet from clientIP: %s, Possible RecvKey: %u (%d byte, inizio: %s)"), (LPCTSTR)ipstr(dwIP), Kademlia::CPrefs::GetUDPVerifyKey(dwIP), nBufLen, hex);
+		NoteUdpJunk(dwIP, pbyBufIn, nBufLen);
 	}
 	return nResult;
 }

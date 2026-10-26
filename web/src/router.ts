@@ -13,15 +13,15 @@ export const SECTIONS = [
 ] as const
 
 // Il testo delle voci e' in i18n: nav.<nome> (esteso) e nav.<nome>Short (barra in basso sul telefono)
-// La schermata Trasferimenti la porta il template (ogni template ha la sua); le altre sono comuni e prendono i colori del template.
-export function createAppRouter(transfers: Component) {
+// Le schermate Trasferimenti e Upload le porta il template (ogni template ha le sue; Upload e' quella comune se il template non ne ha una); le altre sono comuni e prendono i colori del template.
+export function createAppRouter(transfers: Component, uploads?: Component) {
   return createRouter({
     history: createWebHashHistory(),
     scrollBehavior: (to) => (to.hash ? false : { top: 0 }),
     routes: [
       { path: '/', redirect: '/transfers' },
       { path: '/transfers', name: 'transfers', component: transfers },
-      { path: '/transfers/uploads', name: 'uploads', component: () => import('@/views/UploadsView.vue') },
+      { path: '/transfers/uploads', name: 'uploads', component: uploads ?? (() => import('@/views/UploadsView.vue')) },
       { path: '/search', name: 'search', component: () => import('@/views/SearchView.vue') },
       { path: '/servers', name: 'servers', component: () => import('@/views/ServersView.vue') },
       { path: '/shared', name: 'shared', component: () => import('@/views/SharedView.vue') },

@@ -21,7 +21,7 @@ const SEG = [{ path: '/transfers', key: 'nav.transfersDownload' }, { path: '/tra
   <div class="relative flex h-full overflow-hidden bg-bg">
     <aside class="hidden w-20 shrink-0 flex-col items-center gap-2 border-r border-line bg-surface py-4 lg:flex" :aria-label="t('nav.sections')">
       <img :src="logo" alt="" class="mb-3 size-10 object-contain" />
-      <RouterLink v-for="s in SECTIONS" :key="s.name" :to="s.path" :title="t('nav.' + s.name)" :aria-label="t('nav.' + s.name)" class="grid size-11 place-items-center rounded-2xl text-mute hover:bg-sunk" active-class="!bg-soft !text-accent"><Icon :name="s.icon" class="!size-5" /></RouterLink>
+      <RouterLink v-for="s in SECTIONS" :key="s.name" :to="s.path" :title="t('nav.' + s.name)" :aria-label="t('nav.' + s.name)" class="grid size-11 place-items-center rounded-2xl text-mute hover:bg-sunk" :class="s.name === 'transfers' && route.path.startsWith('/transfers/') ? '!bg-soft !text-accent' : ''" active-class="!bg-soft !text-accent"><Icon :name="s.icon" class="!size-5" /></RouterLink>
       <button class="mt-auto grid size-11 place-items-center rounded-2xl text-mute hover:bg-sunk hover:text-fg" :title="t('nav.logout')" :aria-label="t('nav.logout')" @click="session.logout()"><Icon name="logout" class="!size-5" /></button>
     </aside>
     <div class="flex min-w-0 flex-1 flex-col">
@@ -36,7 +36,7 @@ const SEG = [{ path: '/transfers', key: 'nav.transfersDownload' }, { path: '/tra
       </div>
       <main class="relative min-h-0 flex-1 overflow-y-auto" :aria-label="String(route.name ?? '')"><RouterView /></main>
       <nav class="grid shrink-0 grid-cols-5 border-t border-line bg-surface lg:hidden" :aria-label="t('nav.sections')">
-        <RouterLink v-for="s in SECTIONS.slice(0, 4)" :key="s.name" :to="s.path" class="flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-semibold text-mute" active-class="!text-accent"><Icon :name="s.icon" class="!size-5" />{{ t('nav.' + s.name + 'Short') }}</RouterLink>
+        <RouterLink v-for="s in SECTIONS.slice(0, 4)" :key="s.name" :to="s.path" class="flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-semibold text-mute" :class="s.name === 'transfers' && route.path.startsWith('/transfers/') ? '!text-accent' : ''" active-class="!text-accent"><Icon :name="s.icon" class="!size-5" />{{ t('nav.' + s.name + 'Short') }}</RouterLink>
         <button class="flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-semibold text-mute" :class="{ '!text-accent': more || ['kad', 'log', 'stats', 'prefs'].includes(String(route.name)) }" :aria-expanded="more" @click="more = !more"><Icon name="gear" class="!size-5" />{{ t('nav.more') }}</button>
       </nav>
     </div>

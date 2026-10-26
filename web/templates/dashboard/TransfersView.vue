@@ -1,30 +1,24 @@
 <!-- Modello B: schermata Trasferimenti. Tessere di riepilogo (velocita', server, Kad) e una scheda per ogni download; il dettaglio si apre a lato -->
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { FILTERS, useDownloads } from '@/stores/downloads'
-import { useCore } from '@/stores/core'
 import { usePrefs } from '@/stores/prefs'
 import { useUi } from '@/stores/ui'
 import { useTransferActions } from '@/lib/transferActions'
-import { bytes, eta, number, speed } from '@/lib/format'
+import { bytes, eta, speed } from '@/lib/format'
 import { statusInfo, toneClass } from '@/lib/labels'
 import Icon from '@/components/Icon.vue'
 import Ring from '@/components/Ring.vue'
-import Sparkline from '@/components/Sparkline.vue'
+import Tiles from './Tiles.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import DownloadDetail from '@/components/DownloadDetail.vue'
 import TransfersSeg from '@/components/TransfersSeg.vue'
 
 const { t } = useI18n()
-const dl = useDownloads(), core = useCore(), prefs = usePrefs(), ui = useUi(), act = useTransferActions()
+const dl = useDownloads(), prefs = usePrefs(), ui = useUi(), act = useTransferActions()
 onMounted(() => { void prefs.loadCategories() })
-const st = computed(() => core.status)
 const catName = (id: number) => (id ? prefs.categories.find((c) => c.id === id)?.title : undefined)
-const ed2kValue = computed(() => { const e = st.value?.ed2k; return !e ? '…' : e.connected ? (e.server?.name || t('shell.connected')) : t(e.connecting ? 'shell.connecting' : 'shell.disconnected') })
-const ed2kSub = computed(() => { const e = st.value?.ed2k; return e?.connected ? [t(e.high_id ? 'shell.highId' : 'shell.lowId'), e.server?.users ? t('skin.dashboard.users', { n: number(e.server.users) }) : ''].filter(Boolean).join(' · ') : '' })
-const kadValue = computed(() => { const k = st.value?.kad; return !k?.running ? t('shell.off') : t(k.connected ? 'shell.connected' : 'shell.connecting') })
-const kadSub = computed(() => { const k = st.value?.kad; return k?.running ? [k.contacts ? t('skin.dashboard.contacts', { n: number(k.contacts) }) : '', k.udp_verified ? t('skin.dashboard.udpOpen') : ''].filter(Boolean).join(' · ') : '' })
 function pick(hash: string, e: MouseEvent) {
   if ((e.target as HTMLElement).closest('button,a,input,select')) return
   dl.detail = dl.detail === hash ? null : hash
@@ -32,26 +26,7 @@ function pick(hash: string, e: MouseEvent) {
 </script>
 <template>
   <div class="flex flex-col gap-5 p-4 md:p-6" tabindex="-1" @keydown.esc="dl.detail = null">
-    <section class="grid grid-cols-2 gap-3 lg:grid-cols-4" :aria-label="t('skin.dashboard.summary')">
-      <div class="rounded-2xl border border-line bg-surface p-4">
-        <p class="text-xs font-semibold uppercase tracking-wide text-mute">{{ t('skin.dashboard.download') }}</p>
-        <p class="pt-1 text-2xl font-bold tracking-tight tabular-nums">{{ speed(st?.transfers.download_speed ?? 0) }}</p>
-        <p class="text-xs text-mute">{{ t('skin.dashboard.activeFiles', dl.counts.active) }}</p><Sparkline :samples="core.samples" kind="down" />
-      </div>
-      <div class="rounded-2xl border border-line bg-surface p-4">
-        <p class="text-xs font-semibold uppercase tracking-wide text-mute">{{ t('skin.dashboard.upload') }}</p>
-        <p class="pt-1 text-2xl font-bold tracking-tight tabular-nums">{{ speed(st?.transfers.upload_speed ?? 0) }}</p>
-        <p class="text-xs text-mute">{{ t('skin.dashboard.served', st?.transfers.uploading ?? 0) }}</p><Sparkline :samples="core.samples" kind="up" />
-      </div>
-      <div class="rounded-2xl border border-line bg-surface p-4">
-        <p class="text-xs font-semibold uppercase tracking-wide text-mute">{{ t('skin.dashboard.ed2k') }}</p>
-        <p class="truncate pt-1 text-2xl font-bold tracking-tight" :title="ed2kValue">{{ ed2kValue }}</p><p class="truncate text-xs text-mute">{{ ed2kSub || '—' }}</p>
-      </div>
-      <div class="rounded-2xl border border-line bg-surface p-4">
-        <p class="text-xs font-semibold uppercase tracking-wide text-mute">Kad</p>
-        <p class="truncate pt-1 text-2xl font-bold tracking-tight">{{ kadValue }}</p><p class="truncate text-xs text-mute">{{ kadSub || '—' }}</p>
-      </div>
-    </section>
+    <Tiles />
 
     <section>
       <div class="flex flex-wrap items-center gap-x-3 gap-y-2 pb-3">

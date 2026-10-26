@@ -26,7 +26,7 @@ onUnmounted(() => window.removeEventListener('keydown', key))
     <header class="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-b border-line bg-surface px-4 py-2">
       <img :src="logo" alt="" class="size-7 shrink-0 object-contain" />
       <nav class="flex min-w-0 basis-[calc(100%-3.5rem)] gap-1 overflow-x-auto text-sm sm:flex-1 sm:basis-0" :aria-label="t('nav.sections')">
-        <RouterLink v-for="s in SECTIONS" :key="s.name" :to="s.path" class="whitespace-nowrap border-b-2 border-transparent px-3 py-2 text-mute hover:text-fg" active-class="!border-accent font-semibold !text-fg">{{ t('nav.' + s.name) }}</RouterLink>
+        <RouterLink v-for="s in SECTIONS" :key="s.name" :to="s.path" class="whitespace-nowrap border-b-2 border-transparent px-3 py-2 text-mute hover:text-fg" :class="s.name === 'transfers' && route.path.startsWith('/transfers/') ? '!border-accent font-semibold !text-fg' : ''" active-class="!border-accent font-semibold !text-fg">{{ t('nav.' + s.name) }}</RouterLink>
       </nav>
       <label class="relative flex min-w-0 flex-1 basis-32 items-center sm:w-80 sm:flex-none">
         <span class="sr-only">{{ t('shell.searchLabel') }}</span>

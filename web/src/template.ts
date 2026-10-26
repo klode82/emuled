@@ -7,8 +7,9 @@ import { installChunkReload } from './lib/chunkReload'
 import { i18n } from './i18n'
 import './style.css'
 
-export function createTemplateApp(t: { shell: Component; transfers: Component }) {
-  const router = createAppRouter(t.transfers)
+// transfers e uploads sono le due schermate che ogni template puo' disegnare a modo suo; senza `uploads` si usa quella comune
+export function createTemplateApp(t: { shell: Component; transfers: Component; uploads?: Component }) {
+  const router = createAppRouter(t.transfers, t.uploads)
   installChunkReload(router)
   return createApp(App, { shell: t.shell }).use(createPinia()).use(router).use(i18n).mount('#app')
 }

@@ -49,7 +49,7 @@ const en: Messages = {
   },
   skin: {
     dashboard: { summary: 'Summary', download: 'Download', upload: 'Upload', ed2k: 'ed2k server', activeFiles: 'no active files | {n} active file | {n} active files', served: 'no clients served | {n} client served | {n} clients served', inProgress: 'In progress and queued', pasteLink: 'Paste link', details: 'Details', users: '{n} users', contacts: '{n} contacts', udpOpen: 'UDP open' },
-    studio: { search: 'Add a link or search…', count: 'no transfers | {n} transfer | {n} transfers', pick: 'Pick a download to see its details.' },
+    studio: { search: 'Add a link or search…', count: 'no transfers | {n} transfer | {n} transfers', pick: 'Pick a download to see its details.', pickClient: 'Pick a user to see their details.', userHash: 'User hash' },
     mobile: { search: 'Search for a file or paste an ed2k link' },
   },
   template: {

@@ -48,7 +48,7 @@ const it = {
   },
   skin: {
     dashboard: { summary: 'Riepilogo', download: 'Download', upload: 'Upload', ed2k: 'Server ed2k', activeFiles: 'nessun file attivo | {n} file attivo | {n} file attivi', served: 'nessun client servito | {n} client servito | {n} client serviti', inProgress: 'In corso e in coda', pasteLink: 'Incolla link', details: 'Dettagli', users: '{n} utenti', contacts: '{n} contatti', udpOpen: 'UDP aperta' },
-    studio: { search: 'Aggiungi link o cerca…', count: 'nessun trasferimento | {n} trasferimento | {n} trasferimenti', pick: 'Scegli un download per vederne i dettagli.' },
+    studio: { search: 'Aggiungi link o cerca…', count: 'nessun trasferimento | {n} trasferimento | {n} trasferimenti', pick: 'Scegli un download per vederne i dettagli.', pickClient: 'Scegli un utente per vederne i dettagli.', userHash: 'Hash utente' },
     mobile: { search: 'Cerca un file o incolla un link ed2k' },
   },
   template: {

@@ -21,7 +21,7 @@ const linkBad = computed(() => session.link !== 'open')
         <img :src="logo" alt="" class="size-8 shrink-0 object-contain" />
         <span class="hidden text-base font-extrabold tracking-tight text-accent sm:inline">emuled</span>
         <nav class="flex min-w-0 flex-1 gap-1 overflow-x-auto" :aria-label="t('nav.sections')">
-          <RouterLink v-for="s in SECTIONS" :key="s.name" :to="s.path" :title="t('nav.' + s.name)" class="flex items-center gap-2 whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-semibold text-mute hover:bg-sunk hover:text-fg" active-class="!bg-accent !text-onaccent">
+          <RouterLink v-for="s in SECTIONS" :key="s.name" :to="s.path" :title="t('nav.' + s.name)" class="flex items-center gap-2 whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-semibold text-mute hover:bg-sunk hover:text-fg" :class="s.name === 'transfers' && route.path.startsWith('/transfers/') ? '!bg-accent !text-onaccent' : ''" active-class="!bg-accent !text-onaccent">
             <Icon :name="s.icon" class="hidden sm:block" />{{ t('nav.' + s.name) }}</RouterLink>
         </nav>
         <button class="inline-flex items-center gap-1.5 rounded-full border border-line px-3.5 py-1.5 text-sm font-semibold hover:bg-sunk" :aria-label="t('skin.dashboard.pasteLink')" @click="ui.openAdd()"><Icon name="link" /><span class="hidden md:inline">{{ t('skin.dashboard.pasteLink') }}</span></button>

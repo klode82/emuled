@@ -164,7 +164,7 @@ bool CUrlClient::SendHttpBlockRequests()
 	return true;
 }
 
-bool CUrlClient::TryToConnect(bool bIgnoreMaxCon, bool bNoCallbacks, CRuntimeClass* /*pClassSocket*/)
+bool CUrlClient::TryToConnect(bool bIgnoreMaxCon, bool bNoCallbacks, const CRuntimeClass* /*pClassSocket*/)
 {
 	return CUpDownClient::TryToConnect(bIgnoreMaxCon, bNoCallbacks, RUNTIME_CLASS(CHttpClientDownSocket));
 }

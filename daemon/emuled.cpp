@@ -98,6 +98,7 @@ struct Args { std::string profile, pathmaps, backup_dir, guard_slot; bool check 
 int Usage(const char *me)
 {
 	std::fprintf(stderr, "usage: %s                (no mode: the daemon; options: --profile, --web-dir, --api-port, --fake-profile, ...; see MANUAL)\n       %s [--profile DIR] (--check-profile | --scan-shared | --verify-hashes [--sample N] [--max-size-mb M] | --update-known [--force] | --recover [--force] | --guard-scan --backup-dir DIR | --guard-restore SLOT --backup-dir DIR [--force]) [--pathmap \"WIN=LINUX\"]...\n"
+		"  --install-service    install and start the user systemd service (no questions); --uninstall-service stops and removes it (the profile is kept)\n"
 		"  --reset-user     create or reset the web interface user name and password (from a terminal; closes sessions already open)\n"
 		"  --check-profile  read-only: validates the .met files and reports what could be recovered\n"
 		"  --scan-shared    read-only: lists the shared files, how many are already in known.met and how many must be hashed\n"
@@ -336,11 +337,28 @@ static int MaybeRunWizard(int argc, char **argv)
 	}
 }
 
+// --install-service / --uninstall-service (Bench 895): the Wizard's service step without questions. Returns -1 if the argument is something else.
+static int MaybeServiceCommand(int argc, char **argv)
+{
+	if (argc != 2) return -1;
+	const std::string a = argv[1];
+	if (a != "--install-service" && a != "--uninstall-service") return -1;
+	const char *home = std::getenv("HOME");
+	if (!home || !*home) { std::fprintf(stderr, "emuled %s: HOME is not set.\n", a.c_str()); return 2; }
+	emule::net::WizardEnv we; we.home = home;
+	std::error_code ec; we.exe = fs::read_symlink("/proc/self/exe", ec).string();
+	we.have_systemctl = fs::exists("/run/systemd/system", ec) && (fs::exists("/usr/bin/systemctl", ec) || fs::exists("/bin/systemctl", ec));
+	we.packaged_unit = we.exe == "/usr/bin/emuled" && fs::exists("/usr/lib/systemd/user/emuled.service", ec);
+	we.run = [](const std::string &c) { int r = std::system(c.c_str()); return WIFEXITED(r) ? WEXITSTATUS(r) : 1; };
+	return a == "--install-service" ? emule::net::InstallService(std::cout, we) : emule::net::UninstallService(std::cout, we);
+}
+
 static char **g_argv = nullptr;		// for the daemon restart (execv)
 
 int RunDaemonCmd(int argc, char **argv)
 {
 	{ bool quiet = false; for (int i = 1; i < argc; ++i) if (std::string(argv[i]) == "--reset-user") quiet = true; if (!quiet) emule::net::PrintBanner(stdout); }		// header (version, eMule base version, project link); not for --reset-user, which prints only what was asked
+	if (int rc = MaybeServiceCommand(argc, argv); rc >= 0) return rc;
 	if (int rc = MaybeRunWizard(argc, argv); rc >= 0) return rc;
 	emule::net::DaemonOptions o; std::string prof; bool resetUser = false;
 	// start values: configuration file, then environment variables; the command line (below) wins over both

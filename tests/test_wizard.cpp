@@ -144,6 +144,26 @@ int main()
 		fs::path hold; (void)hold;
 		CHECK(!ApiResponds("127.0.0.1", p));			// nessuno risponde
 	}
+	// 13. --install-service / --uninstall-service (Bench 895)
+	{
+		const std::string home = (fs::temp_directory_path() / ("test_wizard_svc_" + std::to_string(::getpid()))).string();
+		fs::remove_all(home); fs::create_directories(home);
+		std::vector<std::string> cmds; int fail_on = -1;
+		WizardEnv e; e.home = home; e.exe = "/opt/emuled/bin/emuled"; e.have_systemctl = true;
+		e.run = [&](const std::string &c) { cmds.push_back(c); return (int)cmds.size() == fail_on ? 1 : 0; };
+		const std::string unit = home + "/.config/systemd/user/emuled.service";
+		std::ostringstream o1; CHECK(InstallService(o1, e) == 0 && fs::exists(unit) && Has(Slurp(unit), "ExecStart=/opt/emuled/bin/emuled") && Has(o1.str(), "installed"));
+		CHECK(cmds.size() == 2 && cmds[0] == "systemctl --user daemon-reload" && cmds[1] == "systemctl --user enable --now emuled");
+		fs::create_directories(home + "/.emuled"); std::ofstream(home + "/.emuled/config.yaml") << "api_port: 9999\n";
+		cmds.clear(); std::ostringstream o2; CHECK(UninstallService(o2, e) == 0 && !fs::exists(unit) && Has(o2.str(), "Removed"));
+		CHECK(cmds.size() == 2 && cmds[0] == "systemctl --user disable --now emuled" && cmds[1] == "systemctl --user daemon-reload");
+		CHECK(fs::exists(home + "/.emuled/config.yaml"));				// the configuration stays
+		cmds.clear(); std::ostringstream o3; CHECK(UninstallService(o3, e) == 0 && Has(o3.str(), "not touched"));		// already removed: still fine
+		e.have_systemctl = false; std::ostringstream o4; CHECK(InstallService(o4, e) == 2 && UninstallService(o4, e) == 2 && Has(o4.str(), "not available"));
+		e.have_systemctl = true; e.packaged_unit = true; cmds.clear(); std::ostringstream o5; CHECK(InstallService(o5, e) == 0 && !fs::exists(unit) && cmds.size() == 2);		// the package's unit: nothing written
+		cmds.clear(); fail_on = 2; std::ostringstream o6; CHECK(InstallService(o6, e) == 1 && Has(o6.str(), "failed"));
+		fs::remove_all(home);
+	}
 	std::printf(fails ? "wizard: %d FAIL\n" : "wizard: OK\n", fails);
 	return fails != 0;
 }

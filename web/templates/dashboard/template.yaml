@@ -2,7 +2,7 @@
 id: dashboard
 name: Cruscotto
 version: 1.0.0
-description: B: tessere di riepilogo (velocita' con andamento, server ed2k, Kad) e una scheda con anello per ogni download.
+description: B: summary tiles (speed with trend, ed2k server, Kad) and a card with a progress ring for each download.
 author: emuled
 license: GPL-2.0-or-later
 api: 1

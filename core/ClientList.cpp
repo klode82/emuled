@@ -807,7 +807,7 @@ void CClientList::CleanUpClientList()
 	const DWORD curTick = ::GetTickCount();
 	if (curTick >= m_dwLastClientCleanUp + CLIENTLIST_CLEANUP_TIME) {
 		m_dwLastClientCleanUp = curTick;
-		uint32 cDeleted = 0;
+		[[maybe_unused]] uint32 cDeleted = 0;
 		for (POSITION pos = list.GetHeadPosition(); pos != NULL;) {
 			const CUpDownClient *pCurClient = list.GetNext(pos);
 			if ((pCurClient->GetUploadState() == US_NONE || (pCurClient->GetUploadState() == US_BANNED && !pCurClient->IsBanned()))

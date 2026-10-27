@@ -43,4 +43,11 @@ bool IsPortFree(const std::string &bind, uint16_t port);			// tries to listen (a
 bool ApiResponds(const std::string &bind, uint16_t port);			// GET /api/v1/ping
 std::string ServiceUnitText(const std::string &exe);				// the user's systemd unit
 
+// emuled --install-service / --uninstall-service (Bench 895): the same operations the Wizard does, without questions. Messages in English.
+// Install: writes ~/.config/systemd/user/emuled.service (unless the package already provides the unit), daemon-reload, enable --now.
+// Uninstall: disable --now, removes ONLY the unit written by emuled in ~/.config (never the package's), daemon-reload. Never touches the profile or the configuration.
+// Return 0 = done, 1 = a step failed, 2 = systemd is not available.
+int InstallService(std::ostream &out, const WizardEnv &env);
+int UninstallService(std::ostream &out, const WizardEnv &env);
+
 } // namespace emule::net

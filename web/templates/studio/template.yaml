@@ -2,7 +2,7 @@
 id: studio
 name: Studio
 version: 1.0.0
-description: C: elenco compatto a sinistra e dettaglio a destra, casella comandi con Ctrl+K, barra di stato a caratteri fissi.
+description: C: compact list on the left and detail on the right, command box with Ctrl+K, fixed-width status bar.
 author: emuled
 license: GPL-2.0-or-later
 api: 1

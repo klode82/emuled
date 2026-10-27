@@ -199,6 +199,8 @@ The rest is asked by the web page: you create your account (username and passwor
 
 **Change the port later:** edit `api_port` in `~/.emuled/config.yaml` and restart (`systemctl --user restart emuled`), or set `EMULED_API_PORT`, or run `emuled --setup`. With Docker change the `-p` mapping. If the port is taken the daemon says so in its log (`journalctl --user -u emuled`).
 
+**Install or remove the service without questions:** `emuled --install-service` (writes the user unit if the package does not provide it, then `enable --now`) and `emuled --uninstall-service` (stops it and removes the unit written by emuled; your profile and `config.yaml` stay).
+
 ## Using emuled
 
 - **Web UI**: <http://127.0.0.1:8765>. Pick the look in *Preferences → Appearance* and the language in *Preferences → Interface*. *About* shows the emuled version and the eMule version it is based on.
@@ -311,7 +313,7 @@ All in [`docs/`](docs/):
 
 emuled is free software under the **GNU General Public License, version 2 or (at your option) any later version** — the same licence as eMule. See [`LICENSE`](LICENSE). It comes with **no warranty**. If you distribute it, modified or not, you must provide the source under the same terms.
 
-Third-party components keep their own, GPL-compatible licences (RSA MD4/MD5 notices in `core/MD4.cpp` and `core/MD5Sum.h`; Crypto++, libcurl, zlib, miniupnpc; Vue, Tailwind CSS and the `@fontsource` fonts in the web UI). The complete list and the results of the per-file licence check are in [`NOTICE.md`](NOTICE.md).
+Third-party components keep their own, GPL-compatible licences (RSA MD4/MD5 notices in `core/MD4.cpp` and `core/MD5Sum.h`; Crypto++, libcurl, zlib, miniupnpc; Vue, Tailwind CSS and the `@fontsource` fonts in the web UI). The complete list and the results of the per-file licence check are in [`NOTICE.md`](NOTICE.md). The folder `upstream/` is an unmodified copy of the original eMule sources, kept as is for reference: a few of its Windows-only files (`ColourPopup`, `CreditsDlg`, `Quantize`) have non-GPL terms, and none of them is used, compiled or distributed by emuled.
 
 ## Origin and acknowledgements
 

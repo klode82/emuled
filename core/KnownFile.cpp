@@ -996,7 +996,7 @@ Packet*	CKnownFile::CreateSrcInfoPacket(const CUpDownClient *forClient, uint8 by
 	uint16 nCount = 0;
 	data.WriteHash16(forClient->GetUploadFileID());
 	data.WriteUInt16(nCount);
-	uint32 cDbgNoSrc = 0;
+	[[maybe_unused]] uint32 cDbgNoSrc = 0;
 	for (POSITION pos = m_ClientUploadList.GetHeadPosition(); pos != NULL;) {
 		const CUpDownClient *cur_src = m_ClientUploadList.GetNext(pos);
 /*

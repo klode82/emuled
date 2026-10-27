@@ -2,7 +2,7 @@
 id: mobile
 name: Mobile first
 version: 1.0.0
-description: D: grande casella di ricerca, righe con anello, dettaglio come foglio dal basso e pulsante +.
+description: D: large search box, rows with a ring, detail as a bottom sheet and a + button.
 author: emuled
 license: GPL-2.0-or-later
 api: 1

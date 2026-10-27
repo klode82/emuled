@@ -2,7 +2,7 @@
 id: console
 name: Console
 version: 1.0.0
-description: A: barra laterale, tabella densa e barra di stato. Il template di serie predefinito.
+description: A: sidebar, dense table and status bar. The default built-in template.
 author: emuled
 license: GPL-2.0-or-later
 api: 1

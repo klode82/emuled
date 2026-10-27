@@ -253,7 +253,7 @@ CED2KFileLink::CED2KFileLink(LPCTSTR pszName, LPCTSTR pszSize, LPCTSTR pszHash
 		return;
 	//uint32 dwServerIP = 0; - unknown here
 	//uint16 nServerPort = 0;
-	int nInvalid = 0;
+	[[maybe_unused]] int nInvalid = 0;
 	SourcesList = new CSafeMemFile(256);
 	uint16 nCount = 0;
 	SourcesList->WriteUInt16(nCount); // init to 0, we'll fix this at the end.

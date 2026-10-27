@@ -33,7 +33,7 @@ public:
 	virtual void SetRequestFile(CPartFile *pReqFile);
 	virtual bool IsEd2kClient() const				{ return false; }
 
-	virtual bool TryToConnect(bool bIgnoreMaxCon, bool bNoCallbacks = false, CRuntimeClass *pClassSocket = NULL);
+	virtual bool TryToConnect(bool bIgnoreMaxCon, bool bNoCallbacks = false, const CRuntimeClass *pClassSocket = NULL);
 	virtual void Connect();
 	virtual void OnSocketConnected(int nErrorCode);
 	virtual void ConnectionEstablished();

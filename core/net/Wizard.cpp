@@ -47,8 +47,8 @@ bool ApiResponds(const std::string &bind_addr, uint16_t port)
 std::string ServiceUnitText(const std::string &exe)
 {
 	const std::string path = exe.find(' ') != std::string::npos ? "\"" + exe + "\"" : exe;
-	return "# Servizio systemd \"utente\" di emuled, scritto dal Wizard (emuled --setup). Comandi: systemctl --user status|restart|stop emuled, journalctl --user -u emuled -f\n"
-		   "[Unit]\nDescription=emuled - eMule per Linux (interfaccia web)\nAfter=network-online.target\nWants=network-online.target\n\n"
+	return "# emuled \"user\" systemd service, written by emuled (--setup or --install-service). Commands: systemctl --user status|restart|stop emuled, journalctl --user -u emuled -f\n"
+		   "[Unit]\nDescription=emuled - eMule for Linux (web interface)\nAfter=network-online.target\nWants=network-online.target\n\n"
 		   "[Service]\nType=simple\nExecStart=" + path + "\nExecReload=/bin/kill -HUP $MAINPID\nRestart=on-failure\nRestartSec=10\nTimeoutStopSec=60\nKillSignal=SIGTERM\nNoNewPrivileges=yes\n\n"
 		   "[Install]\nWantedBy=default.target\n";
 }
@@ -207,6 +207,37 @@ WizardResult RunWizard(std::istream &in, std::ostream &out, const WizardEnv &env
 	out << T("Il servizio parte con il tuo accesso al computer. Per averlo acceso anche senza che tu abbia fatto l'accesso: loginctl enable-linger $USER\nPassword dimenticata: emuled --reset-user\n",
 			 "The service starts when you log in. To keep it running even when you are not logged in: loginctl enable-linger $USER\nForgot the password: emuled --reset-user\n");
 	return WizardResult::ServiceStarted;
+}
+
+int InstallService(std::ostream &out, const WizardEnv &env)
+{
+	if (!env.have_systemctl) { out << "systemd is not available on this system: no service installed.\n"; return 2; }
+	std::error_code ec;
+	const std::string udir = env.home + "/.config/systemd/user", unit = udir + "/emuled.service";
+	if (!env.packaged_unit) {
+		fs::create_directories(udir, ec);
+		std::ofstream f(unit, std::ios::trunc); f << ServiceUnitText(env.exe); f.close();
+		if (!f) { out << "Error: cannot write " << unit << "\n"; return 1; }
+		out << "Service written to " << unit << "\n";
+	}
+	for (const char *cmd : {"systemctl --user daemon-reload", "systemctl --user enable --now emuled"})
+		if (env.run(cmd) != 0) { out << "Error: the command '" << cmd << "' failed. Look at: journalctl --user -u emuled -e\n"; return 1; }
+	out << "Service installed and started. Status: systemctl --user status emuled\n";
+	return 0;
+}
+
+int UninstallService(std::ostream &out, const WizardEnv &env)
+{
+	if (!env.have_systemctl) { out << "systemd is not available on this system: nothing to remove.\n"; return 2; }
+	std::error_code ec;
+	const std::string unit = env.home + "/.config/systemd/user/emuled.service";
+	if (env.run("systemctl --user disable --now emuled") != 0) out << "Note: the service was not enabled or could not be stopped (continuing).\n";
+	else out << "Service stopped and disabled.\n";
+	if (fs::remove(unit, ec)) out << "Removed " << unit << "\n";
+	else if (env.packaged_unit) out << "The unit /usr/lib/systemd/user/emuled.service belongs to the package: it stays (remove the package to delete it).\n";
+	if (env.run("systemctl --user daemon-reload") != 0) { out << "Error: 'systemctl --user daemon-reload' failed.\n"; return 1; }
+	out << "The profile and the configuration in ~/.emuled were not touched.\n";
+	return 0;
 }
 
 } // namespace emule::net

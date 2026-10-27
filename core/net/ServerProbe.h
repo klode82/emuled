@@ -1,9 +1,9 @@
-// LINUX (codice nuovo): sonda di login verso un server ed2k. Serve a provare TUTTO lo stack di rete (socket su epoll, pacchetti,
-// throttler, EMSocket) contro un server vero: si collega, manda OP_LOGINREQUEST, legge le risposte e si scollega.
+// LINUX (new code): login probe towards an ed2k server. It exercises the WHOLE network stack (epoll sockets, packets,
+// throttler, EMSocket) against a real server: connects, sends OP_LOGINREQUEST, reads the replies and disconnects.
 //
-// E' un'azione di rete verso l'esterno: parte SOLO se chiamata esplicitamente (emuled --probe-server ...), mai da un test automatico.
-// Il login e' anonimo e minimo: hash utente TEMPORANEO (non quello dell'utente), porta di ascolto fittizia, nessun file condiviso,
-// nessuna ricerca. Il server proveremmo a richiamare la porta indicata: non c'e' nessuno in ascolto, quindi riceviamo un LowID.
+// It is a network action towards the outside: it starts ONLY if called explicitly (emuled --probe-server ...), never from an automatic test.
+// The login is anonymous and minimal: TEMPORARY user hash (not the user's), fake listening port, no shared files,
+// no search. The server will try to call back the given port: nobody is listening, so we get a LowID.
 #pragma once
 #include <cstdint>
 #include <string>
@@ -15,23 +15,23 @@ namespace emule::net {
 struct ProbeOptions
 {
 	std::string nick = "eMuleLinux-probe";
-	uint16_t advertised_port = 24999;		// porta che si dichiara nel login: senza "listen" nessuno vi ascolta (LowID)
-	bool listen = false;					// ascolta davvero su advertised_port (TCP) per tutta la sonda: il server vi si collega per verificare e assegnare l'ID alto
+	uint16_t advertised_port = 24999;		// port declared in the login: without "listen" nobody listens on it (LowID)
+	bool listen = false;					// really listens on advertised_port (TCP) for the whole probe: the server connects to it to verify and assign the high ID
 	int timeout_ms = 30000;
-	bool request_serverlist = false;		// chiede anche OP_GETSERVERLIST (elenco di altri server)
+	bool request_serverlist = false;		// also asks for OP_GETSERVERLIST (list of other servers)
 	bool want_statistics = true;
-	std::string sources_hash;				// MD4 in esadecimale (32 caratteri): dopo la ricerca chiede al server le sorgenti di quel file (deve comparire nei risultati)
-	std::string search;						// se non vuota: dopo il login cerca sul server. Stessa sintassi del campo di ricerca di eMule: parole in AND, "frasi", OR, NOT,
-											// parentesi, @size>10m, @type=video, @ext=mkv, @sources>5, @length>1:30, @bitrate, @codec, @title, @album, @artist
-	// filtri come nel pannello di ricerca di eMule (si sommano all'espressione)
-	std::string ext, file_type;				// estensione senza punto; tipo: Audio, Video, Image, Doc, Pro, Arc, Iso
+	std::string sources_hash;				// MD4 in hex (32 characters): after the search asks the server for the sources of that file (it must appear in the results)
+	std::string search;						// if not empty: after login searches the server. Same syntax as the eMule search field: words in AND, "phrases", OR, NOT,
+											// parentheses, @size>10m, @type=video, @ext=mkv, @sources>5, @length>1:30, @bitrate, @codec, @title, @album, @artist
+	// filters like in the eMule search panel (added to the expression)
+	std::string ext, file_type;				// extension without the dot; type: Audio, Video, Image, Doc, Pro, Arc, Iso
 	uint64_t min_size = 0, max_size = 0;	// byte
 	unsigned min_sources = 0, min_complete = 0;
 };
 
 struct SourceInfo
 {
-	uint32_t id = 0;						// ID ed2k: se >= 16777216 e' l'IP (ordine di rete) di una sorgente raggiungibile (ID alto); altrimenti ID basso
+	uint32_t id = 0;						// ed2k ID: if >= 16777216 it is the IP (network order) of a reachable source (high ID); otherwise low ID
 	uint16_t port = 0;
 	bool high() const { return id >= 16777216u; }
 };
@@ -40,19 +40,19 @@ struct ProbeResult
 {
 	std::vector<SourceInfo> sources;
 	bool got_sources = false;
-	uint64_t sources_size = 0;				// dimensione esatta del file di cui si sono chieste le sorgenti
-	std::string sources_for_name;			// nome del file di cui si sono chieste le sorgenti
-	std::string inbound_first_bytes;		// primi byte (esadecimale) ricevuti dal lato che si e' collegato alla porta di ascolto
-	int inbound_connections = 0, inbound_hello_answered = 0;			// connessioni in arrivo sulla porta di ascolto (la verifica del server)
+	uint64_t sources_size = 0;				// exact size of the file whose sources were requested
+	std::string sources_for_name;			// name of the file whose sources were requested
+	std::string inbound_first_bytes;		// first bytes (hex) received from the side that connected to the listening port
+	int inbound_connections = 0, inbound_hello_answered = 0;			// incoming connections on the listening port (the server's verification)
 	std::vector<SearchHit> hits;
 	bool got_search_result = false;
-	bool connected = false;				// connessione TCP riuscita
-	bool logged_in = false;				// ricevuto OP_IDCHANGE
-	std::string error;					// se qualcosa e' andato storto
-	uint32_t client_id = 0;				// ID assegnato dal server
-	bool high_id = false;				// ID >= 16777216: raggiungibile dall'esterno
+	bool connected = false;				// TCP connection succeeded
+	bool logged_in = false;				// OP_IDCHANGE received
+	std::string error;					// if something went wrong
+	uint32_t client_id = 0;				// ID assigned by the server
+	bool high_id = false;				// ID >= 16777216: reachable from outside
 	uint32_t server_flags = 0;
-	uint32_t users = 0, files = 0;		// da OP_SERVERSTATUS (0 se non arrivato)
+	uint32_t users = 0, files = 0;		// from OP_SERVERSTATUS (0 if not arrived)
 	bool got_status = false;
 	std::vector<std::string> messages;	// OP_SERVERMESSAGE
 	bool got_serverlist = false;
@@ -62,11 +62,11 @@ struct ProbeResult
 	int bytes_sent = 0, bytes_received = 0;
 };
 
-// Contenuto del pacchetto OP_LOGINREQUEST (esposto per i test).
+// Content of the OP_LOGINREQUEST packet (exposed for tests).
 std::string BuildLoginPayload(const uint8_t userhash[16], uint32_t client_id, uint16_t port, const std::string &nick);
-void MakeTempUserHash(uint8_t out[16]);		// 16 byte casuali con i due marcatori di eMule (byte 5 = 14, byte 14 = 111)
+void MakeTempUserHash(uint8_t out[16]);		// 16 random bytes with the two eMule markers (byte 5 = 14, byte 14 = 111)
 
-// Bloccante: si collega a host:porta (indirizzo numerico o nome), esegue la sonda e ritorna.
+// Blocking: connects to host:port (numeric address or name), runs the probe and returns.
 ProbeResult ProbeServer(const std::string &host, uint16_t port, const ProbeOptions &opt = ProbeOptions());
 
 } // namespace emule::net

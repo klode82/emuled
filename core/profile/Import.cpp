@@ -1,4 +1,4 @@
-// LINUX (codice nuovo): vedi Import.h
+// LINUX (new code): see Import.h
 #include "profile/Import.h"
 #include "profile/IniFile.h"
 #include "profile/Profile.h"
@@ -13,7 +13,7 @@ namespace fs = std::filesystem;
 namespace emule::profile {
 
 namespace {
-// I file che si copiano (nomi di eMule). Niente Temp/, niente indici Kad (key_index, src_index, load_index: si ricostruiscono).
+// The files that get copied (eMule names). No Temp/, no Kad indexes (key_index, src_index, load_index: they are rebuilt).
 const char *const kFiles[] = {"preferences.ini", "preferences.dat", "preferencesKad.dat", "cryptkey.dat", "clients.met", "known.met", "known2_64.met", "server.met",
 	"nodes.dat", "statistics.ini", "shareddir.dat", "cancelled.met", "Category.ini", "emfriends.met", "StoredSearches.met", "SearchSpam.met", "staticservers.dat",
 	"addresses.dat", "AC_SearchStrings.dat", "AC_ServerMetURLs.dat", "AC_IPFilterUpdateURLs.dat", "AC_BootstrapIPs.dat", "AC_VF_RegExpr.dat", "webservices.dat"};
@@ -26,7 +26,7 @@ bool WriteAll(const std::string &p, const std::string &d) { std::ofstream f(p, s
 
 PathMap MakeMap(const std::vector<ImportRule> &rules) { PathMap m; for (auto &r : rules) m.Add(r.win, r.linux_path); return m; }
 
-// Le cartelle del profilo di origine, come sono scritte (Incoming, Temp, TempDirs, shareddir.dat)
+// The origin profile's folders, as written (Incoming, Temp, TempDirs, shareddir.dat)
 void SourceDirs(const std::string &src, std::string &nick, std::vector<std::string> &dirs)
 {
 	IniFile ini; std::string e;
@@ -43,8 +43,8 @@ void SourceDirs(const std::string &src, std::string &nick, std::vector<std::stri
 
 bool Exists(const std::string &p) { bool found = false; ResolveCaseInsensitive(p, &found); return found; }
 
-// Per ogni unita' di Windows trovata, cerca sopra la cartella di origine il punto dove le sue cartelle esistono davvero:
-// src=/mnt/z/eMule/config e "Z:\eMule\Incoming" -> regola "Z:\eMule" = "/mnt/z/eMule".
+// For every Windows drive found, looks above the origin folder for the point where its folders really exist:
+// src=/mnt/z/eMule/config and "Z:\eMule\Incoming" -> rule "Z:\eMule" = "/mnt/z/eMule".
 std::vector<ImportRule> Suggest(const std::string &src, const std::vector<std::string> &dirs)
 {
 	std::vector<ImportRule> out;
@@ -87,7 +87,7 @@ std::string Utf16Out(const std::vector<std::string> &lines, const std::string &e
 
 std::string MapOne(const PathMap &m, const std::string &p) { if (!LooksWindows(p)) return p; bool mapped; std::string r = m.ToLinux(p, &mapped); return mapped ? r : p; }
 
-// shareddir.dat: una cartella per riga, stessa codifica dell'originale
+// shareddir.dat: one folder per line, same encoding as the original
 std::string MapSharedDir(const std::string &bytes, const PathMap &m)
 {
 	DecodedText d = DecodeText(bytes);
@@ -125,7 +125,7 @@ std::vector<std::string> FindImportCandidates(const std::string &home, const std
 	auto add = [&](const fs::path &p) {
 		if (!looks(p)) return;
 		std::error_code e2; const fs::path c = fs::weakly_canonical(p, e2);
-		if (!profile_dir.empty() && fs::equivalent(c, fs::path(profile_dir), e2)) return;		// quella in uso non e' un'origine
+		if (!profile_dir.empty() && fs::equivalent(c, fs::path(profile_dir), e2)) return;		// the one in use is not an origin
 		for (const std::string &x : out) if (x == c.string()) return;
 		out.push_back(c.string());
 	};
@@ -148,14 +148,14 @@ bool ScanImportSource(const std::string &src_in, const std::string &profile_dir,
 	out = ImportScan();
 	std::error_code ec;
 	const fs::path src = fs::canonical(src_in, ec);
-	if (ec || !fs::is_directory(src, ec)) { err = "cartella inesistente: " + src_in; return false; }
-	if (fs::equivalent(src, fs::path(profile_dir), ec)) { err = "e' la cartella di emuled stesso: scegli quella del vecchio eMule"; return false; }
+	if (ec || !fs::is_directory(src, ec)) { err = "folder does not exist: " + src_in; return false; }
+	if (fs::equivalent(src, fs::path(profile_dir), ec)) { err = "this is emuled's own folder: choose the one of the old eMule"; return false; }
 	for (const char *n : kFiles) {
 		const fs::path p = src / n;
 		if (fs::is_regular_file(p, ec)) { ImportFile f; f.name = n; f.size = fs::file_size(p, ec); out.files.push_back(f); out.total_bytes += f.size; }
 	}
 	auto has = [&](const char *n) { for (auto &f : out.files) if (f.name == n) return true; return false; };
-	if (!has("preferences.ini") && !has("known.met") && !has("clients.met")) { err = "non sembra una cartella di configurazione di eMule (mancano preferences.ini, known.met e clients.met)"; return false; }
+	if (!has("preferences.ini") && !has("known.met") && !has("clients.met")) { err = "this does not look like an eMule configuration folder (preferences.ini, known.met and clients.met are missing)"; return false; }
 	std::vector<std::string> dirs; SourceDirs(src.string(), out.nick, dirs);
 	out.rules = rules_in.empty() ? Suggest(src.string(), dirs) : rules_in;
 	const PathMap m = MakeMap(out.rules);
@@ -173,9 +173,9 @@ bool StageImport(const std::string &src_in, const std::string &profile_dir, cons
 	std::error_code ec;
 	const fs::path src = fs::canonical(src_in, ec), stage = fs::path(profile_dir) / kImportStageDir;
 	const auto sp = fs::space(profile_dir, ec);
-	if (!ec && sp.available < sc.total_bytes * 2 + (16u << 20)) { err = "spazio insufficiente nella cartella di emuled (servono circa " + std::to_string(sc.total_bytes * 2 / (1 << 20) + 16) + " MB)"; return false; }
+	if (!ec && sp.available < sc.total_bytes * 2 + (16u << 20)) { err = "not enough space in the emuled folder (about " + std::to_string(sc.total_bytes * 2 / (1 << 20) + 16) + " MB needed)"; return false; }
 	fs::remove_all(stage, ec); fs::create_directories(stage, ec);
-	if (ec) { err = "non riesco a creare " + stage.string(); return false; }
+	if (ec) { err = "cannot create " + stage.string(); return false; }
 	const PathMap m = MakeMap(sc.rules);
 	for (const ImportFile &f : sc.files) {
 		const fs::path from = src / f.name, to = stage / f.name;
@@ -184,9 +184,9 @@ bool StageImport(const std::string &src_in, const std::string &profile_dir, cons
 		else if (f.name == "shareddir.dat") ok = WriteAll(to.string(), MapSharedDir(ReadAll(from.string()), m));
 		else if (f.name == "Category.ini") ok = WriteAll(to.string(), MapCategories(ReadAll(from.string()), m));
 		else ok = fs::copy_file(from, to, fs::copy_options::overwrite_existing, ec) && !ec;
-		if (!ok) { fs::remove_all(stage, ec); err = "copia di " + f.name + " non riuscita"; return false; }
+		if (!ok) { fs::remove_all(stage, ec); err = "copy of " + f.name + " failed"; return false; }
 	}
-	if (!WriteAll((stage / "READY").string(), "source=" + src.string() + "\n")) { err = "scrittura non riuscita in " + stage.string(); return false; }
+	if (!WriteAll((stage / "READY").string(), "source=" + src.string() + "\n")) { err = "write failed in " + stage.string(); return false; }
 	return true;
 }
 
@@ -194,7 +194,7 @@ bool ApplyStagedImport(const std::string &profile_dir, std::string &log)
 {
 	std::error_code ec;
 	const fs::path root = profile_dir, stage = root / kImportStageDir;
-	if (!fs::exists(stage / "READY", ec)) { if (fs::exists(stage, ec)) fs::remove_all(stage, ec); return false; }		// preparazione interrotta: si butta
+	if (!fs::exists(stage / "READY", ec)) { if (fs::exists(stage, ec)) fs::remove_all(stage, ec); return false; }		// preparation interrupted: discarded
 	char ts[32]; std::time_t t = std::time(nullptr); std::strftime(ts, sizeof ts, "%Y%m%d-%H%M%S", std::localtime(&t));
 	const fs::path bak = root / (std::string("pre-import-") + ts);
 	std::string src; { std::string r = ReadAll((stage / "READY").string()); if (r.rfind("source=", 0) == 0) src = r.substr(7, r.find('\n') - 7); }
@@ -203,13 +203,13 @@ bool ApplyStagedImport(const std::string &profile_dir, std::string &log)
 		const std::string name = e.path().filename().string();
 		if (name == "READY") continue;
 		if (fs::exists(root / name, ec)) { fs::create_directories(bak, ec); fs::rename(root / name, bak / name, ec); }
-		fs::remove(root / (name + ".bak"), ec);		// la copia di sicurezza del file vecchio non deve rimpiazzare quello importato
+		fs::remove(root / (name + ".bak"), ec);		// the backup copy of the old file must not replace the imported one
 		fs::rename(e.path(), root / name, ec);
-		if (ec) log += "  non riesco a spostare " + name + ": " + ec.message() + "\n"; else ++n;
+		if (ec) log += "  cannot move " + name + ": " + ec.message() + "\n"; else ++n;
 	}
 	fs::remove_all(stage, ec);
 	WriteAll((root / kImportedMarker).string(), "source=" + src + "\n");
-	log += "Importati " + std::to_string(n) + " file da " + src + (fs::exists(bak, ec) ? "; i file sostituiti sono in " + bak.string() : "") + "\n";
+	log += "Imported " + std::to_string(n) + " files from " + src + (fs::exists(bak, ec) ? "; the replaced files are in " + bak.string() : "") + "\n";
 	return true;
 }
 

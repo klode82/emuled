@@ -1,4 +1,4 @@
-// LINUX: vedi util/Net.h
+// LINUX: see util/Net.h
 #include "StdAfx.h"
 #include "util/Net.h"
 #include "Preferences.h"
@@ -47,7 +47,7 @@ bool IsLANIP(uint32 nIP)
 
 bool IsGoodIP(uint32 nIP, bool forceCheck)
 {
-	// sempre scartati: 0.0.0.0, 127.* (loopback), 224-239.* (multicast), 240-255.* (riservati)
+	// always discarded: 0.0.0.0, 127.* (loopback), 224-239.* (multicast), 240-255.* (reserved)
 	if (nIP == 0 || (uint8)nIP == 127 || (uint8)nIP >= 224)
 		return false;
 	return (!thePrefs.FilterLANIPs() && !forceCheck) || !IsLANIP(nIP);

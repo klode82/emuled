@@ -21,7 +21,7 @@ bool IsPortFree(const std::string &bind_addr, uint16_t port)
 {
 	int fd = ::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
 	if (fd < 0) return false;
-	int one = 1; ::setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof one);		// come fa il demone (una porta in TIME_WAIT non e' occupata)
+	int one = 1; ::setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof one);		// as the daemon does (a port in TIME_WAIT is not busy)
 	sockaddr_in a{}; a.sin_family = AF_INET; a.sin_port = htons(port);
 	bool ok = inet_pton(AF_INET, bind_addr.c_str(), &a.sin_addr) == 1 && ::bind(fd, (sockaddr *)&a, sizeof a) == 0 && ::listen(fd, 1) == 0;
 	::close(fd);
@@ -68,7 +68,7 @@ struct Talk
 {
 	std::istream &in; std::ostream &out; bool en;
 	const std::string &T(const std::string &it, const std::string &english) const { return en ? english : it; }
-	// una riga di risposta; nullopt se l'input e' finito
+	// one line of answer; nullopt if the input is over
 	std::optional<std::string> Ask(const std::string &prompt) { out << prompt << " " << std::flush; std::string l; if (!std::getline(in, l)) return std::nullopt; return Trim(l); }
 };
 
@@ -129,7 +129,7 @@ WizardResult RunWizard(std::istream &in, std::ostream &out, const WizardEnv &env
 	}
 	out << T("   Porta " + std::to_string(port) + ": libera.\n", "   Port " + std::to_string(port) + ": free.\n");
 
-	// 3. cartella del profilo
+	// 3. profile folder
 	std::string profile = env.home + "/.emuled/profile";
 	for (;;) {
 		auto a = w.Ask(T("\n3) Cartella dove emuled tiene i suoi dati (preferenze, file in scarico, elenchi) [" + Pretty(profile, env.home) + "]:",

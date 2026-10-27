@@ -1,4 +1,4 @@
-// Strato di compatibilita': CString, collezioni, tempo, thread, eventi, CFileFind. Sono i soli pezzi MFC che il core usa davvero.
+// Compatibility layer: CString, collections, time, threads, events, CFileFind. These are the only MFC pieces the core really uses.
 #include "StdAfx.h"
 #include <filesystem>
 #include <set>
@@ -32,7 +32,7 @@ int main()
 		CHECK(CString("  x ").Trim() == "x" && CString("AbC").MakeLower() == "abc" && CString("abc").Mid(1, 1) == "b");
 		CString f; f.Format("%hs|%ls|%S|%s", "a", "b", "c", "d"); CHECK(f == "a|b|c|d");
 		f.Format("%5.2f|%-4d|%04X|%I64d", 3.14159, 7, 255u, (long long)-9); CHECK(f == " 3.14|7   |00FF|-9");
-		CString w(u"café"); CHECK(w == "caf\xC3\xA9" && w.GetLength() == 5);			// UTF-16 -> UTF-8, GetLength conta byte
+		CString w(u"café"); CHECK(w == "caf\xC3\xA9" && w.GetLength() == 5);			// UTF-16 -> UTF-8, GetLength counts bytes
 		CString v(u"\U0001F600"); CHECK(v == "\xF0\x9F\x98\x80");
 	}
 	// --- CList / CPtrList / CTypedPtrList
@@ -54,7 +54,7 @@ int main()
 		CStringArray a; a.Add("uno"); a.Add("due"); a.InsertAt(1, "mezzo"); CHECK(a.GetSize() == 3 && a[1] == "mezzo"); a.RemoveAt(0); CHECK(a[0] == "mezzo");
 		CByteArray b; b.SetSize(4); CHECK(b.GetSize() == 4); CUIntArray u; u.SetAtGrow(3, 9); CHECK(u.GetSize() == 4 && u[3] == 9);
 	}
-	// --- CMap con chiave stringa e iterazione per puntatore
+	// --- CMap with string key and iteration by pointer
 	{
 		CMapStringToString m; m["a"] = "1"; m.SetAt("b", "2"); CString v; CHECK(m.Lookup("b", v) && v == "2" && !m.Lookup("z", v));
 		int n = 0; for (auto *p = m.PGetFirstAssoc(); p; p = m.PGetNextAssoc(p)) ++n; CHECK(n == 2);
@@ -70,21 +70,21 @@ int main()
 		CHECK(t.Format("%Y-%m-%d %H:%M:%S") == "2023-11-14 22:13:20" && t.GetYear() == 2023 && t.GetMonth() == 11 && t.GetDay() == 14);
 		CHECK(CTime::GetCurrentTime().GetTime() > 1700000000);
 	}
-	// --- CCriticalSection / CSingleLock rientranti, CEvent
+	// --- reentrant CCriticalSection / CSingleLock, CEvent
 	{
 		CCriticalSection cs; CSingleLock l1(&cs, true), l2(&cs, true); CHECK(l1.IsLocked() && l2.IsLocked());
 		CEvent ev(false, true); CHECK(!ev.Lock(10)); std::thread th([&] { std::this_thread::sleep_for(std::chrono::milliseconds(30)); ev.SetEvent(); });
-		CHECK(ev.Lock(2000)); CHECK(ev.Lock(0)); th.join();				// manuale: resta segnalato
-		CEvent au(true, false); CHECK(au.Lock(0) && !au.Lock(10));			// automatico: si riarma da solo
+		CHECK(ev.Lock(2000)); CHECK(ev.Lock(0)); th.join();				// manual: stays signaled
+		CEvent au(true, false); CHECK(au.Lock(0) && !au.Lock(10));			// automatic: re-arms itself
 	}
-	// --- CWinThread / AfxBeginThread (semantica MFC: il thread si autodistrugge; per attenderlo si parte sospesi con m_bAutoDelete = false)
+	// --- CWinThread / AfxBeginThread (MFC semantics: the thread self-destroys; to wait for it start suspended with m_bAutoDelete = false)
 	{
 		std::atomic<int> n{0};
 		CWinThread *t = AfxBeginThread(Proc, &n, THREAD_PRIORITY_NORMAL, 0, CREATE_SUSPENDED); t->m_bAutoDelete = false; t->ResumeThread(); t->Join(); CHECK(n == 1); delete t;
 		CWinThread *s = AfxBeginThread(Proc, &n, THREAD_PRIORITY_LOWEST, 0, CREATE_SUSPENDED); s->m_bAutoDelete = false;
-		std::this_thread::sleep_for(std::chrono::milliseconds(50)); CHECK(n == 1);			// sospeso: non parte
+		std::this_thread::sleep_for(std::chrono::milliseconds(50)); CHECK(n == 1);			// suspended: does not start
 		s->ResumeThread(); s->Join(); CHECK(n == 2); delete s;
-		AfxBeginThread(Proc, &n);															// autodistruzione: nessuna perdita (lo verifica LeakSanitizer)
+		AfxBeginThread(Proc, &n);															// self-destruction: no leaks (verified by LeakSanitizer)
 		for (int i = 0; i < 200 && n < 3; ++i) std::this_thread::sleep_for(std::chrono::milliseconds(5)); CHECK(n == 3);
 		CWinThread *w = AfxBeginThread(RUNTIME_CLASS(Worker), THREAD_PRIORITY_BELOW_NORMAL, 0, CREATE_SUSPENDED); w->m_bAutoDelete = false; w->ResumeThread(); w->Join(); CHECK(Worker::ran == 10); delete w;
 		Worker::ran = 0; AfxBeginThread(RUNTIME_CLASS(Worker)); for (int i = 0; i < 200 && Worker::ran == 0; ++i) std::this_thread::sleep_for(std::chrono::milliseconds(5)); CHECK(Worker::ran == 10);

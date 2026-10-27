@@ -114,7 +114,7 @@ struct PartFileBufferedData
 	uint64 end;						// Barry - This is the end offset of the data
 	BYTE *data;						// Barry - This is the data to be written
 	Requested_Block_Struct *block;	// Barry - This is the requested block that this data relates to
-	std::atomic<DWORD> dwError;		// returned from the writing thread (LINUX: atomico, lo scrive il thread di scrittura)
+	std::atomic<DWORD> dwError;		// returned from the writing thread (LINUX: atomic, written by the writing thread)
 	std::atomic<byte> flushed;		// 0 - ready; 1 - sent to writing thread; 2 - error; 3 - written
 };
 
@@ -213,8 +213,8 @@ public:
 	void	UpdateAutoDownPriority();
 
 	UINT	GetSourceCount() const						{ return static_cast<UINT>(srclist.GetCount()); }
-	// LINUX: "cerca fonti adesso": azzera i tempi di attesa fra una richiesta di fonti e la successiva (server: 15 minuti, Kad: fino a 1 ora per ogni tentativo);
-	// Process() le rifa' al giro dopo, rispettando i limiti globali (una ricerca Kad al secondo)
+	// LINUX: "search sources now": resets the waiting times between one source request and the next (server: 15 minutes, Kad: up to 1 hour per attempt);
+	// Process() redoes them on the next round, respecting the global limits (one Kad search per second)
 	void	ForceSourceSearch()							{ m_LastSearchTime = 0; m_LastSearchTimeKad = 0; m_TotalSearchesKad = 0; }
 	UINT	GetSrcA4AFCount() const						{ return static_cast<UINT>(A4AFsrclist.GetCount()); }
 	UINT	GetSrcStatisticsValue(EDownloadState nDLState) const { return m_anStates[nDLState]; } //ASSERT(nDLState < _countof(m_anStates));
@@ -334,7 +334,7 @@ public:
 	CFile	m_hpartfile;				// permanent opened handle to avoid write conflicts
 	CMutex	m_FileCompleteMutex;		// Lord KiRon - Mutex for file completion
 	HANDLE	m_hWrite;					// asynchronous part file writing
-	std::atomic<int> m_iWrites;		// outstanding I/O counter (LINUX: atomico, lo cambia il thread di scrittura)
+	std::atomic<int> m_iWrites;		// outstanding I/O counter (LINUX: atomic, changed by the writing thread)
 	DWORD	m_LastSearchTime;
 	DWORD	m_LastSearchTimeKad;
 	uint16	src_stats[4];

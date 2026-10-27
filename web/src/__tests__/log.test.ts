@@ -11,7 +11,7 @@ describe('log store', () => {
     s.apply({ type: 'log', data: { lines: [line(1)], last_id: 1 } }); expect(s.lines).toHaveLength(0)
     s.loaded = true
     s.apply({ type: 'log', data: { lines: [line(1), line(2)], last_id: 2 } }); expect(s.lines.map((l) => l.id)).toEqual([1, 2]); expect(s.lastId).toBe(2)
-    s.apply({ type: 'log', data: { lines: [line(2), line(3)], last_id: 3 } }); expect(s.lines.map((l) => l.id)).toEqual([1, 2, 3])		// la 2 era gia' arrivata
+    s.apply({ type: 'log', data: { lines: [line(2), line(3)], last_id: 3 } }); expect(s.lines.map((l) => l.id)).toEqual([1, 2, 3])		// line 2 had already arrived
     s.apply({ type: 'log', data: { lines: [], last_id: 3 } }); expect(s.lines).toHaveLength(3)
   })
   it('tiene al massimo 3000 righe (le piu\' vecchie vanno via)', () => {

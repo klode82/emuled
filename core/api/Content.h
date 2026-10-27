@@ -1,6 +1,6 @@
-// LINUX (codice nuovo): contenuto di un file (scheda "Contenuto") con mediainfo.
-//   POST /api/v1/downloads/:hash/content   avvia (o rifa) la lettura: 202 {"state":"running"}, oppure {"state":"unavailable"} se mediainfo non c'e'
-//   GET  /api/v1/downloads/:hash/content   lo stato e, a lettura finita, il risultato (vedi media/MediaProbe.h)
+// LINUX (new code): content of a file ("Content" tab) with mediainfo.
+//   POST /api/v1/downloads/:hash/content   starts (or redoes) the reading: 202 {"state":"running"}, or {"state":"unavailable"} if mediainfo is missing
+//   GET  /api/v1/downloads/:hash/content   the state and, when reading is done, the result (see media/MediaProbe.h)
 #pragma once
 #include "api/HttpServer.h"
 #include <string>

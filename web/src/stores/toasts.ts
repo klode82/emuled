@@ -15,6 +15,6 @@ export const useToasts = defineStore('toasts', () => {
   const dismiss = (id: number) => { items.value = items.value.filter((t) => t.id !== id) }
   return { items, push, dismiss, ok: (t: string) => push('ok', t), error: (t: string) => push('error', t), info: (t: string) => push('info', t) }
 })
-// messaggio leggibile da un errore qualsiasi (i messaggi dell'API sono scritti dal demone, in italiano)
-// l'errore dell'API ha un codice stabile: se c'e' una traduzione si usa quella (nella lingua scelta), altrimenti il testo italiano del demone
+// readable message from any error (API messages are written by the daemon, in Italian)
+// the API error has a stable code: if a translation exists use it (in the chosen language), otherwise the daemon's Italian text
 export const errText = (e: unknown) => (e instanceof ApiError && e.code && te(`apiErrors.${e.code}`) ? t(`apiErrors.${e.code}`) : e instanceof Error ? e.message : String(e))

@@ -470,7 +470,7 @@ bool CDownloadQueue::IsPartFile(const CKnownFile *file) const
 
 bool CDownloadQueue::CheckAndAddSource(CPartFile *sender, CUpDownClient *source)
 {
-	// LINUX: con il debug acceso ogni rifiuto dice il motivo (l'originale scarta in silenzio e la schermata sembrava "senza fonti")
+	// LINUX: with debug on, every rejection states the reason (the original discards silently and the screen looked "without sources")
 	auto refused = [&](const TCHAR *why) {
 		if (thePrefs.GetVerbose())
 			AddDebugLogLine(false, _T("Source %s:%u refused for \"%s\": %s"), (LPCTSTR)ipstr(::IsLowID(source->GetUserIDHybrid()) ? source->GetConnectIP() : htonl(source->GetUserIDHybrid())), (UINT)source->GetUserPort(), (LPCTSTR)sender->GetFileName(), why);
@@ -1591,7 +1591,7 @@ void CDownloadQueue::ExportPartMetFilesOverview() const
 		return;
 	}
 
-	// LINUX: l'originale scrive UTF-16 con BOM; il file e' solo un elenco per l'utente (eMule non lo rilegge): qui UTF-8
+	// LINUX: the original writes UTF-16 with BOM; the file is only a list for the user (eMule never reads it back): here UTF-8
 
 	try {
 		file.printf(_T("Date:      %s\r\n"), (LPCTSTR)CTime::GetCurrentTime().Format(_T("%c")));
@@ -1707,7 +1707,7 @@ CString CDownloadQueue::GetOptimalTempDir(UINT nCat, EMFileSize nFileSize)
 				}
 			}
 			break;
-		// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+		// LINUX: the other values do nothing (listed so -Wswitch flags new values)
 		case PS_COMPLETE:
 		case PS_COMPLETING:
 		case PS_ERROR:

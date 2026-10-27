@@ -1,4 +1,4 @@
-// Origine: OtherFunctions.cpp:4037 GetMyConnectOptions - le opzioni di connessione che mandiamo nell'HELLO e nelle richieste di callback.
+// Origin: OtherFunctions.cpp:4037 GetMyConnectOptions - the connection options we send in HELLO and in callback requests.
 #include "StdAfx.h"
 #include "emule.h"
 #include "Preferences.h"

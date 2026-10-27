@@ -1,5 +1,5 @@
-// LINUX (codice nuovo): vedi SearchResult.h. Il formato e' quello di CSearchList::ProcessSearchAnswer / CSearchFile (nome, dimensione anche a 64 bit,
-// tipo, sorgenti, sorgenti complete).
+// LINUX (new code): see SearchResult.h. The format is that of CSearchList::ProcessSearchAnswer / CSearchFile (name, size also 64-bit,
+// type, sources, complete sources).
 #include "StdAfx.h"
 #include "search/SearchResult.h"
 #include "SafeFile.h"
@@ -36,7 +36,7 @@ UINT ParseSearchAnswer(const uchar *packet, uint32 size, std::vector<SearchHit> 
 		SearchHit h; ParseSearchFile(f, h); h.server_ip = serverIP; h.server_port = serverPort;
 		out.push_back(h); ++read;
 	}
-	// byte finale: 1 = il server ha altri risultati (OP_QUERY_MORE_RESULT), 0 = no
+	// final byte: 1 = the server has more results (OP_QUERY_MORE_RESULT), 0 = no
 	if (f.GetLength() - f.GetPosition() == 1) {
 		uint8 more = f.ReadUInt8();
 		if (more <= 1 && pbMoreResultsAvailable) *pbMoreResultsAvailable = more != 0;

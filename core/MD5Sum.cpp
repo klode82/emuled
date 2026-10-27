@@ -26,8 +26,8 @@ MD5Sum::MD5Sum(const byte *pachSource, size_t nLength)
 
 void MD5Sum::Calculate(const CString &sSource)
 {
-	// LINUX: su Windows TCHAR e' wchar_t, quindi l'MD5 di una CString e' calcolato sui byte UTF-16LE. Le password del web server in
-	// preferences.ini sono salvate cosi': per restare compatibili si hasha l'UTF-16LE anche se CString qui e' UTF-8.
+	// LINUX: on Windows TCHAR is wchar_t, so the MD5 of a CString is computed over the UTF-16LE bytes. The web server passwords in
+	// preferences.ini are stored that way: to stay compatible the UTF-16LE is hashed even though CString here is UTF-8.
 	const std::u16string w = Utf8ToUtf16(sSource);
 	std::string le; le.reserve(w.size() * 2);
 	for (char16_t c : w) { le += (char)(c & 0xFF); le += (char)(c >> 8); }

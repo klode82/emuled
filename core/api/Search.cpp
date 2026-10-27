@@ -1,4 +1,4 @@
-// LINUX (codice nuovo): vedi Search.h
+// LINUX (new code): see Search.h
 #include "StdAfx.h"
 #include "api/Search.h"
 #include "api/Api.h"
@@ -35,17 +35,17 @@ struct ActiveSearch
 	bool cancelled = false;
 	std::unique_ptr<emule::net::GlobalSearch> gs;	// scope server | all | global
 	uint32_t kadId = 0;								// scope kad | global
-	bool frozen = false;							// sostituita da una ricerca piu' nuova: i risultati sono la copia qui sotto
+	bool frozen = false;							// replaced by a newer search: the results are the copy below
 	json frozenResults; size_t frozenCount = 0; int frozenElapsed = 0;
-	json params;									// il corpo della richiesta (query, scope, filtri): serve a rifare la stessa ricerca ("Aggiorna")
+	json params;									// the request body (query, scope, filters): used to redo the same search ("Refresh")
 };
-std::deque<std::unique_ptr<ActiveSearch>> g_history;	// tutte le schede di ricerca, dalla piu' vecchia; l'ultima e' quella viva. Si tolgono solo su richiesta; restano su disco (searches.json)
-uint32_t g_liveId = 0;							// la scheda con la ricerca viva (non e' detto sia l'ultima: "Aggiorna" rifa una scheda al suo posto)
+std::deque<std::unique_ptr<ActiveSearch>> g_history;	// all the search tabs, from the oldest; the last one is the live one. Removed only on request; they stay on disk (searches.json)
+uint32_t g_liveId = 0;							// the tab with the live search (not necessarily the last: "Refresh" redoes a tab in its place)
 ActiveSearch *Find(const std::string &id);
 ActiveSearch *Live() { return g_liveId ? Find(std::to_string(g_liveId)) : nullptr; }
 ActiveSearch *Find(const std::string &id) { for (auto &p : g_history) if (std::to_string(p->id) == id) return p.get(); return nullptr; }
 uint32_t g_nextId = 1;
-constexpr double kTailS = 6, kMaxS = 120;			// attesa risposte in ritardo dopo l'ultimo server / limite assoluto
+constexpr double kTailS = 6, kMaxS = 120;			// wait for late answers after the last server / absolute limit
 
 size_t HitCount(const ActiveSearch &s)
 {
@@ -64,7 +64,7 @@ void Stop(ActiveSearch &s)
 void Freeze(ActiveSearch &s, bool stop = true);
 void SaveAll();
 
-// finita = tutti i server interrogati (o Kad ha chiuso) e nessun risultato nuovo da kTailS secondi, oppure annullata, oppure oltre il limite
+// finished = all servers queried (or Kad closed) and no new result for kTailS seconds, or cancelled, or past the limit
 bool Running(ActiveSearch &s)
 {
 	if (s.frozen) return false;
@@ -81,7 +81,7 @@ json HitsJson(const ActiveSearch &s)
 {
 	if (s.frozen) return s.frozenResults;
 	struct Agg { std::string name, type; uint64_t size = 0; uint32_t sources = 0, complete = 0, answers = 0; };
-	std::map<std::string, Agg> m;			// un file puo' arrivare da piu' server: si unisce per hash
+	std::map<std::string, Agg> m;			// a file may arrive from several servers: merged by hash
 	auto add = [&m](const std::string &h, const std::string &name, const std::string &type, uint64_t size, uint32_t src, uint32_t comp) {
 		Agg &a = m[h];
 		if (a.name.empty()) { a.name = name; a.type = type; a.size = size; }
@@ -98,7 +98,7 @@ json HitsJson(const ActiveSearch &s)
 
 json SearchJson(ActiveSearch &s, bool withResults)
 {
-	bool run = Running(s);		// puo' congelare la ricerca appena finita: prima dei conteggi
+	bool run = Running(s);		// may freeze the search just finished: before the counts
 	json j = {{"id", s.id}, {"query", s.query}, {"scope", s.scope}, {"state", "running"}, {"elapsed_s", s.frozen ? s.frozenElapsed : (int)(NowS() - s.started)}, {"result_count", HitCount(s)}};
 	j["state"] = run ? "running" : s.cancelled ? "cancelled" : "finished";
 	if (s.gs) { j["servers_asked"] = s.gs->ServersAsked(); j["servers_skipped"] = s.gs->ServersSkipped(); }
@@ -106,7 +106,7 @@ json SearchJson(ActiveSearch &s, bool withResults)
 	return j;
 }
 
-// la ricerca viva cede il posto: si ferma e tiene una copia dei risultati (le liste di CSearchList sono una sola)
+// the live search yields: it stops and keeps a copy of the results (the CSearchList lists are only one)
 void Freeze(ActiveSearch &s, bool stop)
 {
 	if (s.frozen) return;
@@ -118,7 +118,7 @@ void Freeze(ActiveSearch &s, bool stop)
 
 std::string StorePath() { return std::string((LPCTSTR)(thePrefs.GetMuleDirectory(EMULE_CONFIGDIR) + _T("searches.json"))); }
 
-// le schede sopravvivono al riavvio: elenco, parole e risultati in <config>/searches.json (file nostro, eMule Windows non lo usa)
+// tabs survive a restart: list, words and results in <config>/searches.json (our own file, eMule Windows does not use it)
 void SaveAll()
 {
 	json a = json::array();
@@ -148,34 +148,34 @@ void EnsureLoaded()
 	}
 }
 
-// avvia Kad come CSearchResultsWnd::DoNewKadSearch: parola chiave = primo termine, albero di ricerca = GetSearchPacket, poi PrepareFindKeywords
+// starts Kad like CSearchResultsWnd::DoNewKadSearch: keyword = first term, search tree = GetSearchPacket, then PrepareFindKeywords
 uint32_t StartKad(SSearchParams &sp)
 {
 	int iPos = 0; sp.strKeyword = sp.strExpression.Tokenize(_T(" "), iPos);
 	if (sp.strKeyword.GetLength() > 1 && sp.strKeyword[0] == '"') { int l = sp.strKeyword.GetLength(); sp.strKeyword = (sp.strKeyword[l - 1] == '"') ? sp.strKeyword.Mid(1, l - 2) : sp.strKeyword.Mid(1, l - 1); }
 	sp.strKeyword.Trim();
 	CSafeMemFile data(100);
-	if (!GetSearchPacket(data, &sp, true, nullptr)) throw SearchParseError("espressione vuota");
-	if (sp.strKeyword.IsEmpty() || sp.strKeyword.FindOneOf(g_szInvKadKeywordChars) >= 0) throw SearchParseError("parola chiave Kad non valida (caratteri vietati o vuota)");
+	if (!GetSearchPacket(data, &sp, true, nullptr)) throw SearchParseError("empty expression");
+	if (sp.strKeyword.IsEmpty() || sp.strKeyword.FindOneOf(g_szInvKadKeywordChars) >= 0) throw SearchParseError("invalid Kad keyword (forbidden characters or empty)");
 	UINT n = (UINT)data.GetLength(); LPBYTE buf = nullptr;
 	if (n) { buf = new BYTE[n]; data.SeekToBegin(); data.Read(buf, n); }
 	Kademlia::CSearch *k = Kademlia::CSearchManager::PrepareFindKeywords((LPCTSTR)sp.strKeyword, n, buf);
 	delete[] buf;
-	if (!k) throw SearchParseError("Kad ha rifiutato la ricerca");
+	if (!k) throw SearchParseError("Kad refused the search");
 	return k->GetSearchID();
 }
 } // namespace
 
 nlohmann::json CurrentSearchSummary() { EnsureLoaded(); return Live() ? SearchJson(*Live(), false) : json(); }
 
-// avvia una ricerca; reuse = scheda da rifare al suo posto (stesso id), altrimenti se ne apre una nuova
+// starts a search; reuse = tab to redo in its place (same id), otherwise a new one is opened
 Response StartSearch(const json &b, ActiveSearch *reuse)
 {
 	std::string query = b.value("query", std::string()), scope = b.value("scope", std::string("server"));
-	if (query.empty()) return Response::Error(422, "serve \"query\"");
+	if (query.empty()) return Response::Error(422, "\"query\" is required");
 	if (scope != "server" && scope != "all" && scope != "kad" && scope != "global") return Response::Error(422, "scope: server | all | kad | global");
 	bool kadOn = Kademlia::CKademlia::IsConnected(), edOn = theApp.serverconnect->IsConnected();
-	if (scope == "global" ? !kadOn && !edOn : scope == "kad" ? !kadOn : !edOn) return Response::Error(409, scope == "kad" ? "Kad non connesso" : scope == "global" ? "ne' un server ed2k ne' Kad sono connessi" : "non connesso a un server ed2k");
+	if (scope == "global" ? !kadOn && !edOn : scope == "kad" ? !kadOn : !edOn) return Response::Error(409, scope == "kad" ? "Kad not connected" : scope == "global" ? "neither a server (ed2k) nor Kad is connected" : "not connected to a server (ed2k)");
 	SSearchParams sp;
 	sp.eType = scope == "kad" ? SearchTypeKademlia : scope == "all" || scope == "global" ? SearchTypeEd2kGlobal : SearchTypeEd2kServer;
 	sp.strExpression = query.c_str(); sp.strExtension = b.value("ext", std::string()).c_str(); sp.strFileType = b.value("type", std::string()).c_str();
@@ -193,18 +193,18 @@ Response StartSearch(const json &b, ActiveSearch *reuse)
 			ActiveSearch *raw = s.get();
 			theApp.emuledlg->searchwnd->onLocalEnd = [raw](UINT, bool) { raw->gs->OnLocalServerAnswered(); };
 			theApp.emuledlg->searchwnd->onCancel = [raw] { raw->gs->Cancel(); };
-			if (!s->gs->Start(sp, scope != "server")) return Response::Error(409, "ricerca non partita");
+			if (!s->gs->Start(sp, scope != "server")) return Response::Error(409, "search did not start");
 		}
-	} catch (const SearchParseError &e) { return Response::Error(422, std::string("ricerca non valida: ") + e.what()); }
-	catch (const CString &e) { return Response::Error(422, std::string("ricerca rifiutata: ") + (LPCTSTR)e); }
+	} catch (const SearchParseError &e) { return Response::Error(422, std::string("invalid search: ") + e.what()); }
+	catch (const CString &e) { return Response::Error(422, std::string("search refused: ") + (LPCTSTR)e); }
 	s->started = s->lastGrowth = NowS();
 	Audit(std::string(reuseId ? "search refreshed (" : "search started (") + scope + "): " + query);
 	ActiveSearch *added = nullptr;
-	if (reuseId) {		// la scheda resta dov'e' e con lo stesso id
+	if (reuseId) {		// the tab stays where it is and with the same id
 		s->id = reuseId;
 		for (auto &p : g_history) if (p->id == reuseId) { p = std::move(s); added = p.get(); break; }
 	} else s->id = g_nextId++;
-	if (!added) { g_history.push_back(std::move(s)); added = g_history.back().get(); }		// nuova, o la scheda da riusare non c'e' piu'
+	if (!added) { g_history.push_back(std::move(s)); added = g_history.back().get(); }		// new, or the tab to reuse no longer exists
 	g_liveId = added->id;
 	SaveAll();
 	return Ok(SearchJson(*added, false), 202);
@@ -215,41 +215,41 @@ void RegisterSearchRoutes(HttpServer &srv)
 	srv.Route("POST", "/api/v1/searches", [](const Request &r) {
 		EnsureLoaded();
 		json b = json::parse(r.body, nullptr, false);
-		if (b.is_discarded() || !b.is_object()) return Response::Error(400, "serve un oggetto JSON nel corpo");
+		if (b.is_discarded() || !b.is_object()) return Response::Error(400, "a JSON object is required in the body");
 		return StartSearch(b, nullptr);
 	});
-	// rifa la stessa ricerca (stessa parola, dove e filtri) nella STESSA scheda: i risultati si rifanno da capo
+	// redoes the same search (same word, where and filters) in the SAME tab: the results are redone from scratch
 	srv.Route("POST", "/api/v1/searches/:id/refresh", [](const Request &r) {
 		EnsureLoaded();
 		ActiveSearch *s = Find(r.params.at("id"));
-		if (!s) return Response::Error(404, "ricerca non trovata");
+		if (!s) return Response::Error(404, "search not found");
 		json params = s->params.is_object() ? s->params : json{{"query", s->query}, {"scope", s->scope}};
 		return StartSearch(params, s);
 	});
 	srv.Route("GET", "/api/v1/searches", [](const Request &) {
 		EnsureLoaded();
 		json a = json::array();
-		for (auto it = g_history.rbegin(); it != g_history.rend(); ++it) a.push_back(SearchJson(**it, false));	// la piu' nuova per prima
+		for (auto it = g_history.rbegin(); it != g_history.rend(); ++it) a.push_back(SearchJson(**it, false));	// newest first
 		return Ok(a);
 	});
 	srv.Route("GET", "/api/v1/searches/:id", [](const Request &r) {
 		EnsureLoaded();
 		ActiveSearch *s = Find(r.params.at("id"));
-		if (!s) return Response::Error(404, "ricerca non trovata");
+		if (!s) return Response::Error(404, "search not found");
 		return Ok(SearchJson(*s, true));
 	});
 	srv.Route("POST", "/api/v1/searches/:id/cancel", [](const Request &r) {
 		EnsureLoaded();
 		ActiveSearch *s = Find(r.params.at("id"));
-		if (!s) return Response::Error(404, "ricerca non trovata");
+		if (!s) return Response::Error(404, "search not found");
 		Stop(*s);
 		return Ok(SearchJson(*s, false));
 	});
-	// toglie la scheda (e ferma la ricerca se e' ancora in corso): e' l'unico modo in cui una scheda sparisce
+	// removes the tab (and stops the search if still running): the only way a tab disappears
 	srv.Route("DELETE", "/api/v1/searches/:id", [](const Request &r) {
 		EnsureLoaded();
 		ActiveSearch *s = Find(r.params.at("id"));
-		if (!s) return Response::Error(404, "ricerca non trovata");
+		if (!s) return Response::Error(404, "search not found");
 		Stop(*s);
 		json j = SearchJson(*s, false);
 		if (s == Live()) { g_liveId = 0; theApp.searchlist->serverHits.clear(); theApp.searchlist->kadHits.clear(); theApp.emuledlg->searchwnd->onLocalEnd = nullptr; theApp.emuledlg->searchwnd->onCancel = nullptr; }

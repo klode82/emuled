@@ -1,2 +1,2 @@
-// STUB (sostituisce srchybrid/DebugHelpers.h): aiuti di debug di Windows (dump di memoria, stack). Non servono: vuoto di proposito.
+// STUB (replaces srchybrid/DebugHelpers.h): Windows debug helpers (memory dump, stack). Not needed: empty on purpose.
 #pragma once

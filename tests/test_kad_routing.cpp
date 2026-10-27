@@ -1,5 +1,5 @@
-// Kademlia, tabella di routing: UInt128, contatti, nodes.dat (lettura, scrittura sicura, rilettura). Il nodes.dat reale si copia in una
-// cartella temporanea: RoutingZone lo riscrive alla chiusura, e il profilo dell'utente non si tocca.
+// Kademlia, routing table: UInt128, contacts, nodes.dat (read, safe write, re-read). The real nodes.dat is copied into a
+// temporary folder: RoutingZone rewrites it on close, and the user's profile is not touched.
 #include "StdAfx.h"
 #include "Emule.h"
 #include "kademlia/kademlia/Kademlia.h"
@@ -20,7 +20,7 @@ static std::string slurp(const std::string &p) { std::ifstream f(p, std::ios::bi
 
 int main(int argc, char **argv)
 {
-	CKademlia::Start(new CPrefs());			// senza file; l'istanza ne diventa proprietaria
+	CKademlia::Start(new CPrefs());			// without file; the instance becomes its owner
 	CPrefs &prefs = *CKademlia::GetPrefs();
 	CUInt128 me; prefs.GetKadID(me);
 	CHECK(!(me == CUInt128((ULONG)0)));
@@ -46,10 +46,10 @@ int main(int argc, char **argv)
 		ContactArray all; zone.GetAllEntries(all);
 		CHECK(all.size() == n1);
 		for (auto *c : all) { CHECK(c->GetIPAddress() != 0 && c->GetUDPPort() != 0); CString s; c->GetClientID(s); ids1.push_back((LPCTSTR)s); }
-	}	// il distruttore riscrive nodes.dat (scrittura sicura)
+	}	// the destructor rewrites nodes.dat (safe write)
 	std::string after = slurp(nodes);
 	CHECK(emule::met::ValidateNodesDat((const uint8_t*)after.data(), after.size()).verdict == emule::met::Verdict::Valid);
-	CHECK(fs::exists(nodes + ".bak"));		// l'originale sano e' stato salvato
+	CHECK(fs::exists(nodes + ".bak"));		// the healthy original was saved
 	{
 		CRoutingZone zone(nodes.c_str());
 		CHECK(zone.GetNumContacts() == n1);

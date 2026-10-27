@@ -81,7 +81,7 @@ public:
 	uint32	GetWaitingUserForFileCount(const CSimpleArray<CObject*> &raFiles, bool bOnlyIfChanged);
 	uint32	GetDatarateForFile(const CSimpleArray<CObject*> &raFiles) const;
 	uint32	GetTargetClientDataRate(bool bMinDatarate) const;
-	// LINUX: solo per le prove (test del throttler): forza i valori che il throttler legge
+	// LINUX: for tests only (throttler test): forces the values the throttler reads
 	void	SetStats(uint32 rate, uint32 queueLen, uint32 target)	{ datarate = rate; m_testQueueLen = queueLen; m_testTarget = target; m_bTestStats = true; }
 
 	POSITION GetFirstFromUploadList() const					{ return uploadinglist.GetHeadPosition(); }
@@ -108,7 +108,7 @@ public:
 	uint32	GetAverageUpTime() const;
 
 	CUpDownClient* FindBestClientInQueue();
-	void CancelTimer();	// LINUX: per le prove di rete, che non devono far girare le code
+	void CancelTimer();	// LINUX: for network tests, which must not run the queues
 
 	CUpDownClientPtrList waitinglist;
 
@@ -146,7 +146,7 @@ private:
 
 	bool	m_bTestStats = false;
 	uint32	m_testQueueLen = 0, m_testTarget = 0;
-	uint64_t h_timer = 0; //100 ms (timer del ciclo degli eventi)
+	uint64_t h_timer = 0; //100 ms (event-loop timer)
 	emule::net::EventLoop *m_pLoop = nullptr;
 	uint32	successfullupcount;
 	uint32	failedupcount;

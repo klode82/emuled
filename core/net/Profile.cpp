@@ -20,18 +20,18 @@ ScopedProfile::ScopedProfile(const std::string &baseDir, bool createObjects)
 		base_ = p.string() + "/";
 		owned_ = true;
 	} else {
-		base_ = fs::absolute(baseDir, ec).lexically_normal().string();		// SetConfigDir vuole un percorso assoluto
+		base_ = fs::absolute(baseDir, ec).lexically_normal().string();		// SetConfigDir wants an absolute path
 		if (base_.back() != '/')
 			base_ += '/';
 	}
 	fs::create_directories(config(), ec);
 	thePrefs.SetConfigDir(CString(config().c_str()));
-	const bool keepLanFilter = thePrefs.FilterLANIPs();		// Init() ricarica i predefiniti: le prove su rete locale lo spengono prima
+	const bool keepLanFilter = thePrefs.FilterLANIPs();		// Init() reloads the defaults: tests on a local network turn it off beforehand
 	thePrefs.Init();
 	thePrefs.SetFilterLANIPs(keepLanFilter);
-	thePrefs.SetServerUDPPort(0);			// un profilo di lavoro non apre da solo il socket UDP verso i server (predefinito di eMule: porta casuale)
+	thePrefs.SetServerUDPPort(0);			// a working profile does not open the UDP socket towards the servers by itself (eMule default: random port)
 	thePrefs.SetCryptLayer(true, false, false);
-	thePrefs.SetCryptLayerRequested(false);	// offuscamento supportato ma non richiesto (come la prima versione delle sonde); i test lo cambiano da codice
+	thePrefs.SetCryptLayerRequested(false);	// obfuscation supported but not requested (like the first version of the probes); tests change it from code
 	if (createObjects)
 		theApp.CreateObjects();
 }

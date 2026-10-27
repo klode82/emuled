@@ -48,7 +48,7 @@ static char THIS_FILE[] = __FILE__;
 LPCTSTR const strDefaultToolbar = _T("0099010203040506070899091011");
 LPCTSTR const strPreferencesDat = _T("preferences.dat");
 LPCTSTR const strStatisticsIni = _T("statistics.ini");
-CPreferences thePrefs __attribute__((init_priority(101)));	// LINUX: costruita prima di theApp e degli altri globali (che la usano nei costruttori)
+CPreferences thePrefs __attribute__((init_priority(101)));	// LINUX: constructed before theApp and the other globals (which use it in their constructors)
 
 CString CPreferences::m_astrDefaultDirs[13] __attribute__((init_priority(102)));
 CString	CPreferences::strNick __attribute__((init_priority(102)));
@@ -495,7 +495,7 @@ CPreferences::~CPreferences()
 
 LPCTSTR CPreferences::GetConfigFile()
 {
-	static CString s_strIni;	// LINUX: l'originale usa il nome del profilo di MFC (theApp.m_pszProfileName)
+	static CString s_strIni;	// LINUX: the original uses the MFC profile name (theApp.m_pszProfileName)
 	s_strIni = GetMuleDirectory(EMULE_CONFIGDIR) + PREFINIFILE;
 	return s_strIni;
 }
@@ -511,7 +511,7 @@ void CPreferences::MovePreferences(EDefaultDirectory eSrc, LPCTSTR const sFile, 
 void CPreferences::Init()
 {
 	//srand((unsigned)time(NULL)); // we need random numbers sometimes
-	// LINUX: in eMule Init() gira una volta sola; i test e le sonde creano piu' profili nello stesso processo, quindi si riparte da zero
+	// LINUX: in eMule Init() runs only once; tests and probes create several profiles in the same process, so we start from scratch
 	Uninit();
 	shareddir_list.RemoveAll();
 	addresses_list.RemoveAll();
@@ -566,7 +566,7 @@ void CPreferences::Init()
 			CString toadd;
 			while (sdirfile.ReadString(toadd)) {
 				toadd.Trim(_T(" \t\r\n")); // need to trim '\r' in binary mode
-				toadd = MapForeignPath(toadd);		// LINUX: percorsi di Windows
+				toadd = MapForeignPath(toadd);		// LINUX: Windows paths
 				if (!toadd.IsEmpty()) {
 					MakeFoldername(toadd);
 					// skip non-shareable directories
@@ -1483,7 +1483,7 @@ bool CPreferences::Save()
 void CPreferences::CreateUserHash()
 {
 	while (isbadhash(userhash))
-		if (getrandom(userhash, sizeof userhash, 0) != (ssize_t)sizeof userhash)	// LINUX: nell'originale CryptoPP::AutoSeededRandomPool
+		if (getrandom(userhash, sizeof userhash, 0) != (ssize_t)sizeof userhash)	// LINUX: in the original CryptoPP::AutoSeededRandomPool
 			break;
 	// mark as emule client. this will be needed in later version
 	userhash[5] = 14;	//0x0e
@@ -1492,7 +1492,7 @@ void CPreferences::CreateUserHash()
 
 UINT CPreferences::GetRecommendedMaxConnections()
 {
-	UINT iRealMax = UNLIMITED;	// LINUX: in Windows il limite dipende dal sistema (GetMaxWindowsTCPConnections); su Linux non c'e'
+	UINT iRealMax = UNLIMITED;	// LINUX: on Windows the limit depends on the system (GetMaxWindowsTCPConnections); not on Linux
 	if (iRealMax == UNLIMITED || iRealMax > 520)
 		return 500;
 
@@ -1965,7 +1965,7 @@ void CPreferences::LoadPreferences()
 		maxhalfconnections = dwCurSP2OrHigher ? 9 : 50;
 
 	m_strBindAddrW = ini.GetString(_T("BindAddr")).Trim();
-	m_pszBindAddrW = NULL;	// LINUX: la versione wide non serve
+	m_pszBindAddrW = NULL;	// LINUX: the wide version is not needed
 	m_strBindAddrA = m_strBindAddrW;
 	m_pszBindAddrA = m_strBindAddrA.IsEmpty() ? NULL : (LPCSTR)m_strBindAddrA;
 
@@ -2041,7 +2041,7 @@ void CPreferences::LoadPreferences()
 	confirmExit = ini.GetBool(_T("ConfirmExit"), true);
 	filterLANIPs = ini.GetBool(_T("FilterBadIPs"), true);
 	m_bAllocLocalHostIP = ini.GetBool(_T("AllowLocalHostIP"), false);
-	autoconnect = ini.GetBool(_T("Autoconnect"), true);		// LINUX: un demone parte collegato; nell'originale il predefinito era no (la chiave, se c'e', vince)
+	autoconnect = ini.GetBool(_T("Autoconnect"), true);		// LINUX: a daemon starts connected; in the original the default was no (the key, if present, wins)
 	showRatesInTitle = ini.GetBool(_T("ShowRatesOnTitle"), false);
 	m_bIconflashOnNewMessage = ini.GetBool(_T("IconflashOnNewMessage"), false);
 
@@ -2279,8 +2279,8 @@ void CPreferences::LoadPreferences()
 	else
 		slosh(m_strSkinProfileDir);
 
-	// LINUX: CIni::GetBinary scrive nel buffer che gli si da' tanti byte quanti ne contiene il valore del file: il profilo di Windows ha strutture piu' grandi delle nostre
-	// (LOGFONTW = 92 byte, le nostre 60): scriveva fuori dalla variabile (ASan, solo con un profilo vero). Si legge in un buffer proprio e si copia solo se la misura coincide.
+	// LINUX: CIni::GetBinary writes into the buffer given to it as many bytes as the file value holds: the Windows profile has bigger structures than ours
+	// (LOGFONTW = 92 bytes, ours 60): it wrote outside the variable (ASan, only with a real profile). We read into a buffer of our own and copy only if the size matches.
 	auto readBlob = [&ini](LPCTSTR name, void *dst, size_t size) {
 		LPBYTE blob = NULL; UINT n = 0;
 		const bool ok = ini.GetBinary(name, &blob, &n) && n == size;
@@ -2369,7 +2369,7 @@ void CPreferences::LoadPreferences()
 	for (unsigned i = 0; i < _countof(m_adwStatsColors); ++i) {
 		buffer.Format(_T("StatColor%u"), i);
 		m_adwStatsColors[i] = 0;
-		long v = 0;		// LINUX: "%li" scrive un long (8 byte su Linux a 64 bit) ma m_adwStatsColors e' di DWORD (4 byte): scriveva 4 byte oltre l'ultimo elemento (ASan)
+		long v = 0;		// LINUX: "%li" writes a long (8 bytes on 64-bit Linux) but m_adwStatsColors is DWORD (4 bytes): it wrote 4 bytes past the last element (ASan)
 		if (_stscanf(ini.GetString(buffer, _T("")), _T("%li"), &v) != 1)
 			ResetStatsColor(i);
 		else
@@ -2429,7 +2429,7 @@ void CPreferences::LoadPreferences()
 
 WORD CPreferences::GetWindowsVersion()
 {
-	return _WINVER_VISTA_ + 0x100;	// LINUX: nessuna versione di Windows; si comporta come una Windows recente
+	return _WINVER_VISTA_ + 0x100;	// LINUX: no Windows version; behaves like a recent Windows
 }
 
 UINT CPreferences::GetDefaultMaxConperFive()
@@ -2706,12 +2706,12 @@ UINT CPreferences::GetWebMirrorAlertLevel()
 
 bool CPreferences::IsRunAsUserEnabled()
 {
-	return false;	// LINUX: "esegui come utente senza privilegi" e' una funzione di Windows XP
+	return false;	// LINUX: "run as unprivileged user" is a Windows XP feature
 }
 
 bool CPreferences::GetUseReBarToolbar()
 {
-	return false;	// LINUX: barra degli strumenti di Windows
+	return false;	// LINUX: Windows toolbar
 }
 
 uint32 CPreferences::GetMaxGraphUploadRate(bool bEstimateIfUnlimited)
@@ -2749,7 +2749,7 @@ bool CPreferences::CanFSHandleLargeFiles(int nForCat)
 	return false;
 }
 
-// LINUX: l'originale legge la tabella delle porte in uso (GetTcpTable/GetUdpTable); qui si prova a legare la porta: se riesce e' libera.
+// LINUX: the original reads the table of ports in use (GetTcpTable/GetUdpTable); here we try to bind the port: if it succeeds it is free.
 static bool PortIsFree(int type, uint16 nPort)
 {
 	int fd = ::socket(AF_INET, type, 0);
@@ -2785,10 +2785,10 @@ uint16 CPreferences::GetRandomUDPPort()
 	return nPort;
 }
 
-// LINUX: niente registro ne cartelle di sistema di Windows. L'unica cartella data dall'esterno e' quella di configurazione (il "profilo",
-// come "eMule/config" di Windows: opzione --profile del daemon). Le altre le ricava da li', con la stessa disposizione dell'originale:
-//   <base>/config/  <base>/Temp/  <base>/Incoming/  <base>/logs/ ... dove <base> e' la cartella che contiene "config".
-// Finche' SetConfigDir non e' stata chiamata la cartella di configurazione e' vuota: nessun file viene letto ne scritto.
+// LINUX: no registry nor Windows system folders. The only folder given from outside is the configuration one (the "profile",
+// like Windows "eMule/config": daemon --profile option). The others are derived from it, with the same layout as the original:
+//   <base>/config/  <base>/Temp/  <base>/Incoming/  <base>/logs/ ... where <base> is the folder that contains "config".
+// Until SetConfigDir has been called the configuration folder is empty: no file is read or written.
 static std::function<CString(const CString&)> s_pathMapper;
 void CPreferences::SetPathMapper(std::function<CString(const CString&)> fn) { s_pathMapper = std::move(fn); }
 CString CPreferences::MapForeignPath(const CString &strPath)
@@ -2796,11 +2796,11 @@ CString CPreferences::MapForeignPath(const CString &strPath)
 	if (strPath.IsEmpty() || strPath[0] == _T('/'))
 		return strPath;
 	CString blank(strPath); blank.Trim();
-	if (blank.IsEmpty())		// solo spazi o a capo: un valore vuoto del file .ini, non un percorso (prima: 13 avvisi vuoti ad ogni avvio)
+	if (blank.IsEmpty())		// only spaces or newlines: an empty value in the .ini file, not a path (before: 13 empty warnings at every start)
 		return CString();
 	CString r = s_pathMapper ? s_pathMapper(strPath) : CString();
 	if (r.IsEmpty())
-		DebugLogWarning(_T("Percorso di Windows ignorato (nessuna regola --pathmap): \"%s\""), (LPCTSTR)strPath);
+		DebugLogWarning(_T("Windows path ignored (no --pathmap rule): \"%s\""), (LPCTSTR)strPath);
 	return r;
 }
 
@@ -2810,7 +2810,7 @@ void CPreferences::SetConfigDir(const CString &strConfigDir)
 		d.Empty();
 	for (bool &b : m_abDefaultDirsCreated)
 		b = false;
-	if (strConfigDir.IsEmpty() || strConfigDir[0] != _T('/'))	// deve essere assoluto: un percorso relativo scriverebbe file dove capita
+	if (strConfigDir.IsEmpty() || strConfigDir[0] != _T('/'))	// must be absolute: a relative path would write files wherever
 		return;
 	CString strConfig(strConfigDir);
 	slosh(strConfig);
@@ -2836,10 +2836,10 @@ void CPreferences::SetConfigDir(const CString &strConfigDir)
 
 CString CPreferences::GetDefaultDirectory(EDefaultDirectory eDirectory, bool bCreate)
 {
-	if (m_astrDefaultDirs[0].IsEmpty())	// SetConfigDir non ancora chiamata
+	if (m_astrDefaultDirs[0].IsEmpty())	// SetConfigDir not called yet
 		return CString();
 	if (bCreate && !m_abDefaultDirsCreated[eDirectory]) {
-		::CreateDirectory(m_astrDefaultDirs[EMULE_DATABASEDIR], NULL);	// la cartella che contiene tutte le altre
+		::CreateDirectory(m_astrDefaultDirs[EMULE_DATABASEDIR], NULL);	// the folder that contains all the others
 		::CreateDirectory(m_astrDefaultDirs[eDirectory], NULL);
 		m_abDefaultDirsCreated[eDirectory] = true;
 	}
@@ -2858,7 +2858,7 @@ CString CPreferences::GetMuleDirectory(EDefaultDirectory eDirectory, bool bCreat
 		return m_strSkinProfileDir;
 	case EMULE_TOOLBARDIR:
 		return m_sToolbarBitmapFolder;
-	// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+	// LINUX: the other values do nothing (listed so -Wswitch flags new values)
 	case EMULE_ADDLANGDIR:
 	case EMULE_CONFIGBASEDIR:
 	case EMULE_CONFIGDIR:
@@ -2906,7 +2906,7 @@ bool CPreferences::IsRunningAeroGlassTheme()
 	return false;
 }
 
-// LINUX: la lingua dell'interfaccia (DLL di traduzione) non esiste nel daemon: le traduzioni sono dell'interfaccia web.
+// LINUX: the UI language (translation DLL) does not exist in the daemon: translations belong to the web interface.
 void CPreferences::SetLanguage()
 {
 }

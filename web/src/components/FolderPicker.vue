@@ -1,4 +1,4 @@
-<!-- Finestra "scegli una cartella" (Bench 874): mostra le cartelle del computer dove gira il DEMONE (non quelle del PC del browser; con Docker: quelle del contenitore) -->
+<!-- "Choose a folder" window (Bench 874): shows the folders of the computer where the DAEMON runs (not those of the browser's PC; with Docker: those of the container) -->
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -9,7 +9,7 @@ import type { FsList } from '@/types'
 import Modal from './Modal.vue'
 import Icon from './Icon.vue'
 
-const props = defineProps<{ open: boolean; start?: string; needWrite?: boolean; showHidden?: boolean }>()		// showHidden: si apre gia' con le cartelle nascoste (es. ~/.emuled.old)
+const props = defineProps<{ open: boolean; start?: string; needWrite?: boolean; showHidden?: boolean }>()		// showHidden: opens already showing hidden folders (e.g. ~/.emuled.old)
 const emit = defineEmits<{ close: []; pick: [path: string] }>()
 const { t } = useI18n()
 const session = useSession()
@@ -20,7 +20,7 @@ async function load(path?: string) {
   try { data.value = await session.getApi().fs(path, hidden.value) }
   catch (e) {
     error.value = errText(e)
-    if (!data.value) { try { data.value = await session.getApi().fs(undefined, hidden.value) } catch { /* resta l'errore */ } }		// il percorso di partenza non c'e': si parte dalla cartella personale
+    if (!data.value) { try { data.value = await session.getApi().fs(undefined, hidden.value) } catch { /* the error stays */ } }		// the starting path does not exist: start from the home folder
   } finally { busy.value = false }
 }
 watch(() => props.open, (v) => { if (v) { newName.value = ''; data.value = null; if (props.showHidden) hidden.value = true; void load(props.start || undefined) } }, { immediate: true })

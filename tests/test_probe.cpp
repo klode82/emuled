@@ -1,4 +1,4 @@
-// ServerProbe contro un finto server ed2k su localhost: controlla il pacchetto di login e il parsing delle risposte.
+// ServerProbe against a fake ed2k server on localhost: checks the login packet and the parsing of the replies.
 #include "StdAfx.h"
 #include "net/Profile.h"
 #include "net/ServerProbe.h"
@@ -21,7 +21,7 @@ static std::string U32(uint32_t v) { return std::string((const char*)&v, 4); }
 
 int main()
 {
-	emule::net::ScopedProfile profile;		// profilo temporaneo: preferenze iniziali e oggetti dell'applicazione
+	emule::net::ScopedProfile profile;		// temporary profile: initial preferences and application objects
 	int ls = socket(AF_INET, SOCK_STREAM, 0); sockaddr_in a{}; a.sin_family = AF_INET; a.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 	bind(ls, (sockaddr*)&a, sizeof a); listen(ls, 1); socklen_t sl = sizeof a; getsockname(ls, (sockaddr*)&a, &sl);
 	std::string got, gotsearch; uint8_t gotop = 0, gotsearchop = 0, gotsrcop = 0; std::string gotsrc;
@@ -39,7 +39,7 @@ int main()
 		std::string res = U32(2) + hit('\x0A', "Fight Club ITA.avi", 734003200, 42) + hit('\x0B', "fight.club.sub.mkv", 1500000000u, 7);
 		std::string out = Pkt(0x38, m) + Pkt(0x40, U32(0x01020304) + U32(0x0F)) + Pkt(0x34, U32(1234) + U32(56789));
 		(void)!write(c, out.data(), out.size());
-				// opcode 0x16 (ricerca): la leggiamo e rispondiamo con 2 risultati
+				// opcode 0x16 (search): we read it and reply with 2 results
 		{
 			char h2[6]; size_t n2 = 0; while (n2 < 6) { ssize_t r = read(c, h2 + n2, 6 - n2); if (r <= 0) break; n2 += r; }
 			uint32_t l2 = 0; memcpy(&l2, h2 + 1, 4); gotsearchop = (uint8_t)h2[5]; gotsearch.resize(l2 - 1); n2 = 0;
@@ -47,7 +47,7 @@ int main()
 		}
 		std::string outres = Pkt(0x33, res);
 		(void)!write(c, outres.data(), outres.size());
-		{	// OP_GETSOURCES: la leggiamo e rispondiamo con 2 sorgenti (una con ID alto 1.2.3.4, una con ID basso)
+		{	// OP_GETSOURCES: we read it and reply with 2 sources (one with high ID 1.2.3.4, one with low ID)
 			char h3[6]; size_t n3 = 0; while (n3 < 6) { ssize_t r = read(c, h3 + n3, 6 - n3); if (r <= 0) break; n3 += r; }
 			uint32_t l3 = 0; memcpy(&l3, h3 + 1, 4); gotsrcop = (uint8_t)h3[5]; gotsrc.resize(l3 - 1); n3 = 0;
 			while (n3 < gotsrc.size()) { ssize_t r = read(c, &gotsrc[n3], gotsrc.size() - n3); if (r <= 0) break; n3 += r; }
@@ -75,7 +75,7 @@ int main()
 	{ uint32_t sz; memcpy(&sz, gotsrc.data() + 16, 4); CHECK(sz == 734003200u); }
 	CHECK(r.got_sources && r.sources.size() == 2 && r.sources[0].id == 0x04030201 && r.sources[0].high() && r.sources[0].port == 4662);
 	CHECK(r.sources.size() == 2 && !r.sources[1].high() && r.sources[1].id == 12345 && r.sources_for_name == "Fight Club ITA.avi");
-	// come eMule: solo parole in AND = UNA stringa (0x01 + lunghezza + testo), il server separa le parole
+	// as eMule: only AND words = ONE string (0x01 + length + text), the server splits the words
 	CHECK(gotsearch == std::string("\x01\x0E\x00" "fight club ita", 3 + 14));
 	CHECK(gotop == 0x01); CHECK(got.size() > 26);
 	if (got.size() > 26) {
@@ -85,7 +85,7 @@ int main()
 		uint32_t nt; memcpy(&nt, &got[22], 4); CHECK(nt == 4);
 		CHECK(got.find("tester") != std::string::npos);
 	}
-	// nessun server: errore, non blocco
+	// no server: error, not a block
 	emule::net::ProbeOptions o2; o2.timeout_ms = 1500;
 	auto r2 = emule::net::ProbeServer("127.0.0.1", 1, o2);
 	CHECK(!r2.error.empty() && !r2.logged_in);

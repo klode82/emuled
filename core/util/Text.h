@@ -1,5 +1,5 @@
-// LINUX: argomento "utilita' pure" di OtherFunctions.h (nessuna dipendenza da Windows).
-// Origine: srchybrid/OtherFunctions.h righe 71-110 (ROUND, maxi, mini, sgn, inSet, nstrdup). Altre funzioni dell'argomento si portano a richiesta.
+// LINUX: the "pure utilities" topic of OtherFunctions.h (no Windows dependency).
+// Origin: srchybrid/OtherFunctions.h lines 71-110 (ROUND, maxi, mini, sgn, inSet, nstrdup). Other functions of the topic are ported on request.
 #pragma once
 #include "StdAfx.h"
 #include <cmath>
@@ -40,7 +40,7 @@ inline char* nstrdup(const char *todup)
 	return (char*)memcpy(new char[len], todup, len);
 }
 
-// vero se il file comincia con il BOM UTF-16 little endian (origine: OtherFunctions.cpp IsUnicodeFile)
+// true if the file starts with the UTF-16 little endian BOM (origin: OtherFunctions.cpp IsUnicodeFile)
 inline bool IsUnicodeFile(LPCTSTR pszFilePath)
 {
 	FILE *fp = fopen(pszFilePath, "rb");
@@ -51,7 +51,7 @@ inline bool IsUnicodeFile(LPCTSTR pszFilePath)
 	return bResult;
 }
 
-// Origine: OtherFunctions.cpp:100-250. Testi leggibili per dimensioni, velocita' e durate (la lingua e' sempre l'inglese, vedi ResString.h)
+// Origin: OtherFunctions.cpp:100-250. Human-readable sizes, speeds and durations (the language is always English, see ResString.h)
 CString CastItoXBytes(uint16 count, bool isK = false, bool isPerSec = false, uint32 decimal = 2);
 CString CastItoXBytes(uint32 count, bool isK = false, bool isPerSec = false, uint32 decimal = 2);
 CString CastItoXBytes(uint64 count, bool isK = false, bool isPerSec = false, uint32 decimal = 2);
@@ -66,15 +66,15 @@ CString CastSecondsToHM(time_t seconds);
 
 extern LPCTSTR const sBadFileNameChar;
 class CAICHHash;
-CString StripInvalidFilenameChars(const CString &strText);		// toglie i caratteri vietati nei nomi di file e i nomi riservati di Windows
+CString StripInvalidFilenameChars(const CString &strText);		// removes characters forbidden in file names and Windows reserved names
 void HeapSort(CArray<uint16> &count, UINT first, UINT last);
 CString GetFileTypeDisplayStrFromED2KFileType(LPCTSTR pszED2KFileType);
 CString SecToTimeLength(UINT uiSec);
 uint32 DecodeBase32(LPCTSTR pszInput, CAICHHash &Hash);
-CString EncodeUrlUtf8(const CString &rstr);						// codifica i caratteri non ASCII per un link ed2k://
+CString EncodeUrlUtf8(const CString &rstr);						// encodes non-ASCII characters for an ed2k:// link
 bool ExtensionIs(LPCTSTR pszFilePath, LPCTSTR pszExt);
 bool RegularExpressionMatch(const CString &regexpr, const CString &teststring);
-CString CleanupFilename(const CString &filename, bool bExtension = true);	// nome "pulito" per i confronti (toglie punti, [AD], maiuscole...)
+CString CleanupFilename(const CString &filename, bool bExtension = true);	// "clean" name for comparisons (removes dots, [AD], uppercase...)
 
 struct SUnresolvedHostname
 {
@@ -83,9 +83,9 @@ struct SUnresolvedHostname
 	CString strURL;
 	uint16 nPort;
 };
-CString URLDecode(const CString &sIn, bool bKeepNewLine = false);	// %XX -> carattere (togli i caratteri di controllo)
+CString URLDecode(const CString &sIn, bool bKeepNewLine = false);	// %XX -> character (strip control characters)
 CString URLEncode(const CString &sIn);
 CString EncodeURLQueryParam(const CString &sInT);
 void DebugHttpHeaders(const CStringAArray &astrHeaders);
-CString GetNextString(const CString &rstr, LPCTSTR pszTokens, int &riStart);	// prossimo pezzo fino a uno dei separatori (aggiorna riStart, -1 alla fine)
+CString GetNextString(const CString &rstr, LPCTSTR pszTokens, int &riStart);	// next piece up to one of the separators (updates riStart, -1 at the end)
 CString GetNextString(const CString &rstr, TCHAR chToken, int &riStart);

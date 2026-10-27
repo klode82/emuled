@@ -12,8 +12,8 @@ export const SECTIONS = [
   { path: '/prefs', name: 'prefs', icon: 'gear' },
 ] as const
 
-// Il testo delle voci e' in i18n: nav.<nome> (esteso) e nav.<nome>Short (barra in basso sul telefono)
-// Le schermate Trasferimenti e Upload le porta il template (ogni template ha le sue; Upload e' quella comune se il template non ne ha una); le altre sono comuni e prendono i colori del template.
+// The item text is in i18n: nav.<name> (long) and nav.<name>Short (bottom bar on the phone)
+// The Transfers and Upload screens come from the template (each template has its own; Upload is the shared one if the template has none); the others are shared and take the template colors.
 export function createAppRouter(transfers: Component, uploads?: Component) {
   return createRouter({
     history: createWebHashHistory(),

@@ -15,7 +15,7 @@
 //along with this program; if not, write to the Free Software
 //Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #pragma once
-#include <atomic>		// LINUX: flag condivisi tra il thread del throttler e quello del ciclo (vedi i commenti sui membri)
+#include <atomic>		// LINUX: flags shared between the throttler thread and the loop thread (see the member comments)
 #include "packets.h"
 #include "EncryptedStreamSocket.h"
 #include "ThrottledSocket.h" // ZZ:UploadBandWithThrottler (UDP)
@@ -40,9 +40,9 @@ public:
 	~CEMSocket();
 
 	virtual void SendPacket(Packet *packet, bool controlpacket = true, uint32 actualPayloadSize = 0, bool bForceImmediateSend = false);
-	// LINUX: CONTRATTO DI DISTRUZIONE. Il throttler (altro thread) chiama funzioni virtuali del socket finche' questo e' nelle sue code.
-	// La classe PIU' DERIVATA deve chiamare StopThrottling() come PRIMA istruzione del proprio distruttore, quando l'oggetto e' ancora intero.
-	// Il distruttore di CEMSocket lo fa comunque, ma a quel punto la tabella virtuale e' gia' cambiata (TSan lo segnala).
+	// LINUX: DESTRUCTION CONTRACT. The throttler (another thread) calls virtual functions of the socket as long as it is in its queues.
+	// The MOST DERIVED class must call StopThrottling() as the FIRST statement of its destructor, while the object is still whole.
+	// The CEMSocket destructor does it anyway, but by then the vtable has already changed (TSan reports it).
 	void StopThrottling();
 	bool	IsConnected() const								{ return byConnected == EMS_CONNECTED; }
 	uint8	GetConState() const								{ return byConnected; }
@@ -102,7 +102,7 @@ protected:
 	CAsyncProxySocketLayer *m_pProxyLayer;
 	CString m_strLastProxyError;
 	UINT	m_uTimeOut;
-	std::atomic<uint8_t>	byConnected;	// LINUX: letto dal throttler, scritto dal thread del ciclo (era uint8)
+	std::atomic<uint8_t>	byConnected;	// LINUX: read by the throttler, written by the loop thread (was uint8)
 	bool	m_bProxyConnectFailed;
 
 private:
@@ -125,7 +125,7 @@ private:
 
 	// Download partial header
 	size_t	pendingHeaderSize;
-	uint8 m_dbgLastOpcode = 0, m_dbgLastProt = 0; uint32 m_dbgLastSize = 0;		// LINUX: ultimo pacchetto ricevuto, per la diagnosi di "wrong header"
+	uint8 m_dbgLastOpcode = 0, m_dbgLastProt = 0; uint32 m_dbgLastSize = 0;		// LINUX: last received packet, for diagnosing "wrong header"
 	char	pendingHeader[PACKET_HEADER_SIZE];	// actually, this holds only 'PACKET_HEADER_SIZE-1' bytes.
 
 	// Upload control
@@ -137,11 +137,11 @@ private:
 
 	CTypedPtrList<CPtrList, Packet*> controlpacket_queue;	//use sendLocker!
 	CList<StandardPacketQueueEntry> standardpacket_queue;	//use sendLocker!
-	mutable CCriticalSection sendLocker;		// LINUX: mutable, cosi' anche HasQueues e IsLowOnFileDataQueued (const) possono prenderlo
+	mutable CCriticalSection sendLocker;		// LINUX: mutable, so HasQueues and IsLowOnFileDataQueued (const) can take it too
 	uint64	m_numberOfSentBytesCompleteFile;
 	uint64	m_numberOfSentBytesPartFile;
 	//uint64	m_numberOfSentBytesControlPacket;
-	std::atomic<DWORD>	lastCalledSend;			// LINUX: atomici (erano DWORD): scritti dal throttler, letti dal thread del ciclo
+	std::atomic<DWORD>	lastCalledSend;			// LINUX: atomics (were DWORD): written by the throttler, read by the loop thread
 	std::atomic<DWORD>	lastSent;
 	std::atomic<DWORD>	lastFinishedStandard;
 	uint32	m_actualPayloadSize;	// Payload size of the data currently in sendbuffer

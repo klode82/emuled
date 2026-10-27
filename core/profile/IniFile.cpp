@@ -42,7 +42,7 @@ IniFile IniFile::FromBytes(const std::string &bytes)
 	DecodedText d = DecodeText(bytes);
 	f.enc_ = d.enc; f.eol_ = d.eol;
 	f.final_eol_ = bytes.empty() || bytes.back() == '\n' || (d.enc == TextEnc::Utf16LE && bytes.size() >= 2 && bytes[bytes.size() - 2] == '\n');
-	// righe grezze: per ANSI e UTF-8 si lavora sui byte originali, per UTF-16 si ricodifica solo se toccate
+	// raw lines: for ANSI and UTF-8 we work on the original bytes, for UTF-16 we re-encode only if touched
 	std::string body = bytes;
 	if (d.enc == TextEnc::Utf8Bom) body = bytes.substr(3);
 	if (d.enc == TextEnc::Ansi || d.enc == TextEnc::Utf8Bom) {
@@ -63,15 +63,15 @@ IniFile IniFile::FromBytes(const std::string &bytes)
 bool IniFile::Load(const std::string &path, IniFile &out, std::string &err)
 {
 	FILE *fp = fopen(path.c_str(), "rb");
-	if (!fp) { err = errno == ENOENT ? "assente" : strerror(errno); return false; }
+	if (!fp) { err = errno == ENOENT ? "absent" : strerror(errno); return false; }
 	std::string b; char buf[1 << 16]; size_t k;
 	while ((k = fread(buf, 1, sizeof buf, fp)) > 0) b.append(buf, k);
 	bool bad = ferror(fp); fclose(fp);
-	if (bad) { err = "errore di lettura"; return false; }
+	if (bad) { err = "read error"; return false; }
 	out = FromBytes(b); return true;
 }
 
-// Cerca la riga del valore. Se sec_last_line e' dato, vi mette l'ultima riga "utile" della sezione (o -1 se la sezione non esiste).
+// Finds the value line. If sec_last_line is given, stores in it the last "useful" line of the section (or -1 if the section does not exist).
 int IniFile::Find(const std::string &sec, const std::string &key, int *sec_last_line) const
 {
 	std::string ls = Lower(sec), lk = Lower(key); bool in = false; int last = -1, found = -1;
@@ -120,7 +120,7 @@ void IniFile::Set(const std::string &sec, const std::string &key, const std::str
 	Line l; l.text = key + "=" + value; l.dirty = true;
 	if (i >= 0) {
 		const std::string &old = lines_[i].text; size_t eq = old.find('=');
-		l.text = Trim(old.substr(0, eq)) + "=" + value;		// conserva la grafia originale della chiave
+		l.text = Trim(old.substr(0, eq)) + "=" + value;		// keeps the original spelling of the key
 		lines_[i] = l; return;
 	}
 	if (last >= 0) { lines_.insert(lines_.begin() + last + 1, l); return; }
@@ -146,7 +146,7 @@ std::string IniFile::Bytes() const
 		if (i + 1 < lines_.size() || final_eol_) out += eol_;
 	}
 	if (enc_ != TextEnc::Utf16LE) return out;
-	// UTF-8 -> UTF-16LE con BOM
+	// UTF-8 -> UTF-16LE with BOM
 	std::string w = "\xFF\xFE";
 	for (size_t i = 0; i < out.size();) {
 		unsigned char c = (unsigned char)out[i]; uint32_t cp; int n;
@@ -171,12 +171,12 @@ Report ValidateIni(const uint8_t *data, size_t size)
 	Report rep; rep.version = size ? data[0] : 0;
 	std::string b((const char*)data, size);
 	DecodedText d = DecodeText(b);
-	if (!d.ok) { rep.reason = "UTF-16 di lunghezza dispari"; return rep; }
-	if (d.enc != TextEnc::Utf16LE && memchr(data, 0, size)) { rep.reason = "byte nulli in un file di testo"; return rep; }
+	if (!d.ok) { rep.reason = "UTF-16 of odd length"; return rep; }
+	if (d.enc != TextEnc::Utf16LE && memchr(data, 0, size)) { rep.reason = "null bytes in a text file"; return rep; }
 	uint64_t secs = 0;
 	for (auto &l : d.lines) { std::string t = Trim(l); if (!t.empty() && t[0] == '[' && t.find(']') != std::string::npos) ++secs; }
 	rep.records = secs;
-	if (!secs) { rep.reason = "nessuna sezione"; return rep; }
+	if (!secs) { rep.reason = "no section"; return rep; }
 	rep.verdict = Verdict::Valid; return rep;
 }
 

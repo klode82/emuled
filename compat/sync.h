@@ -1,4 +1,4 @@
-// Primitive di sincronizzazione MFC su std::recursive_mutex (in MFC sono rientranti).
+// MFC synchronization primitives on std::recursive_mutex (in MFC they are reentrant).
 #pragma once
 #include <mutex>
 

@@ -1,10 +1,10 @@
-// LINUX (codice nuovo): account dell'interfaccia web (nome utente + password), Bench 872.
-//  - L'account sta in <profilo>/emuled.users (permessi 0600): nome, sale casuale, hash PBKDF2-HMAC-SHA256 della password e un "segreto" che firma le sessioni.
-//    La password non si puo' recuperare, solo reimpostare (emuled --reset-user): cambia anche il segreto, quindi tutte le sessioni aperte decadono.
-//  - La sessione e' un gettone firmato (HMAC) "s1.<nome in esadecimale>|<scadenza>.<firma>": non serve ricordare le sessioni, sopravvive al riavvio del demone.
-//  - Il file viene riletto quando cambia: --reset-user funziona anche a demone acceso.
-//  - Il primo account si crea solo con il "codice di impostazione" (il token del file emuled.token): chi raggiunge la porta ma non ha il codice non puo' prendersi l'interfaccia.
-//  - Dopo troppi tentativi sbagliati da uno stesso indirizzo il login si blocca per un minuto.
+// LINUX (new code): web interface account (user name + password), Bench 872.
+//  - The account is in <profile>/emuled.users (permissions 0600): name, random salt, PBKDF2-HMAC-SHA256 hash of the password and a "secret" that signs sessions.
+//    The password cannot be recovered, only reset (emuled --reset-user): it also changes the secret, so all open sessions expire.
+//  - The session is a signed token (HMAC) "s1.<name in hex>|<expiry>.<signature>": sessions need not be remembered, it survives a daemon restart.
+//  - The file is reread when it changes: --reset-user also works with the daemon running.
+//  - The first account is created only with the "setup code" (the token of the emuled.token file): whoever reaches the port but does not have the code cannot take over the interface.
+//  - After too many wrong attempts from the same address the login is blocked for a minute.
 #pragma once
 #include <ctime>
 #include <map>
@@ -16,28 +16,28 @@ namespace emule::api {
 class Auth
 {
 public:
-	explicit Auth(std::string profile_dir);					// profile_dir con o senza "/" finale
-	static bool ValidName(const std::string &name);			// 1-32 caratteri: lettere, cifre, . _ -
-	static bool ValidPassword(const std::string &pw, std::string &err);	// almeno 8 caratteri
-	bool Configured();										// esiste un account?
-	// Crea o sostituisce l'account (nuovo sale, nuovo segreto: le sessioni precedenti decadono). false + err se non vale o non si scrive.
+	explicit Auth(std::string profile_dir);					// profile_dir with or without trailing "/"
+	static bool ValidName(const std::string &name);			// 1-32 characters: letters, digits, . _ -
+	static bool ValidPassword(const std::string &pw, std::string &err);	// at least 8 characters
+	bool Configured();										// does an account exist?
+	// Creates or replaces the account (new salt, new secret: previous sessions expire). false + err if invalid or not writable.
 	bool SetUser(const std::string &name, const std::string &password, std::string &err);
-	bool CheckLogin(const std::string &name, const std::string &password);	// confronto a tempo costante; l'hash si calcola sempre (nessuna differenza fra nome sbagliato e password sbagliata)
-	std::string IssueToken(time_t now, long ttl_s = 30L * 24 * 3600);	// vuoto se non c'e' un account
+	bool CheckLogin(const std::string &name, const std::string &password);	// constant-time comparison; the hash is always computed (no difference between wrong name and wrong password)
+	std::string IssueToken(time_t now, long ttl_s = 30L * 24 * 3600);	// empty if there is no account
 	bool VerifyToken(const std::string &token, time_t now);
-	// limite ai tentativi sbagliati, per indirizzo
+	// limit on wrong attempts, per address
 	bool AllowAttempt(const std::string &peer, time_t now);
 	void RecordFailure(const std::string &peer, time_t now);
 	void RecordSuccess(const std::string &peer);
-	// Wizard web di primo avvio: <profilo>/emuled.setup vale "pending" dopo la creazione del primo account e "done" a procedura finita; senza il file (profili
-	// di prima di questa funzione) non c'e' niente da fare.
+	// First-start web Wizard: <profile>/emuled.setup is "pending" after the first account is created and "done" when the procedure ends; without the file (profiles
+	// from before this feature) there is nothing to do.
 	bool SetupPending();
 	void MarkSetup(bool pending);
-	void SetIterations(unsigned n) { iter_override_ = n; }	// solo prove: meno giri di PBKDF2
+	void SetIterations(unsigned n) { iter_override_ = n; }	// tests only: fewer PBKDF2 rounds
 
 private:
 	struct User { std::string name, salt, hash, secret; unsigned iter = 0; };
-	bool Load(User &u);										// rilegge il file se e' cambiato
+	bool Load(User &u);										// rereads the file if it changed
 	std::string path_, setup_path_;
 	std::mutex m_;
 	User user_; bool loaded_ = false; long long stamp_ = -1;

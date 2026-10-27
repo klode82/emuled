@@ -65,7 +65,7 @@ bool CIni::Store()
 	if (!m_bWrite)
 		return true;
 
-	// LINUX: file temporaneo, fsync, rinomina atomica (l'originale: scrittura di "nome.t" e MoveFileEx); copia .bak del precedente solo se esiste ed e' non vuoto
+	// LINUX: temporary file, fsync, atomic rename (the original: write of "name.t" and MoveFileEx); .bak copy of the previous one only if it exists and is not empty
 	const std::string path = (LPCTSTR)m_ininame, tmp = path + ".t";
 	FILE *f = fopen(tmp.c_str(), "w");
 	if (!f)
@@ -187,8 +187,8 @@ bool CIni::PutEmuleProfile(LPCTSTR section, LPCTSTR key, LPCSTR value)
 
 void CIni::AddModulePath(CString &rstrFileName, bool /*bModulPath*/)
 {
-	// LINUX: un nome senza percorso si risolve nella cartella corrente (nell'originale: cartella del programma o corrente, con "\\" e lettere di unita').
-	// Il daemon passa sempre percorsi assoluti dal profilo: questo serve solo ai casi senza percorso.
+	// LINUX: a name without a path resolves in the current folder (in the original: program folder or current, with "\\" and drive letters).
+	// The daemon always passes absolute paths from the profile: this is only for the no-path cases.
 	if (rstrFileName.IsEmpty() || ((LPCTSTR)rstrFileName)[0] == '/')
 		return;
 	char cwd[4096];
@@ -198,7 +198,7 @@ void CIni::AddModulePath(CString &rstrFileName, bool /*bModulPath*/)
 
 CString CIni::GetDefaultIniFile(bool /*bModulPath*/)
 {
-	// LINUX: nell'originale e' "<programma>.ini" accanto all'eseguibile; qui "emuled.ini" nella cartella corrente
+	// LINUX: in the original it is "<program>.ini" next to the executable; here "emuled.ini" in the current folder
 	CString s("emuled.ini");
 	AddModulePath(s, false);
 	return s;
@@ -285,7 +285,7 @@ ULONGLONG CIni::GetUInt64(LPCTSTR lpszEntry, ULONGLONG nDefault, LPCTSTR lpszSec
 	TCHAR szDefault[MAX_PATH];
 	_sntprintf(szDefault, _countof(szDefault), _T("%llu"), (unsigned long long)nDefault);
 	szDefault[_countof(szDefault) - 1] = _T('\0');
-	unsigned long long nResult;		// LINUX: ULONGLONG e' unsigned long, %llu vuole unsigned long long
+	unsigned long long nResult;		// LINUX: ULONGLONG is unsigned long, %llu wants unsigned long long
 	if (_stscanf(GetString(lpszEntry, szDefault, lpszSection), _T("%llu"), &nResult) != 1)
 		return nDefault;
 	return nResult;

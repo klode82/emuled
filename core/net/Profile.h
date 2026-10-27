@@ -1,6 +1,6 @@
-// LINUX (codice nuovo): un "profilo" di lavoro per le prove e per gli strumenti a riga di comando: cartella di configurazione, preferenze
-// iniziali e oggetti dell'applicazione (code, client, file). Dentro l'EventLoop del thread chiamante; va distrutto prima del ciclo.
-// Se baseDir e' vuoto crea una cartella temporanea (config/, Temp/, Incoming/ sotto di essa) e la toglie alla fine.
+// LINUX (new code): a working "profile" for tests and command-line tools: configuration folder, initial preferences
+// and application objects (queues, clients, files). Inside the EventLoop of the calling thread; must be destroyed before the loop.
+// If baseDir is empty it creates a temporary folder (config/, Temp/, Incoming/ under it) and removes it at the end.
 #pragma once
 #include <string>
 
@@ -15,7 +15,7 @@ public:
 	ScopedProfile &operator=(const ScopedProfile &) = delete;
 
 	const std::string &base() const { return base_; }				// con '/' finale
-	std::string config() const { return base_ + "config/"; }		// cartella di configurazione (profilo eMule)
+	std::string config() const { return base_ + "config/"; }		// configuration folder (eMule profile)
 	std::string incoming() const { return base_ + "Incoming/"; }
 	std::string temp() const { return base_ + "Temp/"; }
 

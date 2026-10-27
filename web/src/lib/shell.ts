@@ -1,4 +1,4 @@
-// Parti comuni dei gusci (modelli A, B, C, D): la casella "cerca o incolla un link" e le etichette di stato di ed2k e Kad.
+// Shared parts of the shells (models A, B, C, D): the "search or paste a link" box and the ed2k and Kad status labels.
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
@@ -23,7 +23,7 @@ export function useShellBar() {
     if (!k?.running) return { text: `Kad · ${t('shell.off')}`, tone: 'text-mute' }
     return k.connected ? { text: `Kad · ${t('shell.connected')}`, tone: 'text-accent' } : { text: `Kad · ${t('shell.connecting')}`, tone: 'text-warn' }
   })
-  // invio nella casella: un link ed2k apre "Aggiungi", altro testo avvia la ricerca
+  // enter in the box: an ed2k link opens "Add", other text starts the search
   function go() {
     const x = q.value.trim()
     if (!x) return

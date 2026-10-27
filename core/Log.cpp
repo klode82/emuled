@@ -1,4 +1,4 @@
-// STUB: vedi Log.h
+// STUB: see Log.h
 #include "StdAfx.h"
 #include "Log.h"
 #include "util/Net.h"
@@ -48,7 +48,7 @@ void DebugRecv(LPCSTR pszOpcode, uint32 ip, uint16 port)
 	AddDebugLogLine(false, _T("<<< %-20s from %s:%u"), pszOpcode, (LPCTSTR)ipstr(htonl(ip)), port);
 }
 
-// versioni con CUpDownClient: il client vero arriva con Fase 5, qui si scrive solo il nome del messaggio
+// versions with CUpDownClient: the real client arrives with Phase 5, here only the message name is written
 void DebugSend(LPCSTR pszMsg, const CUpDownClient *, const uchar *) { AddDebugLogLine(false, _T(">>> %s"), pszMsg); }
 void DebugRecv(LPCSTR pszMsg, const CUpDownClient *, const uchar *, uint32 nIP) { AddDebugLogLine(false, _T("<<< %s (ip %s)"), pszMsg, (LPCTSTR)ipstr(nIP)); }
 
@@ -77,7 +77,7 @@ void Log(UINT, LPCTSTR pszLine, ...)
 	AddLogLine(false, _T("%s"), buf);
 }
 
-// Origine: OtherFunctions.cpp DebugHexDump (stesso formato: offset, 16 byte in esadecimale, testo)
+// Origin: OtherFunctions.cpp DebugHexDump (same format: offset, 16 bytes in hexadecimal, text)
 void DebugHexDump(const void *data, UINT lenData)
 {
 	for (UINT pos = 0; pos < lenData; pos += 16) {
@@ -92,7 +92,7 @@ void DebugHexDump(const void *data, UINT lenData)
 
 CString DbgGetFileInfo(const uchar *hash)
 {
-	// originale: cerca il file nella coda dei download e fra i condivisi per aggiungere il nome; qui solo l'hash
+	// original: looks the file up in the download queue and among the shared ones to add the name; here only the hash
 	static const char hx[] = "0123456789ABCDEF"; std::string s;
 	for (int i = 0; i < 16; ++i) { s += hx[hash[i] >> 4]; s += hx[hash[i] & 15]; }
 	return CString(("hash=" + s).c_str());

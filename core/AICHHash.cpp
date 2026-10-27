@@ -1,4 +1,4 @@
-// LINUX: gli operatori di confronto delle chiavi di mappa (OtherFunctions.cpp righe 2716-2724). CAICHHash e l'albero AICH sono in SHAHashSet.cpp.
+// LINUX: the map-key comparison operators (OtherFunctions.cpp lines 2716-2724). CAICHHash and the AICH tree are in SHAHashSet.cpp.
 #include "StdAfx.h"
 #include "SHAHashSet.h"
 #include "MapKey.h"

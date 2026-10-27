@@ -1,5 +1,5 @@
-// CEMSocket (il socket dei pacchetti ed2k) su localhost, con il throttler vero: code di controllo e dati, limite di banda in upload,
-// limite in download (letture rimandate), pacchetti compressi, obfuscation, intestazioni errate, pacchetti spezzati, distruzione.
+// CEMSocket (the ed2k packet socket) on localhost, with the real throttler: control and data queues, upload bandwidth limit,
+// download limit (postponed reads), compressed packets, obfuscation, wrong headers, split packets, destruction.
 #include "StdAfx.h"
 #include "net/Profile.h"
 #include "Emule.h"
@@ -23,7 +23,7 @@ static void Spin(EventLoop &l, double secs) { double end = Now() + secs; while (
 struct Got { uint8 prot, opcode; std::string data; };
 struct EMS : CEMSocket
 {
-	~EMS() override { StopThrottling(); }				// contratto di distruzione (vedi EMSocket.h)
+	~EMS() override { StopThrottling(); }				// destruction contract (see EMSocket.h)
 	std::vector<Got> got; int err = 0, closes = 0, receives = 0;
 	bool PacketReceived(Packet *p) override
 	{
@@ -64,9 +64,9 @@ struct Env
 
 int main(int argc, char **argv)
 {
-	emule::net::ScopedProfile profile;		// profilo temporaneo: preferenze iniziali e oggetti dell'applicazione
+	emule::net::ScopedProfile profile;		// temporary profile: initial preferences and application objects
 	thePrefs.SetCryptLayer(false, false, false);
-	// 1. pacchetti di controllo nei due sensi: ordine, contenuto, protocollo e codice
+	// 1. control packets in both directions: order, content, protocol and code
 	{
 		Env e; auto sv = e.Serve(); EMS *srv = nullptr; sv->onNew = [&](EMS &c) { srv = &c; };
 		EMS cli; e.Connect(cli, PortOf(*sv));
@@ -78,7 +78,7 @@ int main(int argc, char **argv)
 		CHECK(same);
 		srv->Queue(OP_EDONKEYPROT, 0x01, "risposta"); CHECK(Pump(e.loop, [&] { return cli.got.size() == 1; })); CHECK(cli.got[0].data == "risposta" && cli.err == 0 && srv->err == 0);
 	}
-	// 2. pacchetto di dati grande con limite di banda 150 KB/s: arriva intero, nel tempo atteso
+	// 2. large data packet with 150 KB/s bandwidth limit: arrives whole, in the expected time
 	{
 		Env e; e.Limit(150); auto sv = e.Serve(); EMS *srv = nullptr; sv->onNew = [&](EMS &c) { srv = &c; };
 		EMS cli; e.Connect(cli, PortOf(*sv));
@@ -90,20 +90,20 @@ int main(int argc, char **argv)
 		CHECK(srv->got.size() == 1 && srv->got[0].data == big && dt > 1.5 && dt < 2.8);
 		CHECK(cli.GetSentPayloadSinceLastCall(true) == 300000);
 	}
-	// 3. limite in download: letture rimandate e riprese a ogni "giro" come fa eMule; nessuna tempesta di OnReceive
+	// 3. download limit: reads postponed and resumed at every "round" as eMule does; no OnReceive storm
 	{
 		Env e; auto sv = e.Serve(); EMS *srv = nullptr; sv->onNew = [&](EMS &c) { srv = &c; c.SetDownloadLimit(0); };
 		EMS cli; e.Connect(cli, PortOf(*sv));
 		CHECK(Pump(e.loop, [&] { return srv && cli.GetState() == connected; }));
 		for (int i = 0; i < 100; ++i) cli.Queue(OP_EDONKEYPROT, 0x50, Pattern(1000, i));			// ~101 KB
-		Spin(e.loop, 0.4); CHECK(srv->got.empty());												// limite 0: niente viene consegnato
+		Spin(e.loop, 0.4); CHECK(srv->got.empty());												// limit 0: nothing is delivered
 		double t0 = Now(); double next = t0; int ticks = 0;
 		while (srv->got.size() < 100 && Now() - t0 < 10) { e.loop.RunOnce(5); if (Now() >= next) { srv->SetDownloadLimit(10000); next += 0.1; ++ticks; } }	// 10 KB ogni 100 ms = 100 KB/s
 		double dt = Now() - t0; std::printf("  101 KB con download a 100 KB/s: %.2f s, %d giri, OnReceive %d volte\n", dt, ticks, srv->receives);
 		CHECK(srv->got.size() == 100 && dt > 0.7 && dt < 1.8 && srv->receives < 400);
 		for (int i = 0; i < 100; ++i) if (srv->got[i].data != Pattern(1000, i)) { CHECK(false); break; }
 	}
-	// 4. pacchetto compresso: arriva come OP_PACKEDPROT piccolo e si decomprime
+	// 4. compressed packet: arrives as a small OP_PACKEDPROT and is decompressed
 	{
 		Env e; auto sv = e.Serve(); EMS *srv = nullptr; sv->onNew = [&](EMS &c) { srv = &c; };
 		EMS cli; e.Connect(cli, PortOf(*sv)); CHECK(Pump(e.loop, [&] { return srv && cli.GetState() == connected; }));
@@ -111,19 +111,19 @@ int main(int argc, char **argv)
 		cli.SendPacket(p, true);
 		CHECK(Pump(e.loop, [&] { return srv->got.size() == 1; })); CHECK(srv->packed_sizes.size() == 1 && srv->packed_sizes[0] < 500 && srv->got[0].data == rep && srv->got[0].prot == OP_EMULEPROT);
 	}
-	// 5. obfuscation: pacchetti accodati PRIMA che l'handshake finisca arrivano comunque, in chiaro dopo la decifratura
+	// 5. obfuscation: packets queued BEFORE the handshake finishes still arrive, in clear after decryption
 	{
 		thePrefs.SetCryptLayer(true, false, false); thePrefs.SetCryptTCPPaddingLength(40);
 		Env e; auto sv = e.Serve(); EMS *srv = nullptr; sv->onNew = [&](EMS &c) { srv = &c; };
 		EMS cli; cli.Create(0, SOCK_STREAM, FD_CONNECT | FD_WRITE | FD_READ | FD_CLOSE); cli.SetConnectionEncryption(true, thePrefs.GetUserHash(), false); cli.Connect("127.0.0.1", PortOf(*sv));
-		for (int i = 0; i < 50; ++i) cli.Queue(OP_EDONKEYPROT, 0x70, Pattern(200 + i * 7, i + 100));		// subito, prima della connessione
+		for (int i = 0; i < 50; ++i) cli.Queue(OP_EDONKEYPROT, 0x70, Pattern(200 + i * 7, i + 100));		// immediately, before the connection
 		CHECK(Pump(e.loop, [&] { return srv && srv->got.size() == 50; }));
 		CHECK(cli.IsObfusicating() && srv->IsObfusicating() && cli.err == 0 && srv->err == 0);
 		bool same = srv->got.size() == 50; for (size_t i = 0; same && i < 50; ++i) same = srv->got[i].data == Pattern(200 + i * 7, i + 100); CHECK(same);
 		srv->Queue(OP_EDONKEYPROT, 0x71, "cifrato anche al ritorno"); CHECK(Pump(e.loop, [&] { return cli.got.size() == 1; })); CHECK(cli.got[0].data == "cifrato anche al ritorno");
 		thePrefs.SetCryptLayer(false, false, false);
 	}
-	// 6. intestazioni errate (due blocchi separati: un solo throttler alla volta)
+	// 6. wrong headers (two separate blocks: only one throttler at a time)
 	{
 		Env e; auto sv = e.Serve(); EMS *srv = nullptr; sv->onNew = [&](EMS &c) { srv = &c; };
 		Raw r; r.Create(0, SOCK_STREAM, FD_CONNECT | FD_WRITE | FD_READ | FD_CLOSE); r.Connect("127.0.0.1", PortOf(*sv)); CHECK(Pump(e.loop, [&] { return srv && r.GetState() == connected; }));
@@ -136,49 +136,49 @@ int main(int argc, char **argv)
 		std::string big = Header(OP_EDONKEYPROT, 15000000, 0x10) + "x"; r2.Send(big.data(), (int)big.size());
 		CHECK(Pump(e2.loop, [&] { return s2->err == ERR_TOOBIG; })); CHECK(s2->got.empty());
 	}
-	// 7. pacchetti spezzati dalla rete: intestazione a pezzi, due pacchetti in una sola scrittura, corpo a pezzi
+	// 7. packets split by the network: header in pieces, two packets in one write, body in pieces
 	{
 		Env e; auto sv = e.Serve(); EMS *srv = nullptr; sv->onNew = [&](EMS &c) { srv = &c; };
 		Raw r; r.Create(0, SOCK_STREAM, FD_CONNECT | FD_WRITE | FD_READ | FD_CLOSE); r.Connect("127.0.0.1", PortOf(*sv)); CHECK(Pump(e.loop, [&] { return srv && r.GetState() == connected; }));
 		std::string a = Header(OP_EDONKEYPROT, 1 + 10, 0x21) + "0123456789", b = Header(OP_EMULEPROT, 1 + 5, 0x22) + "ABCDE", c = Header(OP_EDONKEYPROT, 1, 0x23);
 		std::string all = a + b + c;
-		for (size_t i = 0; i < 9; ++i) { r.Send(all.data() + i, 1); Spin(e.loop, 0.01); }				// i primi 9 byte uno alla volta (spezzano l'intestazione e il corpo)
-		r.Send(all.data() + 9, (int)(all.size() - 9));												// il resto in blocco (b e c incollati)
+		for (size_t i = 0; i < 9; ++i) { r.Send(all.data() + i, 1); Spin(e.loop, 0.01); }				// the first 9 bytes one at a time (they split the header and the body)
+		r.Send(all.data() + 9, (int)(all.size() - 9));												// the rest in one block (b and c glued together)
 		CHECK(Pump(e.loop, [&] { return srv->got.size() == 3; }));
 		CHECK(srv->got.size() == 3 && srv->got[0].data == "0123456789" && srv->got[0].opcode == 0x21 && srv->got[1].data == "ABCDE" && srv->got[1].prot == OP_EMULEPROT && srv->got[2].data.empty() && srv->got[2].opcode == 0x23);
 		CHECK(srv->err == 0);
 	}
-	// 8. chiusura: OnClose, invii dopo la chiusura senza danni, distruzione con il throttler attivo
+	// 8. close: OnClose, sends after close without damage, destruction with the throttler active
 	{
 		Env e; auto sv = e.Serve(); sv->onNew = [&](EMS &) {};
 		for (int round = 0; round < 15; ++round) {
 			EMS *cli = new EMS; e.Connect(*cli, PortOf(*sv)); CHECK(Pump(e.loop, [&] { return sv->conns.size() > (size_t)round && cli->GetState() == connected; }));
 			e.thr.AddToStandardList(0, cli);
 			for (int i = 0; i < 20; ++i) cli->Queue(OP_EDONKEYPROT, 0x80, Pattern(500, i), i % 2);
-			if (round % 3 == 0) sv->conns[round]->Close();									// il peer chiude mentre si invia
+			if (round % 3 == 0) sv->conns[round]->Close();									// the peer closes while sending
 			Spin(e.loop, 0.02);
-			delete cli;																		// distrugge il socket mentre il throttler potrebbe averlo in coda
+			delete cli;																		// destroys the socket while the throttler may have it queued
 		}
 		CHECK(e.thr.GetStandardListSize() == 0);
 		EMS closed; e.Connect(closed, PortOf(*sv)); Pump(e.loop, [&] { return closed.GetState() == connected; });
 		sv->conns.back()->Close(); CHECK(Pump(e.loop, [&] { return closed.closes >= 1; }));
-		closed.Queue(OP_EDONKEYPROT, 0x81, "dopo la chiusura"); Spin(e.loop, 0.1);			// non deve andare in crash ne' bloccarsi
+		closed.Queue(OP_EDONKEYPROT, 0x81, "dopo la chiusura"); Spin(e.loop, 0.1);			// must not crash nor block
 	}
-	// 9. carico lungo, in chiaro e con obfuscation, con il buffer di invio minuscolo (invii parziali, WSAEWOULDBLOCK continui): dati grandi e pacchetti di controllo
-	// mescolati e risposte nel senso opposto. E' il caso del "Wrong header" visto dopo 1,2 MB con un aMule: il flusso non deve mai perdere il passo.
-	// (Il buffer di RICEZIONE non si riduce: sul loopback la finestra sotto un segmento da 64 KB fa aspettare i timer di TCP e misura il sistema, non il codice.)
+	// 9. long load, in clear and with obfuscation, with a tiny send buffer (partial sends, constant WSAEWOULDBLOCK): large data and control packets
+	// mixed and replies in the opposite direction. This is the "Wrong header" case seen after 1.2 MB with an aMule: the stream must never lose its place.
+	// (The RECEIVE buffer is not reduced: on loopback a window below a 64 KB segment makes TCP timers wait and measures the system, not the code.)
 	for (int crypt = 0; crypt < 2; ++crypt) {
 		thePrefs.SetCryptLayer(crypt != 0, false, false); thePrefs.SetCryptTCPPaddingLength(40);
 		Env e; auto sv = e.Serve(); EMS *srv = nullptr; sv->onNew = [&](EMS &c) { srv = &c; };
 		EMS cli; cli.Create(0, SOCK_STREAM, FD_CONNECT | FD_WRITE | FD_READ | FD_CLOSE); if (crypt) cli.SetConnectionEncryption(true, thePrefs.GetUserHash(), false);
 		{ int b = 16384; setsockopt(cli.GetSocketHandle(), SOL_SOCKET, SO_SNDBUF, &b, sizeof b); }
 		cli.Connect("127.0.0.1", PortOf(*sv));
-		cli.Queue(OP_EDONKEYPROT, 0x01, "hello");						// parla per primo chi si connette (e avvia la negoziazione); il server risponde solo dopo
+		cli.Queue(OP_EDONKEYPROT, 0x01, "hello");						// whoever connects speaks first (and starts the negotiation); the server answers only afterwards
 		CHECK(Pump(e.loop, [&] { return srv && cli.GetState() == connected && srv->got.size() == 1; }));
 		e.thr.AddToStandardList(0, &cli); e.thr.AddToStandardList(0, srv);
 		std::vector<Got> sent{{(uint8)OP_EDONKEYPROT, (uint8)0x01, "hello"}}, back; uint32_t seed = 1; size_t total = 0, dataPkts = 0, ctlPkts = 0;
 		while (total < 24u * 1048576) {
-			seed = seed * 1664525u + 1013904223u; const size_t sz = 1 + (seed >> 8) % 190000;			// fino a un blocco di eMule (180 KB) e oltre
+			seed = seed * 1664525u + 1013904223u; const size_t sz = 1 + (seed >> 8) % 190000;			// up to an eMule block (180 KB) and beyond
 			const bool data = (seed >> 3) % 3 != 0;
 			Got g{(uint8)OP_EMULEPROT, (uint8)(data ? 0x46 : 0x30 + seed % 8), Pattern(data ? sz : sz % 300, seed)};
 			sent.push_back(g); cli.Queue(g.prot, g.opcode, g.data, !data); total += g.data.size(); (data ? dataPkts : ctlPkts)++;
@@ -186,7 +186,7 @@ int main(int argc, char **argv)
 		}
 		const double t0 = Now();
 		const bool done = Pump(e.loop, [&] { return (srv->got.size() == sent.size() && cli.got.size() == back.size()) || srv->err || cli.err; }, 60) && !srv->err && !cli.err;
-		// i pacchetti di controllo passano davanti a quelli di dati (come in eMule): ognuna delle due classi deve arrivare intera e nell'ordine in cui e' partita
+		// control packets go ahead of data ones (as in eMule): each of the two classes must arrive whole and in the order it left
 		size_t bad = 0;
 		for (int cls = 0; cls < 2; ++cls) {
 			std::vector<const Got *> a, b; for (auto &g : sent) if ((g.opcode == 0x46) == (cls == 1)) a.push_back(&g); for (auto &g : srv->got) if ((g.opcode == 0x46) == (cls == 1)) b.push_back(&g);
@@ -199,9 +199,9 @@ int main(int argc, char **argv)
 		e.thr.RemoveFromStandardList(&cli); e.thr.RemoveFromStandardList(srv);
 	}
 	thePrefs.SetCryptLayer(false, false, false);
-	// 10. riproduzione di una cattura vera (tcpdump di una sessione reale del 25/10/2026, in chiaro): lo stream che il demone ha MANDATO a un peer durante un upload
-	// (OP_SENDINGPART, OP_COMPRESSEDPART e altri) e quello che il peer ha mandato a lui (hello, OP_REQUESTPARTS). Rimesso nei due sensi in un CEMSocket deve dare esattamente
-	// gli stessi pacchetti, senza errori, qualunque sia il taglio dei segmenti TCP. I file sono in tests/data (si saltano se mancano).
+	// 10. replay of a real capture (tcpdump of a real session of 25/10/2026, in clear): the stream the daemon SENT to a peer during an upload
+	// (OP_SENDINGPART, OP_COMPRESSEDPART and others) and the one the peer sent to it (hello, OP_REQUESTPARTS). Fed back in both directions into a CEMSocket it must yield exactly
+	// the same packets, without errors, whatever the cut of the TCP segments. The files are in tests/data (skipped if missing).
 	{
 		const std::string dir = argc > 1 ? argv[1] : "tests/data";
 		struct Case { const char *file; size_t packets; std::map<int, size_t> kinds; };
@@ -212,7 +212,7 @@ int main(int argc, char **argv)
 		for (const Case &c : cases) {
 			std::ifstream f(dir + "/" + c.file, std::ios::binary); std::string data((std::istreambuf_iterator<char>(f)), {});
 			if (data.empty()) { std::printf("  cattura %s assente: saltata\n", c.file); continue; }
-			for (int chunk : {1448, 17, 60000}) {												// segmenti di rete, a pezzetti, a blocchi grossi
+			for (int chunk : {1448, 17, 60000}) {												// network segments, in small pieces, in big blocks
 				Env e; auto sv = e.Serve(); EMS *srv = nullptr; sv->onNew = [&](EMS &x) { srv = &x; };
 				Raw r; r.Create(0, SOCK_STREAM, FD_CONNECT | FD_WRITE | FD_READ | FD_CLOSE); r.Connect("127.0.0.1", PortOf(*sv)); CHECK(Pump(e.loop, [&] { return srv && r.GetState() == connected; }));
 				for (size_t off = 0; off < data.size();) {

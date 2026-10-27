@@ -811,7 +811,7 @@ void CKademliaUDPListener::Process_KADEMLIA2_RES(const byte *pbyPacketData, uint
 								cResults.push_back(pTemp);
 							else {
 								++nIgnoredCount;
-								// LINUX: con il debug acceso dice QUALE contatto e perche' (l'originale conta soltanto): la tabella non lo accetta per i limiti contro gli abusi
+								// LINUX: with debug on, says WHICH contact and why (the original only counts): the table does not accept it because of the anti-abuse limits
 								if (thePrefs.GetVerbose()) {
 									const CContact *pKnown = pRoutingZone->GetContact(uIDResult);
 									if (pKnown)

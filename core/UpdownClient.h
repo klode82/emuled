@@ -284,7 +284,7 @@ public:
 	bool			IsPartAvailable(UINT uPart) const				{ return m_abyPartStatus && uPart < m_nPartCount && m_abyPartStatus[uPart]; }
 	uint8*			GetPartStatus() const							{ return m_abyPartStatus; }
 	uint16			GetPartCount() const							{ return m_nPartCount; }
-	const CTypedPtrList<CPtrList, Pending_Block_Struct*> &GetPendingBlocks() const { return m_PendingBlocks_list; }	// LINUX: i blocchi richiesti a questa fonte (fQueued = 1: la richiesta e' partita), per l'API
+	const CTypedPtrList<CPtrList, Pending_Block_Struct*> &GetPendingBlocks() const { return m_PendingBlocks_list; }	// LINUX: the blocks requested from this source (fQueued = 1: the request has gone out), for the API
 	UINT			GetDownloadDatarate() const						{ return m_nDownDatarate; }
 	UINT			GetRemoteQueueRank() const						{ return m_nRemoteQueueRank; }
 	void			SetRemoteQueueRank(UINT nr, bool bUpdateDisplay = false);

@@ -1,6 +1,6 @@
-// LINUX (codice nuovo): known.met come dati. Non e' CKnownFile: quella classe mescola dati, statistiche, UI e AICH.
-// Qui il record conserva i byte originali di ogni tag, cosi' un known.met riletto e riscritto resta identico al byte
-// (eMule riscrive solo i tag che conosce: i tag sconosciuti di versioni diverse non si perdono).
+// LINUX (new code): known.met as data. It is not CKnownFile: that class mixes data, statistics, UI and AICH.
+// Here the record keeps the original bytes of each tag, so a known.met re-read and rewritten stays byte-identical
+// (eMule rewrites only the tags it knows: unknown tags from different versions are not lost).
 #pragma once
 #include "met/TagReader.h"
 #include <array>
@@ -14,9 +14,9 @@ namespace emule::known {
 using Hash16 = std::array<uint8_t, 16>;
 
 struct KnownFile {
-	uint32_t date = 0;						// data di ultima modifica (UTC, secondi)
-	Hash16 hash{};							// hash ed2k
-	std::vector<Hash16> part_hashes;		// vuoto per i file piu' piccoli di una parte
+	uint32_t date = 0;						// last modification date (UTC, seconds)
+	Hash16 hash{};							// ed2k hash
+	std::vector<Hash16> part_hashes;		// empty for files smaller than one part
 	struct StoredTag { met::Tag tag; std::string raw; };
 	std::vector<StoredTag> tags;
 	std::string name;						// FT_FILENAME decodificato in UTF-8
@@ -24,29 +24,29 @@ struct KnownFile {
 	const StoredTag *FindTag(uint8_t id) const;
 };
 
-// Decodifica una stringa di un tag di known.met come CTag(file, bOptUTF8=false): BOM UTF-8, altrimenti codepage locale.
+// Decodes a known.met tag string as CTag(file, bOptUTF8=false): UTF-8 BOM, otherwise local codepage.
 std::string DecodeTagString(const std::string &raw);
 
-// Crea un record come lo scriverebbe CKnownFile::WriteToFile: nome (UTF-8 con BOM solo se non ASCII), dimensione
-// (64 bit solo oltre OLD_MAX_EMULE_FILE_SIZE) e data dell'ultima condivisione.
+// Creates a record as CKnownFile::WriteToFile would write it: name (UTF-8 with BOM only if not ASCII), size
+// (64 bit only above OLD_MAX_EMULE_FILE_SIZE) and date of the last share.
 KnownFile MakeKnownFile(const std::string &name, uint64_t size, uint32_t date, const Hash16 &hash, std::vector<Hash16> parts, uint32_t last_shared);
 
 class KnownFileList {
 public:
-	// Carica e valida (stessa strictness di ValidateKnownMet). Se non e' sano: false e err.
+	// Loads and validates (same strictness as ValidateKnownMet). If not sane: false and err.
 	bool Load(const std::string &path, std::string &err);
 	bool LoadBytes(const std::string &bytes, std::string &err);
-	std::string Serialize() const;				// identico all'input se nessun record e' stato modificato
-	bool Save(const std::string &path, std::string &err) const;		// SafeWriteMet con ValidateKnownMet
+	std::string Serialize() const;				// identical to the input if no record was modified
+	bool Save(const std::string &path, std::string &err) const;		// SafeWriteMet with ValidateKnownMet
 
 	size_t size() const { return files_.size(); }
 	const std::vector<KnownFile> &files() const { return files_; }
 	uint8_t header() const { return header_; }
 
-	// Come CKnownFileList::FindKnownFile: nome (esatto), data e dimensione devono coincidere.
+	// As CKnownFileList::FindKnownFile: name (exact), date and size must match.
 	const KnownFile *Find(const std::string &name, uint32_t date, uint64_t size) const;
 	const KnownFile *FindByHash(const Hash16 &h) const;
-	bool Add(KnownFile f);						// false se l'hash c'e' gia'
+	bool Add(KnownFile f);						// false if the hash is already there
 private:
 	void Index(size_t i);
 	uint8_t header_ = 0x0F;

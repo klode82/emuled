@@ -1,5 +1,5 @@
-// LINUX: i messaggi che i thread di lavoro (hash, completamento, scrittura) mandavano alla finestra principale con PostMessage.
-// Le funzioni On... sono quelle di EmuleDlg.cpp (righe 1409-1495), uguali all'originale tranne i controlli IsKindOf.
+// LINUX: the messages that the worker threads (hash, completion, write) used to send to the main window with PostMessage.
+// The On... functions are those of EmuleDlg.cpp (lines 1409-1495), identical to the original except for the IsKindOf checks.
 #include "StdAfx.h"
 #include "Emule.h"
 #include "PartFile.h"
@@ -23,7 +23,7 @@ void OnFileHashed(WPARAM wParam, LPARAM lParam)
 		return;
 	CKnownFile *result = reinterpret_cast<CKnownFile*>(lParam);
 	if (wParam) {
-		// hash finito per un file .part (completato, o riesaminato all'avvio perche' la data non corrispondeva)
+		// hash finished for a .part file (completed, or rechecked at startup because the date did not match)
 		CPartFile *requester = reinterpret_cast<CPartFile*>(wParam);
 		// SLUGFILLER: SafeHash - poteva essere stato annullato
 		if (theApp.downloadqueue->IsPartFile(requester))
@@ -31,7 +31,7 @@ void OnFileHashed(WPARAM wParam, LPARAM lParam)
 		else
 			delete result;
 	} else
-		theApp.sharedfiles->FileHashingFinished(result);	// file condiviso (non .part)
+		theApp.sharedfiles->FileHashingFinished(result);	// shared file (not .part)
 }
 
 void OnFileOpProgress(WPARAM wParam, LPARAM lParam)
@@ -50,7 +50,7 @@ void OnImportPart(WPARAM wParam, LPARAM lParam)
 	ImportPart_Struct *imp = reinterpret_cast<ImportPart_Struct*>(wParam);
 	if (theApp.downloadqueue->IsPartFile(partfile) && !theApp.IsClosing()) // poteva essere annullato
 		if (partfile->WriteToBuffer(imp->end - imp->start + 1, imp->data, imp->start, imp->end, NULL, NULL, false))
-			imp->data = NULL; // il buffer non va cancellato
+			imp->data = NULL; // the buffer must not be deleted
 	delete[] imp->data;
 	delete imp;
 }

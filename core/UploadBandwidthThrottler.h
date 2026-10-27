@@ -34,7 +34,7 @@ public:
 	uint64 GetNumberOfSentBytesOverheadSinceLastCallAndReset()	{ return (uint64)::InterlockedExchange64((LONG64*)&m_SentBytesSinceLastCallOverhead, 0); }
 	INT_PTR GetHighestNumberOfFullyActivatedSlotsSinceLastCallAndReset();
 
-	// LINUX: contatore atomico: l'originale leggeva GetCount() senza lock da altri thread mentre il thread del throttler modificava la lista (corsa sui dati, TSan)
+	// LINUX: atomic counter: the original read GetCount() without lock from other threads while the throttler thread modified the list (data race, TSan)
 	INT_PTR GetStandardListSize() const							{ return m_standardCount.load(); }
 
 	void AddToStandardList(INT_PTR index, ThrottledFileSocket *socket);
@@ -79,6 +79,6 @@ private:
 	uint64 m_SentBytesSinceLastCallOverhead;
 	INT_PTR m_highestNumberOfFullyActivatedSlots;
 
-	std::atomic<bool> m_bRun;	// LINUX: era volatile bool (corsa sui dati tra EndThread e il thread)
-	std::atomic<INT_PTR> m_standardCount{0};	// LINUX: dimensione di m_StandardOrder_list, vedi GetStandardListSize
+	std::atomic<bool> m_bRun;	// LINUX: was volatile bool (data race between EndThread and the thread)
+	std::atomic<INT_PTR> m_standardCount{0};	// LINUX: size of m_StandardOrder_list, see GetStandardListSize
 };

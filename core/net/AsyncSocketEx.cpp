@@ -1,4 +1,4 @@
-// LINUX (codice nuovo): vedi AsyncSocketEx.h
+// LINUX (new code): see AsyncSocketEx.h
 #include "StdAfx.h"
 #include "net/AsyncSocketEx.h"
 #include <cstring>
@@ -14,7 +14,7 @@ using emule::net::EventLoop;
 
 IMPLEMENT_DYNAMIC(CAsyncSocketEx, CObject)
 
-static int Err() { return errno == EINPROGRESS ? WSAEWOULDBLOCK : errno; }	// connect() non bloccante: Linux dice EINPROGRESS, Winsock WSAEWOULDBLOCK
+static int Err() { return errno == EINPROGRESS ? WSAEWOULDBLOCK : errno; }	// non-blocking connect(): Linux says EINPROGRESS, Winsock WSAEWOULDBLOCK
 
 static bool SetNonBlocking(int fd) { int fl = ::fcntl(fd, F_GETFL, 0); return fl >= 0 && ::fcntl(fd, F_SETFL, fl | O_NONBLOCK) == 0; }
 
@@ -27,14 +27,14 @@ template<class F> void CAsyncSocketEx::PostIfAlive(F f)
 	if (!loop_ || !id_) return;
 	EventLoop *loop = loop_; uint64_t id = id_;
 	loop->Post([this, loop, id, f]() {
-		if (loop->Find(id) == static_cast<emule::net::IoSource*>(this)) f(this);	// solo un confronto di puntatori: non si tocca this se e' stato distrutto
+		if (loop->Find(id) == static_cast<emule::net::IoSource*>(this)) f(this);	// only a pointer comparison: this is not touched if it was destroyed
 	});
 }
 
 bool CAsyncSocketEx::Register()
 {
 	loop_ = EventLoop::Current();
-	if (!loop_) { WSASetLastError(EINVAL); return false; }		// serve un EventLoop sul thread (ASSERT in debug)
+	if (!loop_) { WSASetLastError(EINVAL); return false; }		// needs an EventLoop on the thread (ASSERT in debug)
 	id_ = loop_->Add(this);
 	read_armed_ = true; write_armed_ = false; close_notified_ = false;
 	return true;
@@ -46,13 +46,13 @@ void CAsyncSocketEx::Unregister()
 	id_ = 0;
 }
 
-// Eventi richiesti a epoll in base allo stato. Zero = socket "disarmato": non e' piu' in epoll e non puo' far girare il ciclo a vuoto.
+// Events requested from epoll based on the state. Zero = "disarmed" socket: no longer in epoll and cannot make the loop spin idle.
 void CAsyncSocketEx::UpdateInterest()
 {
 	if (!loop_ || !id_ || fd_ == INVALID_SOCKET) return;
 	uint32_t ev = 0;
 	if (close_notified_ || hold_) ev = 0;
-	else if (type_ == SOCK_STREAM && (state_ == unconnected || state_ == notsock || state_ == closed || state_ == aborted)) ev = 0;	// un TCP non connesso segnala subito EPOLLHUP: va tenuto fuori
+	else if (type_ == SOCK_STREAM && (state_ == unconnected || state_ == notsock || state_ == closed || state_ == aborted)) ev = 0;	// an unconnected TCP socket reports EPOLLHUP immediately: it must be kept out
 	else if (state_ == connecting) ev = EPOLLOUT;
 	else if (state_ == listening) ev = read_armed_ && (lEvent_ & FD_ACCEPT) ? EPOLLIN : 0;
 	else {
@@ -65,7 +65,7 @@ void CAsyncSocketEx::UpdateInterest()
 bool CAsyncSocketEx::Create(UINT nSocketPort, int nSocketType, long lEvent, const CString &sSocketAddress, ADDRESS_FAMILY nFamily, bool reusable)
 {
 	if (fd_ != INVALID_SOCKET) { WSASetLastError(WSAEALREADY); return false; }
-	if (nFamily != AF_INET && nFamily != AF_INET6) { WSASetLastError(WSAEINVAL); return false; }	// AF_UNSPEC (famiglia decisa alla connessione): non portato
+	if (nFamily != AF_INET && nFamily != AF_INET6) { WSASetLastError(WSAEINVAL); return false; }	// AF_UNSPEC (family decided at connect time): not ported
 	int fd = ::socket(nFamily, nSocketType | SOCK_CLOEXEC | SOCK_NONBLOCK, 0);
 	if (fd < 0) { WSASetLastError(Err()); return false; }
 	fd_ = fd; family_ = nFamily; type_ = nSocketType; lEvent_ = lEvent;
@@ -74,7 +74,7 @@ bool CAsyncSocketEx::Create(UINT nSocketPort, int nSocketType, long lEvent, cons
 	if (!Bind(nSocketPort, sSocketAddress)) { int e = WSAGetLastError(); Close(); WSASetLastError(e); return false; }
 	state_ = unconnected;
 	UpdateInterest();
-	// Winsock manda FD_WRITE ai datagrammi appena pronti: ClientUDPSocket se ne serve per svuotare la coda di invio
+	// Winsock sends FD_WRITE for freshly ready datagrams: ClientUDPSocket uses it to drain the send queue
 	if (type_ == SOCK_DGRAM && (lEvent_ & FD_WRITE)) PostIfAlive([](CAsyncSocketEx *s) { if (s->lEvent_ & FD_WRITE) s->OnSend(0); });
 	return true;
 }
@@ -111,7 +111,7 @@ BOOL CAsyncSocketEx::Accept(CAsyncSocketEx &rConnected, LPSOCKADDR lpSockAddr, i
 {
 	socklen_t len = lpSockAddrLen ? (socklen_t)*lpSockAddrLen : 0;
 	int h = ::accept4(fd_, lpSockAddr, lpSockAddrLen ? &len : nullptr, SOCK_CLOEXEC | SOCK_NONBLOCK);
-	// Winsock riarma FD_ACCEPT con accept(), anche quando non c'e' nulla da accettare
+	// Winsock re-arms FD_ACCEPT with accept(), even when there is nothing to accept
 	read_armed_ = true; UpdateInterest();
 	if (h < 0) { WSASetLastError(Err()); return FALSE; }
 	if (lpSockAddrLen) *lpSockAddrLen = (int)len;
@@ -142,9 +142,9 @@ BOOL CAsyncSocketEx::Bind(const LPSOCKADDR lpSockAddr, int nSockAddrLen)
 
 void CAsyncSocketEx::Close()
 {
-	resolve_token_++;										// una risoluzione di nome ancora in volo non trova piu' nessuno
+	resolve_token_++;										// a name resolution still in flight no longer finds anyone
 	pending_addrs_.clear();
-	Unregister();											// dopo questo nessun evento raggiunge piu' il socket
+	Unregister();											// after this no event reaches the socket any more
 	if (fd_ != INVALID_SOCKET) { ::close(fd_); fd_ = INVALID_SOCKET; }
 	state_ = closed;
 	read_armed_ = true; write_armed_ = false; close_notified_ = false;
@@ -153,7 +153,7 @@ void CAsyncSocketEx::Close()
 bool CAsyncSocketEx::BeginConnect(const sockaddr *sa, socklen_t len)
 {
 	if (::connect(fd_, sa, len) == 0) {
-		state_ = connecting; hold_ = true;					// anche a connessione immediata l'esito arriva come evento FD_CONNECT
+		state_ = connecting; hold_ = true;					// even with an immediate connection the outcome arrives as an FD_CONNECT event
 		PostIfAlive([](CAsyncSocketEx *s) { s->FinishConnect(0); });
 		return true;
 	}
@@ -182,12 +182,12 @@ bool CAsyncSocketEx::Connect(const CString &sHostAddress, UINT nHostPort)
 		sockaddr_in6 a = {}; a.sin6_family = AF_INET6; a.sin6_port = htons((uint16_t)nHostPort);
 		if (::inet_pton(AF_INET6, sHostAddress, &a.sin6_addr) == 1) return Connect((LPSOCKADDR)&a, sizeof a) != FALSE;
 	}
-	// un nome: lo risolve un thread, il resto avviene nel ciclo. Come WSAAsyncGetHostByName: ritorna false con WSAEWOULDBLOCK.
+	// a name: resolved by a thread, the rest happens in the loop. Like WSAAsyncGetHostByName: returns false with WSAEWOULDBLOCK.
 	EventLoop *loop = loop_; uint64_t id = id_, token = ++resolve_token_;
-	state_ = connecting; hold_ = true;						// finche' il nome non e' risolto non c'e' nulla da attendere in epoll
+	state_ = connecting; hold_ = true;						// until the name is resolved there is nothing to wait for in epoll
 	loop->ResolveAsync((LPCTSTR)sHostAddress, std::to_string(nHostPort), family_, [this, loop, id, token](int gai, std::vector<sockaddr_storage> addrs) {
-		if (loop->Find(id) != static_cast<emule::net::IoSource*>(this) || token != resolve_token_) return;	// chiuso nel frattempo
-		if (gai != 0 || addrs.empty()) { hold_ = false; FinishConnect(ENOENT); return; }	// nome non risolto
+		if (loop->Find(id) != static_cast<emule::net::IoSource*>(this) || token != resolve_token_) return;	// closed in the meantime
+		if (gai != 0 || addrs.empty()) { hold_ = false; FinishConnect(ENOENT); return; }	// name not resolved
 		if (family_ == AF_INET && !OnHostNameResolved((const SOCKADDR_IN*)&addrs[0])) { hold_ = false; return; }
 		if (loop->Find(id) != static_cast<emule::net::IoSource*>(this)) return;
 		pending_addrs_.assign(addrs.begin() + 1, addrs.end());
@@ -210,7 +210,7 @@ int CAsyncSocketEx::Receive(void *lpBuf, int nBufLen, int nFlags)
 {
 	ssize_t n = ::recv(fd_, lpBuf, (size_t)nBufLen, nFlags);
 	if (n < 0) WSASetLastError(Err());
-	// Winsock riarma FD_READ con recv(): se resta altro da leggere (o c'e' una chiusura da notificare) la notifica ritorna
+	// Winsock re-arms FD_READ with recv(): if more is left to read (or a close is to be notified) the notification returns
 	read_armed_ = true; UpdateInterest();
 	return (int)n;
 }
@@ -220,9 +220,9 @@ int CAsyncSocketEx::Send(const void *lpBuf, int nBufLen, int nFlags)
 	ssize_t n = ::send(fd_, lpBuf, (size_t)nBufLen, nFlags | MSG_NOSIGNAL);
 	if (n < 0) {
 		WSASetLastError(Err());
-		if (errno == EAGAIN || errno == EWOULDBLOCK) {			// FD_WRITE quando si potra' scrivere di nuovo
-			// Send() puo' essere chiamata dal thread del throttler, non solo da quello del ciclo: lo stato e la tabella degli eventi
-			// si toccano solo nel thread del ciclo, quindi da fuori il riarmo e' un compito Post().
+		if (errno == EAGAIN || errno == EWOULDBLOCK) {			// FD_WRITE when writing is possible again
+			// Send() may be called from the throttler thread, not only from the loop one: the state and the event table
+			// are touched only in the loop thread, so from outside the re-arm is a Post() task.
 			if (loop_ && loop_->InLoopThread()) { write_armed_ = true; UpdateInterest(); }
 			else PostIfAlive([](CAsyncSocketEx *s) { s->write_armed_ = true; s->UpdateInterest(); });
 		}
@@ -239,7 +239,7 @@ BOOL CAsyncSocketEx::ShutDown(int nHow)
 
 BOOL CAsyncSocketEx::IOCtl(long lCommand, DWORD *lpArgument)
 {
-	if (lCommand == (long)FIONBIO) return SetNonBlocking(fd_) ? TRUE : FALSE;		// i nostri socket sono sempre non bloccanti
+	if (lCommand == (long)FIONBIO) return SetNonBlocking(fd_) ? TRUE : FALSE;		// our sockets are always non-blocking
 	int arg = (int)(lpArgument ? *lpArgument : 0);
 	if (::ioctl(fd_, (unsigned long)lCommand, &arg) < 0) { WSASetLastError(Err()); return FALSE; }
 	if (lpArgument) *lpArgument = (DWORD)arg;
@@ -301,17 +301,17 @@ BOOL CAsyncSocketEx::TriggerEvent(long lEvent)
 	return TRUE;
 }
 
-// ---- consegna degli eventi ----------------------------------------------------------------------------------------
+// ---- event delivery ----------------------------------------------------------------------------------------
 
 void CAsyncSocketEx::FinishConnect(int err)
 {
 	EventLoop *loop = loop_; uint64_t id = id_;
 	auto alive = [&]() { return loop->Find(id) == static_cast<emule::net::IoSource*>(this); };
-	if (err != 0 && !pending_addrs_.empty()) {				// c'e' un altro indirizzo del nome: lo si prova prima di arrendersi
+	if (err != 0 && !pending_addrs_.empty()) {				// there is another address for the name: try it before giving up
 		sockaddr_storage next = pending_addrs_.front(); pending_addrs_.erase(pending_addrs_.begin());
 		socklen_t sl = next.ss_family == AF_INET6 ? sizeof(sockaddr_in6) : sizeof(sockaddr_in);
 		if (::connect(fd_, (sockaddr*)&next, sl) == 0 || errno == EINPROGRESS || errno == EALREADY) { state_ = connecting; hold_ = false; UpdateInterest(); return; }
-		err = Err();											// su Linux un connect() fallito si puo' ritentare sullo stesso socket (stessa famiglia)
+		err = Err();											// on Linux a failed connect() can be retried on the same socket (same family)
 	}
 	if (err != 0) {
 		state_ = aborted; hold_ = false; close_notified_ = true; UpdateInterest();
@@ -321,21 +321,21 @@ void CAsyncSocketEx::FinishConnect(int err)
 	state_ = connected; hold_ = false; write_armed_ = false; read_armed_ = true;
 	UpdateInterest();
 	if (lEvent_ & FD_CONNECT) { OnConnect(0); if (!alive()) return; }
-	if (lEvent_ & FD_WRITE) { OnSend(0); if (!alive()) return; }	// FD_WRITE segue sempre la connessione
+	if (lEvent_ & FD_WRITE) { OnSend(0); if (!alive()) return; }	// FD_WRITE always follows the connection
 	UpdateInterest();
 }
 
-// Il peer ha chiuso (o c'e' un errore). I dati ancora in coda si consegnano prima: FD_CLOSE solo quando non resta nulla da leggere.
+// The peer closed (or there is an error). Data still queued is delivered first: FD_CLOSE only when nothing is left to read.
 void CAsyncSocketEx::HandlePeerClose(int err)
 {
 	if (close_notified_) return;
 	char c;
 	ssize_t n = ::recv(fd_, &c, 1, MSG_PEEK);
-	if (n > 0) return;										// restano dati: l'applicazione li legge (la notifica di lettura e' gia' in corso o armata), poi si torna qui
+	if (n > 0) return;										// data remains: the application reads it (the read notification is already running or armed), then we come back here
 	if (n < 0 && errno != EAGAIN && errno != EWOULDBLOCK) err = errno;
 	close_notified_ = true;
 	state_ = err ? aborted : closed;
-	UpdateInterest();										// fuori da epoll
+	UpdateInterest();										// out of epoll
 	if (lEvent_ & FD_CLOSE) OnClose(err);
 }
 
@@ -360,10 +360,10 @@ void CAsyncSocketEx::OnIo(uint32_t ev)
 	}
 	const bool hup = (ev & (EPOLLRDHUP | EPOLLHUP | EPOLLERR)) != 0;
 	if ((ev & EPOLLIN) && read_armed_ && (lEvent_ & (FD_READ | FD_FORCEREAD))) {
-		bool eof_only = false;								// chiusura senza dati da leggere: Winsock manda solo FD_CLOSE, non FD_READ
+		bool eof_only = false;								// close without data to read: Winsock sends only FD_CLOSE, not FD_READ
 		if (hup) { char c; ssize_t n = ::recv(fd_, &c, 1, MSG_PEEK); eof_only = n == 0 || (n < 0 && errno != EAGAIN && errno != EWOULDBLOCK); }
 		if (!eof_only) {
-			read_armed_ = false; UpdateInterest();			// una notifica per volta: la riarma Receive()
+			read_armed_ = false; UpdateInterest();			// one notification at a time: Receive() re-arms it
 			OnReceive(0);
 			if (!alive()) return;
 		}
@@ -389,7 +389,7 @@ bool CAsyncSocketEx::OnHostNameResolved(const SOCKADDR_IN *) { return true; }
 
 void CAsyncSocketEx::PostArmWrite() { PostIfAlive([](CAsyncSocketEx *s) { s->ArmWrite(); }); }
 
-// ---- CAsyncSocket: datagrammi -------------------------------------------------------------------------------------
+// ---- CAsyncSocket: datagrams -------------------------------------------------------------------------------------
 
 int CAsyncSocket::SendTo(const void *lpBuf, int nBufLen, const LPSOCKADDR lpSockAddr, int nSockAddrLen, int nFlags)
 {
@@ -411,7 +411,7 @@ int CAsyncSocket::ReceiveFrom(void *lpBuf, int nBufLen, LPSOCKADDR lpSockAddr, i
 	ssize_t n = ::recvfrom(GetSocketHandle(), lpBuf, (size_t)nBufLen, nFlags, lpSockAddr, lpSockAddrLen ? &l : nullptr);
 	if (n < 0) WSASetLastError(Err());
 	if (lpSockAddrLen) *lpSockAddrLen = (int)l;
-	ArmRead();										// riarma la lettura, come Receive()
+	ArmRead();										// re-arms reading, like Receive()
 	return (int)n;
 }
 

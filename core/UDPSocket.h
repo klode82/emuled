@@ -44,7 +44,7 @@ public:
 	bool Create();
 	SocketSentBytes SendControlData(uint32 maxNumberOfBytesToSend, uint32 minFragSize); // ZZ:UploadBandWithThrottler (UDP)
 	void SendPacket(Packet *packet, CServer *pServer, uint16 nSpecialPort = 0, BYTE *pInRawPacket = NULL, uint32 nRawLen = 0);
-	void DnsLookupDone(SServerDNSRequest *pReq, uint32 nIP);		// LINUX: chiamata dal ciclo degli eventi a risoluzione finita (nIP in ordine di rete, INADDR_NONE = fallita)
+	void DnsLookupDone(SServerDNSRequest *pReq, uint32 nIP);		// LINUX: called from the event loop when resolution is done (nIP in network order, INADDR_NONE = failed)
 
 protected:
 	virtual void OnSend(int nErrorCode);
@@ -60,6 +60,6 @@ private:
 	CTypedPtrList<CPtrList, SServerDNSRequest*> m_aDNSReqs;
 	CTypedPtrList<CPtrList, SServerUDPPacket*> controlpacket_queue;
 	CCriticalSection sendLocker; // ZZ:UploadBandWithThrottler (UDP)
-	std::shared_ptr<bool> alive_ = std::make_shared<bool>(true);		// LINUX: la risoluzione dei nomi gira in un thread e puo' finire dopo la distruzione del socket
+	std::shared_ptr<bool> alive_ = std::make_shared<bool>(true);		// LINUX: name resolution runs in a thread and may finish after the socket is destroyed
 	bool m_bWouldBlock;
 };

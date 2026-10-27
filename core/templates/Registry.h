@@ -1,12 +1,12 @@
-// LINUX (codice nuovo): il registro dei template d'interfaccia. Cerca nelle cartelle (di sistema, dell'utente, extra di sviluppo), legge e controlla il
-// template.yaml di ogni sottocartella e tiene l'elenco, validi e non validi (con il motivo: l'interfaccia mostra anche quelli che non si caricano).
+// LINUX (new code): the registry of UI templates. Searches the folders (system, user, development extras), reads and checks the
+// template.yaml of each subfolder and keeps the list, valid and invalid (with the reason: the UI also shows the ones that fail to load).
 //
-// Regole (Bench 838, decisione del 26/10/2026):
-//  - priorita': sistema (/usr/share/emuled/templates) > utente (~/.emuled/templates) > extra (templates_dir, per sviluppo e Docker);
-//  - i nomi di serie (console, dashboard, studio, mobile) sono riservati: valgono solo da sistema o da extra, MAI dalla cartella dell'utente;
-//  - il nome della cartella deve essere uguale all'id del manifest (cosi' l'indirizzo /t/<id>/ e la cartella coincidono);
-//  - lo stesso id in due posti: vince la sorgente con priorita' piu' alta, l'altro resta nell'elenco come non valido;
-//  - la pagina d'ingresso (entry) deve esistere ed essere un file normale dentro la cartella del template.
+// Rules (Bench 838, decision of 26/10/2026):
+//  - priority: system (/usr/share/emuled/templates) > user (~/.emuled/templates) > extra (templates_dir, for development and Docker);
+//  - the built-in names (console, dashboard, studio, mobile) are reserved: valid only from system or extra, NEVER from the user folder;
+//  - the folder name must equal the manifest id (so the /t/<id>/ address and the folder match);
+//  - the same id in two places: the higher-priority source wins, the other stays in the list as invalid;
+//  - the entry page (entry) must exist and be a regular file inside the template folder.
 #pragma once
 #include "templates/Manifest.h"
 #include <string>
@@ -17,21 +17,21 @@ namespace emule::templates {
 enum class Source { System, User, Extra };
 const char *SourceName(Source s);				// "system" | "user" | "dev"
 
-struct Dirs { std::string system, user, extra; };		// vuoto = non cercare
-// La cartella di sistema segue il prefisso di installazione (EMULED_SYSTEM_TEMPLATES, deciso da CMake: <prefisso>/share/emuled/templates; /usr/share/emuled/templates
-// nei pacchetti, che usano il prefisso /usr); quella dell'utente e' <home>/.emuled/templates.
+struct Dirs { std::string system, user, extra; };		// empty = do not search
+// The system folder follows the install prefix (EMULED_SYSTEM_TEMPLATES, set by CMake: <prefix>/share/emuled/templates; /usr/share/emuled/templates
+// in packages, which use the /usr prefix); the user one is <home>/.emuled/templates.
 Dirs DefaultDirs(const std::string &home);
-// Crea la cartella dei template dell'utente se manca, con un LEGGIMI.txt che spiega a cosa serve (solo quando la crea: se c'e' gia', non tocca niente). true = l'ha creata.
+// Creates the user's template folder if it is missing, with a README.txt that explains what it is for (only when it creates it: if the folder exists, nothing is touched). true = it created it.
 bool EnsureUserDir(const std::string &dir);
 
 struct Entry
 {
-	std::string id;								// dal manifest; se il manifest e' rotto, il nome della cartella
-	std::string dir_name, dir;					// nome e percorso (canonico) della cartella
+	std::string id;								// from the manifest; if the manifest is broken, the folder name
+	std::string dir_name, dir;					// name and (canonical) path of the folder
 	Source source = Source::System;
-	Manifest manifest;							// valido solo se valid
+	Manifest manifest;							// valid only if valid
 	bool valid = false;
-	bool has_preview = false;					// il file di anteprima esiste
+	bool has_preview = false;					// the preview file exists
 	std::vector<std::string> errors;
 };
 
@@ -40,10 +40,10 @@ bool IsReservedId(const std::string &id);
 class Registry
 {
 public:
-	// ricerca di nuovo in tutte le cartelle (si puo' chiamare quante volte si vuole); scrive nel Registro del demone un riassunto e un avviso per ogni template non valido
+	// searches all folders again (can be called any number of times); writes a summary to the daemon Log and a warning for each invalid template
 	void Scan(const Dirs &dirs);
 	const std::vector<Entry> &entries() const { return entries_; }
-	const Entry *Find(const std::string &id) const;			// solo template validi
+	const Entry *Find(const std::string &id) const;			// valid templates only
 	size_t ValidCount() const;
 private:
 	std::vector<Entry> entries_;

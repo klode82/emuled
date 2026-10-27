@@ -1,4 +1,4 @@
-// LINUX (codice nuovo): vedi Api.h
+// LINUX (new code): see Api.h
 #include "StdAfx.h"
 #include "api/Api.h"
 #include "api/Search.h"
@@ -42,7 +42,7 @@ namespace emule::api {
 
 namespace {
 double NowS() { return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
-Response Ok(const json &j, int status = 200) { return Response::Json(status, j.dump(-1, ' ', false, json::error_handler_t::replace)); }	// UTF-8 non valido: sostituito, mai un'eccezione
+Response Ok(const json &j, int status = 200) { return Response::Json(status, j.dump(-1, ' ', false, json::error_handler_t::replace)); }	// invalid UTF-8: replaced, never an exception
 std::string S(const CString &s) { return std::string((LPCTSTR)s); }
 std::string Hex(const uchar *h) { return S(md4str(h)); }
 
@@ -67,7 +67,7 @@ json DownloadJson(CPartFile *f)
 	j["size"] = (uint64)f->GetFileSize();
 	j["completed"] = (uint64)f->GetCompletedSize();
 	j["percent"] = f->GetPercentCompleted();
-	{	// operazione sul file in corso (verifica degli hash, copia...): la barra verde sopra quella del completamento
+	{	// file operation in progress (hash check, copy...): the green bar above the completion one
 		static const char *const ops[] = {"none", "hashing", "copying", "uncompressing", "import_parts"};
 		unsigned op = (unsigned)f->GetFileOp(); j["file_op"] = ops[op < 5 ? op : 0];
 		j["file_op_percent"] = op ? (int)std::min<WPARAM>(f->GetFileOpProgress(), 100) : 0;
@@ -76,7 +76,7 @@ json DownloadJson(CPartFile *f)
 	j["stopped"] = f->IsStopped();
 	j["sources"] = f->GetSourceCount(); j["sources_other_files"] = f->GetSrcA4AFCount();
 	j["sources_transferring"] = f->GetTransferringSrcCount();
-	{	// posizione in coda piu' vicina tra tutte le fonti (0 = nessuna in coda)
+	{	// closest queue position among all sources (0 = none queued)
 		unsigned best = 0;
 		for (POSITION pos = f->srclist.GetHeadPosition(); pos;) {
 			unsigned r = f->srclist.GetNext(pos)->GetRemoteQueueRank();
@@ -99,9 +99,9 @@ json KadJson()
 		kad["udp_firewalled"] = Kademlia::CUDPFirewallTester::IsFirewalledUDP(true); kad["udp_verified"] = Kademlia::CUDPFirewallTester::IsVerified();
 		if (Kademlia::CKademlia::GetRoutingZone()) kad["contacts"] = Kademlia::CKademlia::GetRoutingZone()->GetNumContacts();
 		kad["users"] = Kademlia::CKademlia::GetKademliaUsers();
-		// cio' che altri ci hanno chiesto di tenere (indici di Kad ospitati da noi)
+		// what others asked us to keep (Kad indexes hosted by us)
 		if (Kademlia::CIndexed *ix = Kademlia::CKademlia::GetIndexed()) kad["indexed"] = {{"keywords", ix->m_uTotalIndexKeyword}, {"sources", ix->m_uTotalIndexSource}, {"notes", ix->m_uTotalIndexNotes}};
-		// cio' che pubblichiamo noi: quanti dei nostri file condivisi sono stati annunciati a Kad almeno una volta (come fonte e come commento)
+		// what we publish: how many of our shared files were announced to Kad at least once (as source and as comment)
 		CKnownFilesMap files; theApp.sharedfiles->CopySharedFileMap(files);
 		uint32_t total = 0, src = 0, notes = 0;
 		for (POSITION p = files.GetStartPosition(); p;) { CCKey k; CKnownFile *f = nullptr; files.GetNextAssoc(p, k, f); ++total; if (f->GetLastPublishTimeKadSrc()) ++src; if (f->GetLastPublishTimeKadNotes()) ++notes; }
@@ -129,7 +129,7 @@ json StatusJson(double started_s, const DaemonHooks &hooks)
 	return j;
 }
 
-// Dettagli di un download in corso (la scheda "Generale" di eMule): quasi tutto e' gia' nel core, qui lo si rende in JSON
+// Details of a running download (eMule's "General" tab): almost everything is already in the core, here it is rendered as JSON
 json DetailsJson(CPartFile *f)
 {
 	json j; const uint64_t size = (uint64_t)f->GetFileSize(), completed = (uint64_t)f->GetCompletedSize(), transferred = f->GetTransferred();
@@ -169,7 +169,7 @@ json CompletedJson(const emule::CompletedDownload &c)
 	j["part_file"] = ""; j["completed_at"] = c.completed_at; j["path"] = c.path;
 	return j;
 }
-// la lista dei trasferimenti: la coda e, dopo, i completati che la finestra di eMule continuerebbe a mostrare
+// the transfer list: the queue and, after it, the completed ones that eMule's window would keep showing
 json AllDownloadsJson()
 {
 	json a = json::array();
@@ -177,7 +177,7 @@ json AllDownloadsJson()
 	for (auto &c : emule::CompletedDownloads::All()) a.push_back(CompletedJson(c));
 	return a;
 }
-// il hash passa nel percorso come 32 caratteri esadecimali
+// the hash is passed in the path as 32 hexadecimal characters
 bool ParseHash(const std::string &s, uchar out[16])
 {
 	return s.size() == 32 && strmd4(CString(s.c_str()), out);
@@ -200,7 +200,7 @@ const char *SourceFromName(ESourceFrom f)
 json SourcesJson(CPartFile *f)
 {
 	json a = json::array();
-	// le fonti di questo file (srclist) e poi quelle "per un altro file" (A4AF): utenti che hanno anche questo file ma che eMule sta gia' usando per un altro download
+	// the sources of this file (srclist) and then those "for another file" (A4AF): users who also have this file but whom eMule is already using for another download
 	for (int pass = 0; pass < 2; ++pass)
 	for (POSITION pos = pass == 0 ? f->srclist.GetHeadPosition() : f->A4AFsrclist.GetHeadPosition(); pos;) {
 		CUpDownClient *c = pass == 0 ? f->srclist.GetNext(pos) : f->A4AFsrclist.GetNext(pos);
@@ -215,7 +215,7 @@ json SourcesJson(CPartFile *f)
 	}
 	return a;
 }
-// i nomi con cui le fonti chiamano il file (scheda "Nome" di eMule): nome -> quante fonti lo usano, i piu' diffusi per primi
+// the names by which sources call the file (eMule's "Name" tab): name -> how many sources use it, most common first
 json NamesJson(CPartFile *f)
 {
 	std::map<std::string, int> m;
@@ -225,7 +225,7 @@ json NamesJson(CPartFile *f)
 	json a = json::array(); for (auto &e : v) a.push_back({{"name", e.first}, {"count", e.second}});
 	return {{"current", S(f->GetFileName())}, {"names", a}};
 }
-// commenti e valutazioni (scheda "Tutti i commenti"): quelli ricevuti dalle fonti (ed2k) e le note trovate su Kad
+// comments and ratings (the "All comments" tab): those received from sources (ed2k) and the notes found on Kad
 json CommentsJson(CPartFile *f)
 {
 	json a = json::array();
@@ -240,13 +240,13 @@ json CommentsJson(CPartFile *f)
 	}
 	return {{"comments", a}, {"kad_connected", Kademlia::CKademlia::IsConnected()}, {"kad_searching", f->IsKadCommentSearchRunning() || Kademlia::CSearchManager::AlreadySearchingFor(Kademlia::CUInt128(f->GetFileHash()))}, {"filter", S(thePrefs.GetCommentFilter())}};
 }
-// ---- streaming: un link temporaneo (ticket) che un player locale (VLC, mpv...) apre senza il token Bearer. Il ticket vale per UN file, scade, e dal link non si puo' risalire al token.
-// Il file si legge con richieste a intervalli (Range). Un download in corso si serve solo dove i byte sono gia' su disco: oltre si risponde 503 (il player riprova).
+// ---- streaming: a temporary link (ticket) that a local player (VLC, mpv...) opens without the Bearer token. The ticket is valid for ONE file, expires, and the token cannot be derived from the link.
+// The file is read with range requests (Range). A running download is served only where the bytes are already on disk: beyond that it answers 503 (the player retries).
 struct StreamTicket { std::string hash; std::chrono::steady_clock::time_point expires; };
-std::map<std::string, StreamTicket> g_tickets;		// solo nel thread degli eventi, come tutta l'API
+std::map<std::string, StreamTicket> g_tickets;		// only in the event thread, like the whole API
 constexpr int kStreamTicketSeconds = 6 * 3600; constexpr size_t kMaxTickets = 64;
 std::string NewTicketId() { std::random_device rd; char b[40]; snprintf(b, sizeof b, "%08x%08x%08x%08x", rd(), rd(), rd(), rd()); return b; }
-std::string PercentEncode(const std::string &s)		// tutto tranne i caratteri non riservati (RFC 3986): il nome non puo' rompere il percorso (? # & ...)
+std::string PercentEncode(const std::string &s)		// everything except unreserved characters (RFC 3986): the name cannot break the path (? # & ...)
 {
 	std::string o; char b[4];
 	for (unsigned char c : s) { if (isalnum(c) || c == '-' || c == '.' || c == '_' || c == '~') o += (char)c; else { snprintf(b, sizeof b, "%%%02X", c); o += b; } }
@@ -262,15 +262,15 @@ std::string StreamMime(const std::string &name)
 	std::string e = name.substr(dot + 1); for (auto &ch : e) ch = (char)std::tolower((unsigned char)ch);
 	auto it = m.find(e); return it == m.end() ? "application/octet-stream" : it->second;
 }
-// primo byte (da `off` in poi) che NON e' ancora su disco in un download in corso; size se tutto il resto c'e'
+// first byte (from `off` on) that is NOT yet on disk in a running download; size if all the rest is there
 uint64_t AvailEnd(CPartFile *f, uint64_t off, uint64_t size)
 {
 	if (off >= size || !f->IsCompleteBD(off, off)) return off;
-	uint64_t lo = off, hi = size - 1;		// ricerca binaria dell'ultimo byte e tale che [off, e] e' tutto su disco
+	uint64_t lo = off, hi = size - 1;		// binary search for the last byte e such that [off, e] is all on disk
 	while (lo < hi) { uint64_t mid = lo + (hi - lo + 1) / 2; if (f->IsCompleteBD(off, mid)) lo = mid; else hi = mid - 1; }
 	return lo + 1;
 }
-// intervallo richiesto "bytes=a-b" | "bytes=a-" | "bytes=-n"; false = non valido o piu' intervalli
+// requested range "bytes=a-b" | "bytes=a-" | "bytes=-n"; false = invalid or multiple ranges
 bool ParseRange(const std::string &h, uint64_t size, uint64_t &a, uint64_t &b)
 {
 	if (h.rfind("bytes=", 0) != 0 || h.find(',') != std::string::npos) return false;
@@ -281,16 +281,16 @@ bool ParseRange(const std::string &h, uint64_t size, uint64_t &a, uint64_t &b)
 	if (!num(s1, a)) return false;
 	if (s2.empty()) b = size - 1; else if (!num(s2, b)) return false;
 	if (b >= size) b = size - 1;
-	return a <= b || a >= size;		// a >= size: l'intervallo e' fuori dal file (416, lo decide il chiamante)
+	return a <= b || a >= size;		// a >= size: the range is outside the file (416, decided by the caller)
 }
-// i blocchi (chunk) di eMule: PARTSIZE = 9 728 000 byte; per ognuno quanti byte mancano e in quante fonti c'e'
+// eMule's blocks (chunks): PARTSIZE = 9 728 000 bytes; for each one how many bytes are missing and in how many sources it is present
 json PartsJson(CPartFile *f)
 {
 	const uint64_t size = (uint64_t)f->GetFileSize(), ps = PARTSIZE;
 	const UINT n = f->GetPartCount();
 	std::vector<unsigned> avail(n, 0);
 	for (POSITION pos = f->srclist.GetHeadPosition(); pos;) { CUpDownClient *c = f->srclist.GetNext(pos); for (UINT i = 0; i < n; ++i) if (c->IsPartAvailable(i)) ++avail[i]; }
-	// senza l'elenco degli hash dei blocchi (hashset) un blocco completo non si puo' controllare: "verified" = false; con un blocco solo vale l'hash del file
+	// without the block hash list (hashset) a complete block cannot be checked: "verified" = false; with a single block the file hash applies
 	const bool hashsetOk = n <= 1 || f->GetFileIdentifier().HasExpectedMD4HashCount();
 	json parts = json::array();
 	for (UINT i = 0; i < n; ++i) {
@@ -301,8 +301,8 @@ json PartsJson(CPartFile *f)
 	return {{"part_size", ps}, {"size", size}, {"count", n}, {"hashset", hashsetOk}, {"parts", parts}};
 }
 
-// i blocchi che stanno arrivando adesso: eMule scarica un chunk (parte da 9,28 MB) a pezzi da 180 KB (EMBLOCKSIZE) chiesti alle fonti; qui, per ogni parte,
-// le fonti in scarico e i loro pezzi richiesti (fQueued = la richiesta e' partita), con quanti byte ne sono gia' arrivati
+// the blocks arriving right now: eMule downloads a chunk (starting at 9.28 MB) in 180 KB pieces (EMBLOCKSIZE) requested from sources; here, for each part,
+// the sources being downloaded from and their requested pieces (fQueued = the request was sent), with how many bytes have already arrived
 json BlocksJson(CPartFile *f)
 {
 	const uint64_t size = (uint64_t)f->GetFileSize(), ps = PARTSIZE;
@@ -326,7 +326,7 @@ json BlocksJson(CPartFile *f)
 	json active = json::array();
 	for (auto &kv : byPart) {
 		const uint64_t len = std::min<uint64_t>(ps, size - (uint64_t)kv.first * ps), missing = f->GetTotalGapSizeInPart(kv.first);
-		bool receiving = false;		// sta arrivando davvero: la fonte ha velocita' oppure un pezzo ha gia' dei byte; altrimenti e' solo richiesto
+		bool receiving = false;		// really arriving: the source has speed or a piece already has bytes; otherwise it is only requested
 		for (auto &s : kv.second["sources"]) { if (s["speed"].get<uint64_t>() > 0) receiving = true; for (auto &b : s["blocks"]) if (b["transferred"].get<uint64_t>() > 0) receiving = true; }
 		kv.second["part"] = kv.first; kv.second["size"] = len; kv.second["missing"] = missing; kv.second["receiving"] = receiving;
 		active.push_back(std::move(kv.second));
@@ -340,16 +340,16 @@ bool ParsePortStr(const std::string &v, uint16_t &out)
 	unsigned n = 0; for (char c : v) { if (c < '0' || c > '9') return false; n = n * 10 + (unsigned)(c - '0'); }
 	if (n > 65535) return false; out = (uint16_t)n; return true;
 }
-// "indirizzo:porta" nel percorso
+// "address:port" in the path
 CServer *FindServer(const std::string &addr, Response &err)
 {
 	size_t col = addr.rfind(':'); uint16_t port = 0;
-	if (col == std::string::npos || col == 0 || !ParsePortStr(addr.substr(col + 1), port)) { err = Response::Error(400, "serve indirizzo:porta"); return nullptr; }
+	if (col == std::string::npos || col == 0 || !ParsePortStr(addr.substr(col + 1), port)) { err = Response::Error(400, "address:port is required"); return nullptr; }
 	CServer *s = theApp.serverlist->GetServerByAddress(addr.substr(0, col).c_str(), port);
-	if (!s) err = Response::Error(404, "server non in lista");
+	if (!s) err = Response::Error(404, "server not in the list");
 	return s;
 }
-// il completato con questo hash, se non e' (piu') in coda
+// the completed file with this hash, if it is not (any more) in the queue
 const emule::CompletedDownload *CompletedOnly(const std::string &hashParam)
 {
 	std::string h = hashParam; for (auto &ch : h) ch = (char)std::toupper((unsigned char)ch);
@@ -360,15 +360,15 @@ const emule::CompletedDownload *CompletedOnly(const std::string &hashParam)
 CPartFile *FindDownload(const Request &r, Response &err)
 {
 	uchar h[16];
-	if (!ParseHash(r.params.at("hash"), h)) { err = Response::Error(400, "hash non valido (32 caratteri esadecimali)"); return nullptr; }
+	if (!ParseHash(r.params.at("hash"), h)) { err = Response::Error(400, "invalid hash (32 hexadecimal characters)"); return nullptr; }
 	CPartFile *f = theApp.downloadqueue->GetFileByID(h);
-	if (!f) err = emule::CompletedDownloads::Find(r.params.at("hash")) ? Response::Error(409, "il download e' gia' completato") : Response::Error(404, "download non trovato");
+	if (!f) err = emule::CompletedDownloads::Find(r.params.at("hash")) ? Response::Error(409, "the download is already complete") : Response::Error(404, "download not found");
 	return f;
 }
 bool ParseBody(const Request &r, json &j, Response &err)
 {
 	j = json::parse(r.body, nullptr, false);
-	if (j.is_discarded() || !j.is_object()) { err = Response::Error(400, "serve un oggetto JSON nel corpo"); return false; }
+	if (j.is_discarded() || !j.is_object()) { err = Response::Error(400, "a JSON object is required in the body"); return false; }
 	return true;
 }
 
@@ -398,8 +398,8 @@ void RegisterRoutes(HttpServer &srv, double started_s, const DaemonHooks &hooks)
 
 	// ---- download
 	srv.Route("GET", "/api/v1/templates", [hooks](const Request &) { return hooks.templates ? Ok(hooks.templates(false)) : Ok({{"templates", json::array()}, {"api_version", 1}, {"dirs", json::object()}}); });
-	srv.Route("POST", "/api/v1/templates/rescan", [hooks](const Request &) {		// rilegge le cartelle dei template (dopo averne copiato uno)
-		if (!hooks.templates) return Response::Error(409, "i template non sono disponibili");
+	srv.Route("POST", "/api/v1/templates/rescan", [hooks](const Request &) {		// rereads the template folders (after copying one)
+		if (!hooks.templates) return Response::Error(409, "templates are not available");
 		Audit("templates rescan requested"); return Ok(hooks.templates(true));
 	});
 	srv.Route("GET", "/api/v1/downloads", [](const Request &) { return Ok(AllDownloadsJson()); });
@@ -411,17 +411,17 @@ void RegisterRoutes(HttpServer &srv, double started_s, const DaemonHooks &hooks)
 	srv.Route("GET", "/api/v1/downloads/:hash/sources", [](const Request &r) { Response e; CPartFile *f = FindDownload(r, e); return f ? Ok(SourcesJson(f)) : e; });
 	srv.Route("GET", "/api/v1/downloads/:hash/names", [](const Request &r) { Response e; CPartFile *f = FindDownload(r, e); return f ? Ok(NamesJson(f)) : e; });
 	srv.Route("GET", "/api/v1/downloads/:hash/comments", [](const Request &r) { Response e; CPartFile *f = FindDownload(r, e); return f ? Ok(CommentsJson(f)) : e; });
-	srv.Route("POST", "/api/v1/downloads/:hash/comments/search-kad", [](const Request &r) {		// "Ricerca in Kad": chiede le note degli altri utenti
+	srv.Route("POST", "/api/v1/downloads/:hash/comments/search-kad", [](const Request &r) {		// "Kad search": asks other users for their notes
 		Response e; CPartFile *f = FindDownload(r, e); if (!f) return e;
-		if (!Kademlia::CKademlia::IsConnected()) return Response::Error(422, "Kad non connesso");
-		if (!Kademlia::CSearchManager::PrepareLookup(Kademlia::CSearch::NOTES, true, Kademlia::CUInt128(f->GetFileHash()))) return Response::Error(409, "una ricerca di note per questo file e' gia' in corso");
+		if (!Kademlia::CKademlia::IsConnected()) return Response::Error(422, "Kad not connected");
+		if (!Kademlia::CSearchManager::PrepareLookup(Kademlia::CSearch::NOTES, true, Kademlia::CUInt128(f->GetFileHash()))) return Response::Error(409, "a notes search for this file is already running");
 		f->SetKadCommentSearchRunning(true); Audit("Kad notes search: " + S(f->GetFileName()));
 		return Ok({{"started", true}}, 202);
 	});
-	srv.Route("POST", "/api/v1/downloads/:hash/stream", [](const Request &r) {		// crea il link di streaming
+	srv.Route("POST", "/api/v1/downloads/:hash/stream", [](const Request &r) {		// creates the streaming link
 		std::string name; uint64_t size = 0;
 		if (const auto *c = CompletedOnly(r.params.at("hash"))) { name = c->name; size = c->size; }
-		else { Response e; CPartFile *f = FindDownload(r, e); if (!f) return e; name = S(f->GetFileName()); size = (uint64_t)f->GetFileSize(); f->SetPreviewPrio(true); }		// anteprima: prima e ultima parte per prime, come in eMule
+		else { Response e; CPartFile *f = FindDownload(r, e); if (!f) return e; name = S(f->GetFileName()); size = (uint64_t)f->GetFileSize(); f->SetPreviewPrio(true); }		// preview: first and last part first, as in eMule
 		auto now = std::chrono::steady_clock::now();
 		for (auto it = g_tickets.begin(); it != g_tickets.end();) it = it->second.expires < now ? g_tickets.erase(it) : std::next(it);
 		if (g_tickets.size() >= kMaxTickets) g_tickets.erase(g_tickets.begin());
@@ -430,23 +430,23 @@ void RegisterRoutes(HttpServer &srv, double started_s, const DaemonHooks &hooks)
 		Audit("stream link created: " + name);
 		return Ok({{"path", "/api/v1/stream/" + id + "/" + PercentEncode(name)}, {"name", name}, {"size", size}, {"expires_in", kStreamTicketSeconds}, {"mime", StreamMime(name)}}, 201);
 	});
-	srv.Route("GET", "/api/v1/stream/:id/:name", [](const Request &r) {		// senza token Bearer: il ticket nel percorso e' l'autorizzazione
+	srv.Route("GET", "/api/v1/stream/:id/:name", [](const Request &r) {		// without Bearer token: the ticket in the path is the authorization
 		auto it = g_tickets.find(r.params.at("id"));
-		if (it == g_tickets.end() || it->second.expires < std::chrono::steady_clock::now()) return Response::Error(403, "link di streaming scaduto o non valido");
+		if (it == g_tickets.end() || it->second.expires < std::chrono::steady_clock::now()) return Response::Error(403, "streaming link expired or invalid");
 		const std::string hash = it->second.hash; std::string path, name; uint64_t size = 0; CPartFile *part = nullptr;
 		uchar hb[16];
 		if (ParseHash(hash, hb) && (part = theApp.downloadqueue->GetFileByID(hb)) != nullptr) { path = S(part->GetFullName()); if (path.size() > 4) path.resize(path.size() - 4); name = S(part->GetFileName()); size = (uint64_t)part->GetFileSize(); }
 		else if (const auto *c = emule::CompletedDownloads::Find(hash)) { path = c->path; name = c->name; size = c->size; }
-		else return Response::Error(404, "download non trovato");
-		struct stat st{}; if (::stat(path.c_str(), &st) != 0 || size == 0) return Response::Error(404, "file inesistente");
+		else return Response::Error(404, "download not found");
+		struct stat st{}; if (::stat(path.c_str(), &st) != 0 || size == 0) return Response::Error(404, "file does not exist");
 		uint64_t a = 0, b = size - 1; bool ranged = false;
 		auto rh = r.headers.find("range");
-		if (rh != r.headers.end()) { if (!ParseRange(rh->second, size, a, b)) { Response x = Response::Error(416, "intervallo non valido"); x.headers["Content-Range"] = "bytes */" + std::to_string(size); return x; } ranged = true; }
-		if (a >= size) { Response x = Response::Error(416, "intervallo oltre la fine del file"); x.headers["Content-Range"] = "bytes */" + std::to_string(size); return x; }
+		if (rh != r.headers.end()) { if (!ParseRange(rh->second, size, a, b)) { Response x = Response::Error(416, "invalid range"); x.headers["Content-Range"] = "bytes */" + std::to_string(size); return x; } ranged = true; }
+		if (a >= size) { Response x = Response::Error(416, "range beyond the end of the file"); x.headers["Content-Range"] = "bytes */" + std::to_string(size); return x; }
 		if (part) {
 			const uint64_t end = AvailEnd(part, a, size);
-			if (end <= a) { Response x = Response::Error(503, "questa parte del file non e' ancora scaricata"); x.headers["Retry-After"] = "3"; return x; }
-			if (b >= end) { b = end - 1; ranged = true; }		// solo cio' che c'e' gia': il player chiedera' il resto
+			if (end <= a) { Response x = Response::Error(503, "this part of the file is not downloaded yet"); x.headers["Retry-After"] = "3"; return x; }
+			if (b >= end) { b = end - 1; ranged = true; }		// only what is already there: the player will ask for the rest
 		}
 		Response x; x.status = ranged ? 206 : 200; x.content_type = StreamMime(name); x.file_path = path; x.file_offset = a; x.file_len = b - a + 1;
 		x.headers["Accept-Ranges"] = "bytes";
@@ -459,28 +459,28 @@ void RegisterRoutes(HttpServer &srv, double started_s, const DaemonHooks &hooks)
 	srv.Route("POST", "/api/v1/downloads", [](const Request &r) {
 		json b; Response e; if (!ParseBody(r, b, e)) return e;
 		std::string link = b.value("link", std::string());
-		if (link.empty()) {		// in alternativa: hash + nome + dimensione
+		if (link.empty()) {		// alternatively: hash + name + size
 			std::string hash = b.value("hash", std::string()), name = b.value("name", std::string("file")); uint64_t size = b.value("size", (uint64_t)0);
-			uchar h[16]; if (!ParseHash(hash, h) || size == 0) return Response::Error(422, "serve \"link\" (ed2k://...) oppure \"hash\", \"name\" e \"size\"");
+			uchar h[16]; if (!ParseHash(hash, h) || size == 0) return Response::Error(422, "\"link\" (ed2k://...) or \"hash\", \"name\" and \"size\" are required");
 			CString l; l.Format(_T("ed2k://|file|%s|%llu|%s|/"), (LPCTSTR)EncodeUrlUtf8(CString(name.c_str())), (unsigned long long)size, (LPCTSTR)md4str(h)); link = S(l);
 		}
 		std::unique_ptr<CED2KLink> pl;
-		try { pl.reset(CED2KLink::CreateLinkFromUrl(CString(link.c_str()))); } catch (const CString &m) { return Response::Error(422, "link non valido: " + S(m)); }
-		if (!pl || pl->GetKind() != CED2KLink::kFile) return Response::Error(422, "il link non e' un link a un file");
+		try { pl.reset(CED2KLink::CreateLinkFromUrl(CString(link.c_str()))); } catch (const CString &m) { return Response::Error(422, "invalid link: " + S(m)); }
+		if (!pl || pl->GetKind() != CED2KLink::kFile) return Response::Error(422, "the link is not a file link");
 		const uchar *h = pl->GetFileLink()->GetHashKey();
-		if (theApp.downloadqueue->GetFileByID(h)) return Response::Error(409, "il file e' gia' in download");
+		if (theApp.downloadqueue->GetFileByID(h)) return Response::Error(409, "the file is already downloading");
 		int cat = b.value("category", 0);
-		if (cat < 0 || cat >= thePrefs.GetCatCount()) return Response::Error(422, "category: id di una categoria che esiste");
+		if (cat < 0 || cat >= thePrefs.GetCatCount()) return Response::Error(422, "category: id of an existing category");
 		theApp.downloadqueue->AddFileLinkToDownload(*pl->GetFileLink(), cat);
 		CPartFile *f = theApp.downloadqueue->GetFileByID(h);
-		if (!f) return Response::Error(422, "il file non e' stato aggiunto (nome o cartella non validi?)");
+		if (!f) return Response::Error(422, "the file was not added (invalid name or folder?)");
 		Audit("download added: " + S(f->GetFileName()) + " (" + Hex(f->GetFileHash()) + ")");
 		return Ok(DownloadJson(f), 201);
 	});
-	srv.Route("PATCH", "/api/v1/downloads/:hash", [](const Request &r) {		// categoria e priorita'
+	srv.Route("PATCH", "/api/v1/downloads/:hash", [](const Request &r) {		// category and priority
 		Response e; CPartFile *f = FindDownload(r, e); if (!f) return e;
 		json b; if (!ParseBody(r, b, e)) return e;
-		if (b.contains("category")) { if (!b["category"].is_number_integer() || b["category"] < 0 || b["category"] >= thePrefs.GetCatCount()) return Response::Error(422, "category: id di una categoria che esiste"); }
+		if (b.contains("category")) { if (!b["category"].is_number_integer() || b["category"] < 0 || b["category"] >= thePrefs.GetCatCount()) return Response::Error(422, "category: id of an existing category"); }
 		int pr = -2;
 		if (b.contains("priority")) {
 			std::string p = b["priority"].is_string() ? b["priority"].get<std::string>() : "";
@@ -491,9 +491,9 @@ void RegisterRoutes(HttpServer &srv, double started_s, const DaemonHooks &hooks)
 		if (b.contains("name")) {
 			newName = b["name"].is_string() ? b["name"].get<std::string>() : "";
 			while (!newName.empty() && (newName.back() == ' ' || newName.back() == '.')) newName.pop_back();
-			if (newName.empty() || newName.size() > 255 || newName.find('/') != std::string::npos || newName.find('\0') != std::string::npos) return Response::Error(422, "name: nome del file, non vuoto, senza \"/\", al massimo 255 byte");
+			if (newName.empty() || newName.size() > 255 || newName.find('/') != std::string::npos || newName.find('\0') != std::string::npos) return Response::Error(422, "name: file name, not empty, without \"/\", at most 255 bytes");
 		}
-		if (!newName.empty() && f->GetStatus() != PS_READY && f->GetStatus() != PS_EMPTY && f->GetStatus() != PS_PAUSED) return Response::Error(409, "non si rinomina un file mentre e' in verifica o in completamento");
+		if (!newName.empty() && f->GetStatus() != PS_READY && f->GetStatus() != PS_EMPTY && f->GetStatus() != PS_PAUSED) return Response::Error(409, "a file cannot be renamed while it is being verified or completed");
 		if (!newName.empty()) { f->SetFileName(CString(newName.c_str()), true, true); f->SavePartFile(); Audit("download renamed: " + S(f->GetFileName())); }
 		if (b.contains("category")) f->SetCategory(b["category"].get<UINT>());
 		if (pr == PR_AUTO) { f->SetAutoDownPriority(true); f->SetDownPriority(PR_HIGH); }
@@ -509,7 +509,7 @@ void RegisterRoutes(HttpServer &srv, double started_s, const DaemonHooks &hooks)
 	srv.Route("POST", "/api/v1/downloads/:hash/pause", [](const Request &r) { Response e; CPartFile *f = FindDownload(r, e); if (!f) return e; f->PauseFile(); Audit("download paused: " + S(f->GetFileName())); return Ok(DownloadJson(f)); });
 	srv.Route("POST", "/api/v1/downloads/:hash/resume", [](const Request &r) { Response e; CPartFile *f = FindDownload(r, e); if (!f) return e; if (f->CanResumeFile()) { if (f->GetStatus() == PS_INSUFFICIENT) f->ResumeFileInsufficient(); else f->ResumeFile(); Audit("download resumed: " + S(f->GetFileName())); } return Ok(DownloadJson(f)); });
 	srv.Route("POST", "/api/v1/downloads/:hash/stop", [](const Request &r) { Response e; CPartFile *f = FindDownload(r, e); if (!f) return e; f->StopFile(); Audit("download stopped: " + S(f->GetFileName())); return Ok(DownloadJson(f)); });
-	srv.Route("DELETE", "/api/v1/downloads/:hash", [](const Request &r) {		// annulla: toglie il download e cancella il .part; un completato esce solo dalla lista (il file resta su disco)
+	srv.Route("DELETE", "/api/v1/downloads/:hash", [](const Request &r) {		// cancel: removes the download and deletes the .part; a completed one only leaves the list (the file stays on disk)
 		if (const auto *c = CompletedOnly(r.params.at("hash"))) { json j = CompletedJson(*c); Audit("completed download removed from the list: " + c->name); emule::CompletedDownloads::Remove(c->hash); return Ok(j); }
 		Response e; CPartFile *f = FindDownload(r, e); if (!f) return e;
 		json j = DownloadJson(f); Audit("download cancelled and partial file deleted: " + S(f->GetFileName())); f->DeletePartFile(); return Ok(j);
@@ -525,20 +525,20 @@ void RegisterRoutes(HttpServer &srv, double started_s, const DaemonHooks &hooks)
 		for (INT_PTR i = 0; i < theApp.serverlist->GetServerCount(); ++i) a.push_back(ServerJson(theApp.serverlist->GetServerAt(i)));
 		return Ok(a);
 	});
-	// la lista si riscrive subito in server.met, come fa eMule dopo ogni modifica
+	// the list is rewritten at once to server.met, as eMule does after every change
 	srv.Route("POST", "/api/v1/servers", [](const Request &r) {
 		json b; Response e; if (!ParseBody(r, b, e)) return e;
 		std::string addr = b.value("address", std::string()); size_t col = addr.rfind(':');
-		uint16_t port = 0; if (col == std::string::npos || !ParsePortStr(addr.substr(col + 1), port) || port == 0 || col == 0) return Response::Error(422, "address deve essere indirizzo:porta (es. 176.123.5.89:4725)");
+		uint16_t port = 0; if (col == std::string::npos || !ParsePortStr(addr.substr(col + 1), port) || port == 0 || col == 0) return Response::Error(422, "address must be address:port (e.g. 176.123.5.89:4725)");
 		std::string host = addr.substr(0, col);
-		if (host.find_first_of(" \t/|") != std::string::npos) return Response::Error(422, "indirizzo non valido");
-		if (theApp.serverlist->GetServerByAddress(host.c_str(), port)) return Response::Error(409, "il server e' gia' in lista");
+		if (host.find_first_of(" \t/|") != std::string::npos) return Response::Error(422, "invalid address");
+		if (theApp.serverlist->GetServerByAddress(host.c_str(), port)) return Response::Error(409, "the server is already in the list");
 		std::string pr = b.value("priority", std::string("normal"));
 		if (pr != "low" && pr != "normal" && pr != "high") return Response::Error(422, "priority: low | normal | high");
 		auto *sv = new CServer(port, host.c_str());
 		sv->SetListName(CString(b.value("name", host).c_str())); sv->SetIsStaticMember(b.value("static", false));
 		sv->SetPreference(pr == "high" ? SRV_PR_HIGH : pr == "low" ? SRV_PR_LOW : SRV_PR_NORMAL);
-		if (!theApp.serverlist->AddServer(sv)) { delete sv; return Response::Error(422, "server non ammesso (indirizzo non valido, locale o filtrato)"); }		// se riesce, la lista si tiene il puntatore
+		if (!theApp.serverlist->AddServer(sv)) { delete sv; return Response::Error(422, "server not allowed (invalid, local or filtered address)"); }		// if it succeeds, the list keeps the pointer
 		theApp.serverlist->SaveServermetToFile();
 		Audit("server added: " + host + ":" + std::to_string(port));
 		CServer *added = theApp.serverlist->GetServerByAddress(host.c_str(), port);
@@ -553,7 +553,7 @@ void RegisterRoutes(HttpServer &srv, double started_s, const DaemonHooks &hooks)
 			sv->SetPreference(pr == "high" ? SRV_PR_HIGH : pr == "low" ? SRV_PR_LOW : SRV_PR_NORMAL);
 		}
 		if (b.contains("static")) { if (!b["static"].is_boolean()) return Response::Error(422, "static: true o false"); sv->SetIsStaticMember(b["static"].get<bool>()); }
-		if (b.contains("name")) { if (!b["name"].is_string() || b["name"].get<std::string>().empty()) return Response::Error(422, "name: testo non vuoto"); sv->SetListName(CString(b["name"].get<std::string>().c_str())); }
+		if (b.contains("name")) { if (!b["name"].is_string() || b["name"].get<std::string>().empty()) return Response::Error(422, "name: non-empty text"); sv->SetListName(CString(b["name"].get<std::string>().c_str())); }
 		theApp.serverlist->SaveServermetToFile();
 		Audit("server changed: " + S(sv->GetAddress()) + ":" + std::to_string(sv->GetPort()));
 		return Ok(ServerJson(sv));
@@ -570,21 +570,21 @@ void RegisterRoutes(HttpServer &srv, double started_s, const DaemonHooks &hooks)
 	});
 	srv.Route("POST", "/api/v1/servers/connect", [](const Request &r) {
 		json b = r.body.empty() ? json::object() : json::parse(r.body, nullptr, false);
-		if (b.is_discarded() || !b.is_object()) return Response::Error(400, "serve un oggetto JSON nel corpo (o niente)");
+		if (b.is_discarded() || !b.is_object()) return Response::Error(400, "a JSON object is required in the body (or nothing)");
 		std::string addr = b.value("address", std::string());
 		Audit("server connect requested: " + (addr.empty() ? std::string("any server") : addr));
 		if (addr.empty()) { theApp.serverconnect->ConnectToAnyServer(); return Ok({{"connecting", true}}, 202); }
-		size_t col = addr.rfind(':'); if (col == std::string::npos) return Response::Error(422, "address deve essere ip:porta");
+		size_t col = addr.rfind(':'); if (col == std::string::npos) return Response::Error(422, "address must be ip:port");
 		CServer *s = theApp.serverlist->GetServerByAddress(addr.substr(0, col).c_str(), (uint16)std::atoi(addr.c_str() + col + 1));
-		if (!s) return Response::Error(404, "server non in lista");
+		if (!s) return Response::Error(404, "server not in the list");
 		theApp.serverconnect->ConnectToServer(s); return Ok({{"connecting", true}, {"server", ServerJson(s)}}, 202);
 	});
 	srv.Route("POST", "/api/v1/servers/disconnect", [](const Request &) { Audit("server disconnect requested"); theApp.serverconnect->Disconnect(); theApp.serverconnect->StopConnectionTry(); return Ok({{"connected", false}}); });
 }
 
 
-// Eventi in diretta: una volta al secondo si confronta lo stato con quello precedente e si manda solo cio' che e' cambiato
-// ponytail: confronto periodico invece di ganci in ogni punto di eMule; scatto minimo 1 s, si passa ai ganci veri se serve latenza minore
+// Live events: once per second the state is compared with the previous one and only what changed is sent
+// ponytail: periodic comparison instead of hooks at every point of eMule; minimum tick 1 s, switch to real hooks if lower latency is needed
 void EventPublisher::Tick()
 {
 	auto send = [this](const char *type, json data) {
@@ -604,7 +604,7 @@ void EventPublisher::Tick()
 	lastDl_ = std::move(now);
 	json se = CurrentSearchSummary();
 	if (se != lastSearch_) { lastSearch_ = se; if (!se.is_null()) send("search.results", se); }
-	// righe nuove del registro (a pacchetti, per non mandare un messaggio per riga)
+	// new log lines (in batches, to avoid one message per line)
 	if (srv_.WsClients()) {
 		bool truncated = false;
 		auto lines = EventLog::Instance().Since(lastLog_, 200, log::Level::Debug, truncated);
@@ -616,7 +616,7 @@ void EventPublisher::Tick()
 EventPublisher::EventPublisher(HttpServer &srv, double started_s, DaemonHooks hooks) : srv_(srv), started_s_(started_s), hooks_(std::move(hooks))
 {
 	lastLog_ = EventLog::Instance().LastId();
-	srv_.SetWsHandler("/api/v1/events", [](uint64_t, const std::string &) {});	// solo dal demone ai client; i messaggi in arrivo si ignorano
+	srv_.SetWsHandler("/api/v1/events", [](uint64_t, const std::string &) {});	// only from the daemon to the clients; incoming messages are ignored
 	timer_ = emule::net::EventLoop::Current()->AddTimer(1000, [this] { Tick(); }, true);
 }
 EventPublisher::~EventPublisher() { if (emule::net::EventLoop::Current()) emule::net::EventLoop::Current()->CancelTimer(timer_); }

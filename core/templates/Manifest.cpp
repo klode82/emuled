@@ -1,4 +1,4 @@
-// LINUX (codice nuovo): vedi Manifest.h
+// LINUX (new code): see Manifest.h
 #include "templates/Manifest.h"
 #include <cctype>
 #include <filesystem>
@@ -30,7 +30,7 @@ bool SafeRelativePath(const std::string &p)
 	if (p.empty() || p.size() > 200 || p[0] == '/') return false;
 	for (char c : p) if (!(std::isalnum((unsigned char)c) || c == '.' || c == '_' || c == '-' || c == '/')) return false;
 	size_t start = 0;
-	for (;;) {			// ogni pezzo fra le '/' deve esistere e non essere "." o ".."
+	for (;;) {			// each piece between the '/' must exist and not be "." or ".."
 		size_t slash = p.find('/', start);
 		std::string part = p.substr(start, slash == std::string::npos ? std::string::npos : slash - start);
 		if (part.empty() || part == "." || part == "..") return false;
@@ -40,7 +40,7 @@ bool SafeRelativePath(const std::string &p)
 	return true;
 }
 
-static bool ValidVersion(const std::string &v)		// numero.numero.numero
+static bool ValidVersion(const std::string &v)		// number.number.number
 {
 	int dots = 0; bool digit = false;
 	for (char c : v) {
@@ -51,42 +51,42 @@ static bool ValidVersion(const std::string &v)		// numero.numero.numero
 	return dots == 2 && digit && v.size() <= 32;
 }
 
-// ponytail: lettore YAML piatto proprio (una ventina di righe); se serve anche altrove si estrae da DaemonConfig.cpp e lo si condivide.
+// ponytail: own flat YAML reader (about twenty lines); if needed elsewhere, extract it from DaemonConfig.cpp and share it.
 ManifestResult ParseManifest(const std::string &input, int daemon_api)
 {
-	ManifestResult r; auto err = [&](int line, const std::string &m) { r.errors.push_back(line > 0 ? "riga " + std::to_string(line) + ": " + m : m); };
-	if (input.size() > kMaxManifestBytes) { err(0, "il file e' troppo grande (al massimo " + std::to_string(kMaxManifestBytes) + " byte)"); return r; }
-	std::string text = input; if (text.compare(0, 3, "\xEF\xBB\xBF") == 0) text.erase(0, 3);		// segno di ordine dei byte (BOM) di alcuni editor
+	ManifestResult r; auto err = [&](int line, const std::string &m) { r.errors.push_back(line > 0 ? "line " + std::to_string(line) + ": " + m : m); };
+	if (input.size() > kMaxManifestBytes) { err(0, "the file is too big (at most " + std::to_string(kMaxManifestBytes) + " bytes)"); return r; }
+	std::string text = input; if (text.compare(0, 3, "\xEF\xBB\xBF") == 0) text.erase(0, 3);		// byte order mark (BOM) added by some editors
 	std::map<std::string, std::string> kv; std::istringstream in(text); std::string line; int n = 0;
 	while (std::getline(in, line)) {
 		++n;
 		size_t hash = line.find('#'); if (hash != std::string::npos) line.erase(hash);
 		line = Trim(line); if (line.empty()) continue;
 		size_t colon = line.find(':');
-		if (colon == std::string::npos) { err(n, "serve \"chiave: valore\""); continue; }
+		if (colon == std::string::npos) { err(n, "expected \"key: value\""); continue; }
 		std::string k = Trim(line.substr(0, colon)), v = Trim(line.substr(colon + 1));
 		if (v.size() >= 2 && ((v.front() == '"' && v.back() == '"') || (v.front() == '\'' && v.back() == '\''))) v = v.substr(1, v.size() - 2);
-		if (k.empty()) { err(n, "chiave mancante"); continue; }
-		if (v.empty()) { err(n, "\"" + k + "\" senza valore"); continue; }
-		if (kv.count(k)) { err(n, "\"" + k + "\" e' scritta due volte"); continue; }
+		if (k.empty()) { err(n, "missing key"); continue; }
+		if (v.empty()) { err(n, "\"" + k + "\" has no value"); continue; }
+		if (kv.count(k)) { err(n, "\"" + k + "\" is written twice"); continue; }
 		kv[k] = v;
 	}
 	auto get = [&](const char *k) { auto it = kv.find(k); return it == kv.end() ? std::string() : it->second; };
 	Manifest &m = r.manifest;
 	m.id = get("id"); m.name = get("name"); m.version = get("version"); m.description = get("description"); m.author = get("author"); m.license = get("license");
-	if (m.id.empty()) err(0, "manca \"id\""); else if (!ValidTemplateId(m.id)) err(0, "\"id\" non valido: da 2 a 32 caratteri fra minuscole, cifre e trattino, senza trattino all'inizio");
-	if (m.name.empty()) err(0, "manca \"name\""); else if (m.name.size() > 60) err(0, "\"name\" e' troppo lungo (al massimo 60 caratteri)");
-	if (m.version.empty()) err(0, "manca \"version\""); else if (!ValidVersion(m.version)) err(0, "\"version\" deve essere del tipo 1.2.3");
-	if (m.description.size() > 300) err(0, "\"description\" e' troppo lunga (al massimo 300 caratteri)");
-	if (m.author.size() > 100) err(0, "\"author\" e' troppo lungo (al massimo 100 caratteri)");
-	if (m.license.size() > 60) err(0, "\"license\" e' troppo lunga (al massimo 60 caratteri)");
+	if (m.id.empty()) err(0, "\"id\" is missing"); else if (!ValidTemplateId(m.id)) err(0, "\"id\" is not valid: 2 to 32 characters among lower-case letters, digits and hyphen, no hyphen at the start");
+	if (m.name.empty()) err(0, "\"name\" is missing"); else if (m.name.size() > 60) err(0, "\"name\" is too long (at most 60 characters)");
+	if (m.version.empty()) err(0, "\"version\" is missing"); else if (!ValidVersion(m.version)) err(0, "\"version\" must look like 1.2.3");
+	if (m.description.size() > 300) err(0, "\"description\" is too long (at most 300 characters)");
+	if (m.author.size() > 100) err(0, "\"author\" is too long (at most 100 characters)");
+	if (m.license.size() > 60) err(0, "\"license\" is too long (at most 60 characters)");
 	if (kv.count("api")) {
 		const std::string a = get("api"); bool num = !a.empty() && a.size() <= 6; for (char c : a) if (c < '0' || c > '9') num = false;
-		if (!num || std::stoi(a) < 1) err(0, "\"api\" deve essere un numero da 1 in su");
-		else { m.api = std::stoi(a); if (m.api > daemon_api) err(0, "il template richiede l'API " + a + " e questo demone arriva alla " + std::to_string(daemon_api) + ": aggiorna emuled o usa un template piu' vecchio"); }
+		if (!num || std::stoi(a) < 1) err(0, "\"api\" must be a number from 1 up");
+		else { m.api = std::stoi(a); if (m.api > daemon_api) err(0, "the template needs API " + a + " and this daemon only goes up to " + std::to_string(daemon_api) + ": update emuled or use an older template"); }
 	}
-	if (kv.count("entry")) { m.entry = get("entry"); if (!SafeRelativePath(m.entry)) err(0, "\"entry\" non e' un percorso relativo valido (niente '..', niente '/' iniziale, solo lettere, cifre e . _ - /)"); }
-	if (kv.count("preview")) { m.preview = get("preview"); if (!SafeRelativePath(m.preview)) err(0, "\"preview\" non e' un percorso relativo valido (niente '..', niente '/' iniziale, solo lettere, cifre e . _ - /)"); }
+	if (kv.count("entry")) { m.entry = get("entry"); if (!SafeRelativePath(m.entry)) err(0, "\"entry\" is not a valid relative path (no '..', no leading '/', only letters, digits and . _ - /)"); }
+	if (kv.count("preview")) { m.preview = get("preview"); if (!SafeRelativePath(m.preview)) err(0, "\"preview\" is not a valid relative path (no '..', no leading '/', only letters, digits and . _ - /)"); }
 	r.ok = r.errors.empty();
 	return r;
 }
@@ -94,10 +94,10 @@ ManifestResult ParseManifest(const std::string &input, int daemon_api)
 ManifestResult LoadManifest(const std::string &path, int daemon_api)
 {
 	ManifestResult r; struct stat st{};
-	if (::stat(path.c_str(), &st) != 0 || !S_ISREG(st.st_mode)) { r.errors.push_back("manca template.yaml (o non e' un file normale)"); return r; }
-	if ((size_t)st.st_size > kMaxManifestBytes) { r.errors.push_back("template.yaml e' troppo grande (al massimo " + std::to_string(kMaxManifestBytes) + " byte)"); return r; }
+	if (::stat(path.c_str(), &st) != 0 || !S_ISREG(st.st_mode)) { r.errors.push_back("template.yaml is missing (or is not a regular file)"); return r; }
+	if ((size_t)st.st_size > kMaxManifestBytes) { r.errors.push_back("template.yaml is too big (at most " + std::to_string(kMaxManifestBytes) + " bytes)"); return r; }
 	std::ifstream f(path, std::ios::binary); std::ostringstream ss; ss << f.rdbuf();
-	if (!f) { r.errors.push_back("template.yaml non leggibile"); return r; }
+	if (!f) { r.errors.push_back("template.yaml is not readable"); return r; }
 	return ParseManifest(ss.str(), daemon_api);
 }
 

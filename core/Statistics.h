@@ -19,8 +19,8 @@
 #include "ring.h"
 #include <atomic>
 #include <type_traits>
-// LINUX: i contatori statici dell'originale sono letti e scritti da piu' thread senza protezione (in Windows e' tollerato);
-// qui sono atomici "rilassati" con la stessa sintassi, cosi' il resto del codice resta identico e ThreadSanitizer non segnala corse.
+// LINUX: the original's static counters are read and written by several threads without protection (tolerated on Windows);
+// here they are "relaxed" atomics with the same syntax, so the rest of the code stays identical and ThreadSanitizer reports no races.
 template<class T> class RA
 {
 	std::atomic<T> v_{};

@@ -1,4 +1,4 @@
-// Tipi e costanti di Winsock sopra i socket POSIX. Vedi core/net/AsyncSocketEx.h.
+// Winsock types and constants on top of POSIX sockets. See core/net/AsyncSocketEx.h.
 #pragma once
 #include <sys/socket.h>
 #include <sys/ioctl.h>
@@ -17,7 +17,7 @@ typedef sa_family_t ADDRESS_FAMILY;
 #define INVALID_SOCKET	(-1)
 #define SOCKET_ERROR	(-1)
 
-// Codici d'errore di Winsock = errno di Linux
+// Winsock error codes = Linux errno
 #define WSAEWOULDBLOCK		EWOULDBLOCK
 #define WSAEINPROGRESS		EINPROGRESS
 #define WSAEALREADY			EALREADY
@@ -36,7 +36,7 @@ typedef sa_family_t ADDRESS_FAMILY;
 #define WSAEMSGSIZE			EMSGSIZE
 #define WSAENOBUFS			ENOBUFS
 
-// Eventi di WSAAsyncSelect
+// WSAAsyncSelect events
 #ifndef FD_READ
 #define FD_READ		0x01
 #define FD_WRITE	0x02
@@ -46,12 +46,12 @@ typedef sa_family_t ADDRESS_FAMILY;
 #define FD_CLOSE	0x20
 #endif
 
-// Ultimo errore di rete del thread: lo imposta ogni chiamata di CAsyncSocketEx che fallisce.
+// Last network error of the thread: set by every CAsyncSocketEx call that fails.
 int WSAGetLastError();
 void WSASetLastError(int e);
 
-// Overlapped I/O di Windows: non esiste su Linux. I tipi servono solo perche' le classi originali li dichiarano;
-// CEMSocket lo usa solo se m_bUseOverlappedSend e' vero, e qui e' sempre falso (si usa l'invio normale).
+// Windows overlapped I/O: does not exist on Linux. The types are only here because the original classes declare them;
+// CEMSocket uses it only if m_bUseOverlappedSend is true, and here it is always false (normal send is used).
 struct WSABUF { ULONG len; char *buf; };
 typedef WSABUF *LPWSABUF;
 struct WSAOVERLAPPED { int unused; HANDLE hEvent; };

@@ -60,7 +60,7 @@ void CClientCredits::AddDownloaded(uint32 bytes, uint32 dwForIP)
 	case IS_IDNEEDED:
 		if (theApp.clientcredits->CryptoAvailable())
 			return;
-	// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+	// LINUX: the other values do nothing (listed so -Wswitch flags new values)
 	case IS_IDENTIFIED:
 	case IS_NOTAVAILABLE:
 		break;
@@ -80,7 +80,7 @@ void CClientCredits::AddUploaded(uint32 bytes, uint32 dwForIP)
 	case IS_IDNEEDED:
 		if (theApp.clientcredits->CryptoAvailable())
 			return;
-	// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+	// LINUX: the other values do nothing (listed so -Wswitch flags new values)
 	case IS_IDENTIFIED:
 	case IS_NOTAVAILABLE:
 		break;
@@ -112,7 +112,7 @@ float CClientCredits::GetScoreRatio(uint32 dwForIP) const
 		if (theApp.clientcredits->CryptoAvailable())
 			// bad guy - no credits for you
 			return 1.0f;
-	// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+	// LINUX: the other values do nothing (listed so -Wswitch flags new values)
 	case IS_IDENTIFIED:
 	case IS_NOTAVAILABLE:
 		break;
@@ -300,7 +300,7 @@ void CClientCreditsList::Process()
 
 void CClientCredits::InitalizeIdent()
 {
-	// LINUX: nKeySize e' un byte letto da clients.met: oltre MAXPUBKEYSIZE (file danneggiato o costruito apposta) la memcpy usciva dai buffer
+	// LINUX: nKeySize is a byte read from clients.met: beyond MAXPUBKEYSIZE (damaged or purposely crafted file) the memcpy overran the buffers
 	if (m_Credits.nKeySize > MAXPUBKEYSIZE) m_Credits.nKeySize = 0;
 	if (m_Credits.nKeySize == 0) {
 		memset(m_abyPublicKey, 0, sizeof m_abyPublicKey); // for debugging

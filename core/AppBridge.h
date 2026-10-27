@@ -1,8 +1,8 @@
-// STUB (ponte con l'applicazione): le parti di eMule che Kademlia e il socket UDP chiamano e che non sono ancora portate.
-// Sostituisce, per ora, srchybrid/DownloadQueue.h, SharedFileList.h, KnownFileList.h, SearchList.h, PartFile.h, KnownFile.h, UpDownClient.h
-// e le finestre grafiche di Kad. Restituisce "niente trovato / niente da fare": il daemon partecipa alla rete Kad (routing, ricerca nodi,
-// firewall) ma non pubblica ne cerca file finche' non arrivano Fase 5 (client, upload, download) e Fase 6 (API).
-// Ogni classe qui sotto sparisce quando la corrispondente viene portata.
+// STUB (bridge with the application): the parts of eMule that Kademlia and the UDP socket call and that are not ported yet.
+// Replaces, for now, srchybrid/DownloadQueue.h, SharedFileList.h, KnownFileList.h, SearchList.h, PartFile.h, KnownFile.h, UpDownClient.h
+// and Kad's graphical windows. Returns "nothing found / nothing to do": the daemon takes part in the Kad network (routing, node search,
+// firewall) but neither publishes nor searches files until Phase 5 (client, upload, download) and Phase 6 (API) arrive.
+// Each class below disappears when the corresponding one is ported.
 #pragma once
 #include "StdAfx.h"
 #include "SHAHashSet.h"
@@ -22,25 +22,25 @@ class CServer;
 struct SSearchTerm;
 namespace Kademlia { class CEntry; class CUInt128; class CContact; }
 
-// (CFileIdentifier, CAbstractFile, CKnownFile, CPartFile, CUpDownClient, CDownloadQueue, CSharedFileList, CKnownFileList: ora sono le classi vere della Fase 5.)
+// (CFileIdentifier, CAbstractFile, CKnownFile, CPartFile, CUpDownClient, CDownloadQueue, CSharedFileList, CKnownFileList: now they are the real Phase 5 classes.)
 
-// Un risultato di ricerca per parole chiave arrivato da Kad (STUB di CSearchList::KademliaSearchKeyword: invece di creare un CSearchFile lo registra).
+// A keyword search result arrived from Kad (STUB of CSearchList::KademliaSearchKeyword: instead of creating a CSearchFile it records it).
 struct KadKeywordHitStub
 {
 	uint32 searchID = 0; std::string hash, name, type, extra; uint64 size = 0;
-	uint32 publishInfo = 0;				// byte alto = numero di editori, ... (vedi Search.cpp)
-	uint32 sources = 0;					// TAG_SOURCES (disponibilita' dichiarata)
+	uint32 publishInfo = 0;				// high byte = number of publishers, ... (see Search.cpp)
+	uint32 sources = 0;					// TAG_SOURCES (declared availability)
 };
 
 class CSearchList
 {
 public:
-	// Risultati di una ricerca sul server (OP_SEARCHRESULT) arrivati da CServerSocket: STUB di CSearchList::ProcessSearchAnswer, registra invece di creare CSearchFile.
+	// Results of a server search (OP_SEARCHRESULT) arrived from CServerSocket: STUB of CSearchList::ProcessSearchAnswer, records instead of creating CSearchFile.
 	UINT ProcessSearchAnswer(const uchar *packet, uint32 size, bool bOptUTF8, uint32 nServerIP, uint16 nServerPort, bool *pbMoreResultsAvailable);
-	// Ricerca globale (UDP): ogni pacchetto OP_GLOBSEARCHRES porta UN file, senza il numero davanti; si legge dal punto corrente e si avanza.
+	// Global search (UDP): every OP_GLOBSEARCHRES packet carries ONE file, without the count in front; it is read from the current point and advanced.
 	UINT ProcessUDPSearchAnswer(class CFileDataIO &packet, bool bOptUTF8, uint32 nServerIP, uint16 nServerPort);
-	std::vector<emule::net::SearchHit> serverHits;				// solo thread logico
-	std::vector<KadKeywordHitStub> kadHits;		// solo thread logico
+	std::vector<emule::net::SearchHit> serverHits;				// logical thread only
+	std::vector<KadKeywordHitStub> kadHits;		// logical thread only
 	void KademliaSearchKeyword(uint32 id, const Kademlia::CUInt128 *pFileID, LPCTSTR name, uint64 size, LPCTSTR type, UINT info, CArray<CAICHHash> &, CArray<uint8> &, SSearchTerm *, UINT numProperties, ...)
 	{
 		KadKeywordHitStub h; h.searchID = id; h.name = name ? name : ""; h.type = type ? type : ""; h.size = size; h.publishInfo = info;
@@ -57,7 +57,7 @@ public:
 	bool AddNotes(const Kademlia::CEntry &, const uchar *) { return false; }
 	void SetNotesSearchStatus(const uchar *, bool) {}
 };
-// finestre grafiche di Kad: nel daemon non esistono, ogni chiamata e' un no-op (diventeranno eventi dell'API in Fase 6)
+// Kad's graphical windows: they do not exist in the daemon, every call is a no-op (they will become API events in Phase 6)
 struct CKadSearchListStub
 {
 	template<class T> void SearchAdd(T *) {}
@@ -68,9 +68,9 @@ struct CSearchWndStub
 {
 	void CancelKadSearch(uint32) {}
 	void CancelEd2kSearch() { if (onCancel) onCancel(); }
-	void LocalEd2kSearchEnd(UINT count = 0, bool more = false) { if (onLocalEnd) onLocalEnd(count, more); }		// il server connesso ha risposto: parte la ricerca globale
+	void LocalEd2kSearchEnd(UINT count = 0, bool more = false) { if (onLocalEnd) onLocalEnd(count, more); }		// the connected server answered: the global search starts
 	void AddEd2kSearchResults(UINT = 0) {}
 	template<class... A> void UpdateSearch(A&&...) {}
-	std::function<void(UINT, bool)> onLocalEnd;		// gancio per GlobalSearch (nell'originale c'e' la finestra dei risultati)
+	std::function<void(UINT, bool)> onLocalEnd;		// hook for GlobalSearch (in the original there is the results window)
 	std::function<void()> onCancel;
 };

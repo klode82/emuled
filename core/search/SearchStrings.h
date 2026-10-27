@@ -1,5 +1,5 @@
-// LINUX: messaggi del parser di ricerca, in inglese (le traduzioni passano all'interfaccia web). Il testo e' quello di emule.rc.
-// Cosi' Parser.y e Scanner.l restano identici all'originale: GetResString(IDS_X) restituisce il testo stesso.
+// LINUX: search parser messages, in English (translations go to the web interface). The text is that of emule.rc.
+// So Parser.y and Scanner.l stay identical to the original: GetResString(IDS_X) returns the text itself.
 #pragma once
 #include "StdAfx.h"
 #define IDS_SEARCH_UNTERMSTRING "Unterminated string"

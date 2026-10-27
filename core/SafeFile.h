@@ -164,17 +164,17 @@ inline uint8 PeekUInt8(const void *p)
 
 inline uint16 PeekUInt16(const void *p)
 {
-	uint16 v; memcpy(&v, p, sizeof v); return v; // LINUX: no cast non allineato
+	uint16 v; memcpy(&v, p, sizeof v); return v; // LINUX: no unaligned cast
 }
 
 inline uint32 PeekUInt32(const void *p)
 {
-	uint32 v; memcpy(&v, p, sizeof v); return v; // LINUX: no cast non allineato
+	uint32 v; memcpy(&v, p, sizeof v); return v; // LINUX: no unaligned cast
 }
 
 inline uint64 PeekUInt64(const void *p)
 {
-	uint64 v; memcpy(&v, p, sizeof v); return v; // LINUX: no cast non allineato
+	uint64 v; memcpy(&v, p, sizeof v); return v; // LINUX: no unaligned cast
 }
 
 
@@ -189,17 +189,17 @@ inline void PokeUInt8(void *p, uint8 nVal)
 
 inline void PokeUInt16(void *p, uint16 nVal)
 {
-	memcpy(p, &nVal, sizeof nVal); // LINUX: no cast non allineato
+	memcpy(p, &nVal, sizeof nVal); // LINUX: no unaligned cast
 }
 
 inline void PokeUInt32(void *p, uint32 nVal)
 {
-	memcpy(p, &nVal, sizeof nVal); // LINUX: no cast non allineato
+	memcpy(p, &nVal, sizeof nVal); // LINUX: no unaligned cast
 }
 
 inline void PokeUInt64(void *p, uint64 nVal)
 {
-	memcpy(p, &nVal, sizeof nVal); // LINUX: no cast non allineato
+	memcpy(p, &nVal, sizeof nVal); // LINUX: no unaligned cast
 }
 
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Prove sul profilo REALE di eMule Windows copiato in $EMULED_REAL_DIR (predefinito /home/steveholmes/eMule: config/, Temp/, file condivisi). Il profilo originale si legge soltanto:
-# tutto cio' che scrive il demone va in una cartella temporanea (copie). Si salta (codice 77) se la cartella non c'e'.
-#   1. known.met riscritto identico al byte; ricalcolo degli hash ed2k di un campione dei file condivisi e confronto con quelli di eMule Windows
-#   2. il demone riprende i download lasciati da eMule Windows (.part.met 0xE0/0xE2) con le stesse percentuali
+# Tests on the REAL Windows eMule profile copied to $EMULED_REAL_DIR (default /home/steveholmes/eMule: config/, Temp/, shared files). The original profile is only read:
+# everything the daemon writes goes to a temporary folder (copies). Skipped (code 77) if the folder is not there.
+#   1. known.met rewritten byte-identical; recomputation of the ed2k hashes of a sample of the shared files and comparison with those of Windows eMule
+#   2. the daemon resumes the downloads left by Windows eMule (.part.met 0xE0/0xE2) with the same percentages
 set -u
 EMULED="${1:?uso: real_profile.sh PERCORSO_EMULED}"
 REAL="${EMULED_REAL_DIR:-/home/steveholmes/eMule}"
@@ -21,12 +21,12 @@ mkdir -p "$W/Temp" "$W/Incoming"; cp -r "$REAL/config" "$W/config"; rm -f "$W"/c
 n=0
 for m in "$REAL"/Temp/*.part.met; do
   b="${m%.part.met}"; [ -f "$b.part" ] || continue
-  sz=$(stat -c %s "$b.part"); [ "$sz" -le 40000000 ] || continue				# solo i piccoli: si copiano
+  sz=$(stat -c %s "$b.part"); [ "$sz" -le 40000000 ] || continue				# only the small ones: they are copied
   cp -p "$m" "$W/Temp/"; cp -p --sparse=always "$b.part" "$W/Temp/"; n=$((n+1))
 done
 [ "$n" -gt 0 ] || { echo "real_profile: nessun .part piccolo in $REAL/Temp: salto la ripresa"; exit 0; }
 "$EMULED" --profile "$REAL/config" --check-profile --pathmap "$MAP=$REAL" | grep -F 'scaricato' > "$W/attese.txt"
-TCP=$((12000 + $$ % 15000)); UDP=$((TCP + 1))		# sotto 32768: fuori dalle porte temporanee di Linux; non quelle del profilo
+TCP=$((12000 + $$ % 15000)); UDP=$((TCP + 1))		# below 32768: outside Linux's ephemeral ports; not those of the profile
 HOME="$W" "$EMULED" --run --fake-profile --profile "$W/config" --offline --api-port 0 --tcp-port "$TCP" --udp-port "$UDP" --status-interval 0 --pathmap "$MAP=$W" > "$W/out.txt" 2>&1 &
 PID=$!
 PORT=""; for _ in $(seq 1 100); do PORT=$(grep -o 'http://127.0.0.1:[0-9]*' "$W/out.txt" | head -1 | grep -o '[0-9]*$'); [ -n "$PORT" ] && [ -s "$W/config/emuled.token" ] && break; sleep 0.1; done

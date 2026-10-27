@@ -560,7 +560,7 @@ void CUpDownClient::SetDownloadState(EDownloadState nNewState, LPCTSTR pszReason
 			SetLastAskedTime();
 			//DontSwapTo(m_reqfile);
 			break;
-		// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+		// LINUX: the other values do nothing (listed so -Wswitch flags new values)
 		case DS_BANNED:
 		case DS_CONNECTED:
 		case DS_DOWNLOADING:
@@ -1853,7 +1853,7 @@ bool CUpDownClient::IsValidSource() const
 	case DS_REMOTEQUEUEFULL:
 	case DS_REQHASHSET:
 		return IsEd2kClient();
-	// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+	// LINUX: the other values do nothing (listed so -Wswitch flags new values)
 	case DS_BANNED:
 	case DS_CONNECTING:
 	case DS_ERROR:
@@ -2140,7 +2140,7 @@ void CUpDownClient::ProcessAICHFileHash(CSafeMemFile *data, CPartFile *file, con
 				if (!SwapToAnotherFile(_T("Source says it doesn't have the file (AICH mismatch). CUpDownClient::ProcessAICHFileHash"), true, true, true, NULL, false, false)) // ZZ:DownloadManager
 					theApp.downloadqueue->RemoveSource(this);
 				break;
-			// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+			// LINUX: the other values do nothing (listed so -Wswitch flags new values)
 			case DS_BANNED:
 			case DS_CONNECTING:
 			case DS_ERROR:

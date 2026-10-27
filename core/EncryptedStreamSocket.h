@@ -25,7 +25,7 @@
  * since it doesn't use secret (and important for rc4: unique) keys
  */
 #pragma once
-#include <atomic>		// LINUX: stato della cifratura condiviso tra il thread del throttler (invio) e quello del ciclo (negoziazione)
+#include <atomic>		// LINUX: encryption state shared between the throttler thread (send) and the loop thread (negotiation)
 #include "AsyncSocketEx.h"
 #include "cryptopp/integer.h"
 
@@ -103,7 +103,7 @@ protected:
 	bool			IsEncryptionLayerReady();
 	static uint8	GetSemiRandomNotProtocolMarker();
 
-	std::atomic<EStreamCryptState>	m_StreamCryptState;	// LINUX: atomico: e' il segnale "la negoziazione e' finita, si puo' cifrare" tra i due thread
+	std::atomic<EStreamCryptState>	m_StreamCryptState;	// LINUX: atomic: it is the "negotiation finished, encryption allowed" signal between the two threads
 	EEncryptionMethods  m_EncryptionMethod;
 	bool	m_bFullReceive;
 	bool	m_bServerCrypt;
@@ -116,7 +116,7 @@ private:
 	RC4_Key_Struct		*m_pRC4SendKey;
 	RC4_Key_Struct		*m_pRC4ReceiveKey;
 	CSafeMemFile		*m_pfiReceiveBuffer;
-	// LINUX: puntatore atomico con la stessa sintassi: il throttler guarda se i dati di negoziazione sono ancora in coda
+	// LINUX: atomic pointer with the same syntax: the throttler checks whether negotiation data is still queued
 	struct AtomicSendBuf {
 		std::atomic<CSafeMemFile*> p{nullptr};
 		operator CSafeMemFile*() const { return p.load(); }
@@ -127,5 +127,5 @@ private:
 	uint32				m_nRandomKeyPart;
 	int					m_nReceiveBytesWanted;
 	int					m_nObfuscatedBytesReceived;
-	std::atomic<ENegotiatingState>	m_NegotiatingState;	// LINUX: atomico (letto da Send nel thread del throttler)
+	std::atomic<ENegotiatingState>	m_NegotiatingState;	// LINUX: atomic (read by Send in the throttler thread)
 };

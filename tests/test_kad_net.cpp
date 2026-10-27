@@ -1,6 +1,6 @@
-// Kad sulla rete locale: il vero stack (routing, listener, socket UDP con offuscamento, throttler) contro un finto nodo Kad su un indirizzo
-// della macchina (non loopback: Kad scarta 127.*). Il finto nodo decifra con il proprio NodeID, controlla il pacchetto e risponde.
-// Nessun pacchetto esce dalla macchina.
+// Kad on the local network: the real stack (routing, listener, UDP socket with obfuscation, throttler) against a fake Kad node on an address
+// of the machine (not loopback: Kad discards 127.*). The fake node decrypts with its own NodeID, checks the packet and replies.
+// No packet leaves the machine.
 #include "StdAfx.h"
 #include "net/Profile.h"
 #include "Emule.h"
@@ -38,10 +38,10 @@ static bool LocalIp(in_addr &out)
 
 int main()
 {
-	emule::net::ScopedProfile profile;		// profilo temporaneo: preferenze iniziali e oggetti dell'applicazione
+	emule::net::ScopedProfile profile;		// temporary profile: initial preferences and application objects
 	in_addr ip;
 	if (!LocalIp(ip)) { std::printf("SKIP nessuna interfaccia di rete non loopback\n"); return 0; }
-	thePrefs.SetFilterLANIPs(false);									// l'indirizzo locale puo' essere privato
+	thePrefs.SetFilterLANIPs(false);									// the local address may be private
 
 	int fs_ = socket(AF_INET, SOCK_DGRAM, 0); sockaddr_in a{}; a.sin_family = AF_INET; a.sin_addr = ip;
 	if (bind(fs_, (sockaddr*)&a, sizeof a)) { std::printf("SKIP bind\n"); return 0; }
@@ -50,7 +50,7 @@ int main()
 
 	uint8_t nodeid[16]; for (int i = 0; i < 16; ++i) nodeid[i] = (uint8_t)(i * 13 + 5);
 
-	// nodes.dat versione 2 con un contatto: il finto nodo
+	// nodes.dat version 2 with one contact: the fake node
 	fs::path tmp = fs::temp_directory_path() / ("kadnet_" + std::to_string(getpid())); fs::create_directories(tmp);
 	{
 		CSafeMemFile f(128);
@@ -58,8 +58,8 @@ int main()
 		f.Write(nodeid, 16);
 		f.WriteUInt32(ntohl(ip.s_addr)); f.WriteUInt16(ntohs(a.sin_port)); f.WriteUInt16(4662);
 		f.WriteUInt8(KADEMLIA_VERSION8_49b);
-		f.WriteUInt32(0); f.WriteUInt32(0);								// chiave UDP: nessuna
-		f.WriteUInt8(1);												// IP verificato
+		f.WriteUInt32(0); f.WriteUInt32(0);								// UDP key: none
+		f.WriteUInt8(1);												// verified IP
 		std::ofstream o(tmp / "nodes.dat", std::ios::binary); o.write((const char*)f.GetBuffer(), (std::streamsize)f.GetLength());
 	}
 	std::string nd = (tmp / "nodes.dat").string(), nds; { std::ifstream i(nd, std::ios::binary); nds.assign(std::istreambuf_iterator<char>(i), {}); }
@@ -74,19 +74,19 @@ int main()
 			if (n <= 0) continue;
 			const uint8_t *p = buf; size_t len = (size_t)n; std::vector<uint8_t> dec;
 			if (buf[0] != OP_KADEMLIAHEADER && buf[0] != OP_KADEMLIAPACKEDPROT) {
-				// cifrato: chiave = MD5(NodeID del destinatario + 2 byte casuali dell'intestazione), RC4, magic a offset 3
+				// encrypted: key = MD5(recipient NodeID + 2 random header bytes), RC4, magic at offset 3
 				uint8_t kd[18]; memcpy(kd, nodeid, 16); memcpy(&kd[16], &buf[1], 2);
 				MD5Sum m(kd, sizeof kd); RC4_Key_Struct k; RC4CreateKey(m.GetRawHash(), MD5_DIGEST_SIZE, &k, true);
 				dec.assign(buf, buf + n); RC4Crypt(&dec[3], (uint32_t)(len - 3), &k);
 				uint32_t magic; memcpy(&magic, &dec[3], 4);
 				if (magic != 0x395F2EC1u) { ++garbage; continue; }
-				size_t hdr = 1 + 2 + 4 + 1 + 8;							// protocollo, chiave, magic, padding, due chiavi di verifica Kad
+				size_t hdr = 1 + 2 + 4 + 1 + 8;							// protocol, key, magic, padding, two Kad verification keys
 				if (len <= hdr) { ++garbage; continue; }
 				p = &dec[hdr]; len -= hdr; ++decrypted;
 			} else ++plain;
 			if (len >= 2 && p[0] == OP_KADEMLIAHEADER) {
 				ops.push_back(p[1]);
-				if (p[1] == KADEMLIA2_REQ && len >= 2 + 1 + 16) {		// <tipo 1><bersaglio 16><controllo 16>: si risponde "nessun contatto vicino"
+				if (p[1] == KADEMLIA2_REQ && len >= 2 + 1 + 16) {		// <type 1><target 16><check 16>: we reply "no close contacts"
 					uint8_t r[2 + 16 + 1] = {OP_KADEMLIAHEADER, KADEMLIA2_RES}; memcpy(&r[2], &p[3], 16); r[18] = 0;
 					sendto(fs_, r, sizeof r, 0, (sockaddr*)&from, fl);
 				}
@@ -108,18 +108,18 @@ int main()
 	for (int op : ops) std::printf(" 0x%02X", op); std::printf("\n");
 	CHECK(r.error.empty());
 	CHECK(r.contacts_before == 1);
-	CHECK(decrypted + plain > 0);											// i pacchetti Kad partono davvero
-	CHECK(garbage == 0);													// e quelli cifrati si decifrano con il NodeID del destinatario
-	CHECK(r.kad_bytes_down > 0);											// la risposta e' arrivata e il listener l'ha letta
+	CHECK(decrypted + plain > 0);											// the Kad packets really go out
+	CHECK(garbage == 0);													// and the encrypted ones are decrypted with the recipient's NodeID
+	CHECK(r.kad_bytes_down > 0);											// the reply arrived and the listener read it
 
-	// ---- scenario 2: ricerca per parole chiave. Il finto nodo ha un ID vicinissimo all'hash della parola "fight" e risponde alla richiesta con un risultato.
+	// ---- scenario 2: keyword search. The fake node has an ID very close to the hash of the word "fight" and replies to the request with one result.
 	{
 		int fs2 = socket(AF_INET, SOCK_DGRAM, 0); sockaddr_in a2{}; a2.sin_family = AF_INET; a2.sin_addr = ip;
 		if (bind(fs2, (sockaddr*)&a2, sizeof a2)) { std::printf("SKIP bind 2\n"); return fails != 0; }
 		socklen_t sl2 = sizeof a2; getsockname(fs2, (sockaddr*)&a2, &sl2);
 		timeval tv2{0, 200000}; setsockopt(fs2, SOL_SOCKET, SO_RCVTIMEO, &tv2, sizeof tv2);
 		Kademlia::CUInt128 kw; KadGetKeywordHash(Kademlia::CKadTagValueString("fight"), &kw);
-		uint8_t id2[16]; memcpy(id2, kw.GetData(), 16); id2[0] ^= 1;						// distanza minima dal bersaglio: dentro la tolleranza di Kad
+		uint8_t id2[16]; memcpy(id2, kw.GetData(), 16); id2[0] ^= 1;						// minimum distance from the target: within Kad's tolerance
 		fs::path tmp2 = fs::temp_directory_path() / ("kadnet2_" + std::to_string(getpid())); fs::create_directories(tmp2);
 		{
 			CSafeMemFile f(128); f.WriteUInt32(0); f.WriteUInt32(2); f.WriteUInt32(1); f.Write(id2, 16);
@@ -147,8 +147,8 @@ int main()
 				if (p[1] == KADEMLIA2_SEARCH_KEY_REQ && len >= 18) {
 					keyreq.assign((const char*)p, len);
 					CSafeMemFile r(256); r.WriteUInt8(OP_KADEMLIAHEADER); r.WriteUInt8(KADEMLIA2_SEARCH_RES);
-					r.Write(id2, 16); r.Write(&p[2], 16); r.WriteUInt16(1);							// chi risponde, bersaglio, un risultato
-					uint8_t fileid[16]; memset(fileid, 0xAB, 16); r.Write(fileid, 16); r.WriteUInt8(3);	// ID del file e 3 tag
+					r.Write(id2, 16); r.Write(&p[2], 16); r.WriteUInt16(1);							// who replies, target, one result
+					uint8_t fileid[16]; memset(fileid, 0xAB, 16); r.Write(fileid, 16); r.WriteUInt8(3);	// file ID and 3 tags
 					auto tagStr = [&](uint8_t name, const char *s) { r.WriteUInt8(0x02); r.WriteUInt16(1); r.WriteUInt8(name); r.WriteUInt16((uint16_t)strlen(s)); r.Write(s, (UINT)strlen(s)); };
 					auto tagInt = [&](uint8_t name, uint32_t v) { r.WriteUInt8(0x03); r.WriteUInt16(1); r.WriteUInt8(name); r.WriteUInt32(v); };
 					tagStr(0x01, "Fight Club ITA.avi"); tagInt(0x02, 734003200u); tagInt(0x15, 42);
@@ -162,8 +162,8 @@ int main()
 		std::printf("  ricerca Kad: partita=%d dopo %d s, parola \"%s\", risultati %zu, opcode:", (int)r2.keyword_search_started, r2.keyword_search_after_s, r2.keyword.c_str(), r2.hits.size());
 		for (int op : ops2) std::printf(" 0x%02X", op); std::printf("\n");
 		CHECK(r2.error.empty()); CHECK(r2.keyword_search_started && r2.keyword == "fight");
-		CHECK(!keyreq.empty());																		// il nodo ha ricevuto KADEMLIA2_SEARCH_KEY_REQ...
-		// ...con l'albero senza la parola chiave gia' usata per scegliere il nodo ("fight"): resta solo "club" (0x01, lunghezza, testo), come in eMule
+		CHECK(!keyreq.empty());																		// the node received KADEMLIA2_SEARCH_KEY_REQ...
+		// ...with the tree without the keyword already used to pick the node ("fight"): only "club" remains (0x01, length, text), as in eMule
 		CHECK(keyreq.size() > 18 && keyreq.find(std::string("\x01\x04\x00" "club", 7)) != std::string::npos && keyreq.find("fight") == std::string::npos);
 		CHECK(r2.hits.size() == 1);
 		if (r2.hits.size() == 1) { CHECK(r2.hits[0].name == "Fight Club ITA.avi" && r2.hits[0].size == 734003200ull && r2.hits[0].sources == 42); CHECK(r2.hits[0].hash == std::string(32, 'A') + "" || r2.hits[0].hash == "ABABABABABABABABABABABABABABABAB"); }

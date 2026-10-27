@@ -1,9 +1,9 @@
-// LINUX: nell'originale queste sono le finestre e le liste dell'interfaccia grafica (TransferDlg, DownloadListCtrl, SharedFilesCtrl, ChatWnd...).
-// Il daemon non le ha: ogni chiamata e' un no-op. In Fase 6 diventeranno gli eventi dell'API (WebSocket) verso l'interfaccia web.
+// LINUX: in the original these are the windows and lists of the graphical interface (TransferDlg, DownloadListCtrl, SharedFilesCtrl, ChatWnd...).
+// The daemon does not have them: every call is a no-op. In Phase 6 they will become the API events (WebSocket) towards the web interface.
 #pragma once
 #include "StdAfx.h"
 
-// Una lista grafica generica (download, sorgenti, coda, upload, file condivisi): tutte le operazioni di aggiornamento sono vuote.
+// A generic graphical list (downloads, sources, queue, uploads, shared files): all update operations are empty.
 class CGuiListSink
 {
 public:
@@ -74,7 +74,7 @@ struct CStatisticsWndStub
 	template<class... A> void SetARange(A&&...) {}
 };
 
-// Messaggi da thread di lavoro al thread principale (EmuleDlg.h): vedi CEmuleDlgStub::PostMessage
+// Messages from worker threads to the main thread (EmuleDlg.h): see CEmuleDlgStub::PostMessage
 enum EEMuleAppMsgs
 {
 	TM_FINISHEDHASHING = 0x8000 + 10,

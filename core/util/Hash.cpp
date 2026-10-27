@@ -1,4 +1,4 @@
-// LINUX: argomento "hash e codifiche esadecimali", estratto di srchybrid/OtherFunctions.cpp. Vedi util/Hash.h.
+// LINUX: the "hashes and hexadecimal encodings" topic, extracted from srchybrid/OtherFunctions.cpp. See util/Hash.h.
 #include "StdAfx.h"
 #include "util/Hash.h"
 

@@ -76,7 +76,7 @@ CUploadQueue::CUploadQueue()
 	, m_bStatisticsWaitingListDirty(true)
 {
 	i1sec = i2sec = i5sec = i60sec = 0;
-	// LINUX: nell'originale ::SetTimer di Windows; qui un timer del ciclo degli eventi, ogni 100 ms
+	// LINUX: in the original Windows ::SetTimer; here an event-loop timer, every 100 ms
 	m_pLoop = emule::net::EventLoop::Current();
 	if (m_pLoop)
 		h_timer = m_pLoop->AddTimer(100, [] { CUploadQueue::UploadTimer(); }, true);
@@ -977,7 +977,7 @@ void CUploadQueue::UploadTimer() noexcept
 					theApp.emuledlg->transferwnd->UpdateCatTabTitles(false);
 				}
 
-				// LINUX: scheduler (perfiles orari) non ancora portato: Bench Fase 6
+				// LINUX: scheduler (time profiles) not ported yet: Bench Phase 6
 				theApp.emuledlg->transferwnd->UpdateListCount(0, -1);
 			}
 

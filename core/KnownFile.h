@@ -107,9 +107,9 @@ public:
 
 	// preview
 	bool	IsMovie() const;
-	virtual bool GrabImage(uint8, double, bool, uint16, void*) { return false; }	// LINUX: miniature dei video non portate (Fase 8)
+	virtual bool GrabImage(uint8, double, bool, uint16, void*) { return false; }	// LINUX: video thumbnails not ported (Phase 8)
 
-	bool	ImportParts(const CString &pathName);	// LINUX: il percorso del file da cui importare (vuoto/inesistente = annulla)
+	bool	ImportParts(const CString &pathName);	// LINUX: the path of the file to import from (empty/nonexistent = cancel)
 
 	// Display / Info / Strings
 	virtual CString	GetInfoSummary(bool bNoFormatCommands = false) const;

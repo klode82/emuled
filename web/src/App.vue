@@ -14,7 +14,7 @@ const { t } = useI18n()
 const session = useSession()
 const setup = useSetup()
 const starting = ref(!!session.token)
-// dopo l'accesso si chiede al demone se il primo avvio e' da completare (Wizard); all'uscita si dimentica
+// after login ask the daemon whether the first start is still to complete (Wizard); on logout it is forgotten
 watch(() => session.ready, (r) => { if (r) void setup.check(); else setup.reset() }, { immediate: true })
 onMounted(async () => { await session.resume(); starting.value = false })
 </script>

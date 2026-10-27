@@ -1,5 +1,5 @@
-// STUB (sostituisce srchybrid/Log.h finche' non viene portato): l'interfaccia di log che i file portati usano.
-// Il testo va a un "pozzo" sostituibile (daemon: file di log; test: memoria). Livelli di Log.h originale: normale, avviso, errore, debug.
+// STUB (replaces srchybrid/Log.h until it is ported): the log interface that the ported files use.
+// The text goes to a replaceable "sink" (daemon: log file; tests: memory). Levels of the original Log.h: normal, warning, error, debug.
 #pragma once
 #include "StdAfx.h"
 #include <functional>
@@ -20,12 +20,12 @@ enum EDebugLogPriority : int { DLP_VERYLOW = 0, DLP_LOW, DLP_DEFAULT, DLP_HIGH, 
 namespace emule::log {
 enum class Level { Info, Warning, Error, Debug };
 struct Line { Level level; std::string text; };
-// Pozzo dei messaggi. Predefinito: nessuno (scartati). I test lo impostano per verificare cosa viene scritto.
+// Message sink. Default: none (discarded). Tests set it to check what is written.
 void SetSink(std::function<void(Level, const std::string &)> sink);
 void Write(Level l, const std::string &text);
-// Secondo pozzo, indipendente dal primo (che resta per --verbose e per i test): il registro degli eventi del demone (EventLog) ci si attacca qui.
+// Second sink, independent of the first (which stays for --verbose and tests): the daemon event log (EventLog) attaches here.
 void SetTap(std::function<void(Level, const std::string &)> tap);
-// Buffer in memoria degli ultimi messaggi, per i test.
+// In-memory buffer of the latest messages, for tests.
 class Capture
 {
 public:
@@ -49,18 +49,18 @@ void Log(LPCTSTR pszLine, ...);
 void Log(UINT uFlags, LPCTSTR pszLine, ...);
 void DebugHexDump(const void *data, UINT lenData);
 CString DbgGetHexDump(const uint8 *data, UINT size);
-CString DbgGetClientID(uint32 nClientID);					// "LowID=n" oppure l'indirizzo IP (ID alto)
+CString DbgGetClientID(uint32 nClientID);					// "LowID=n" or the IP address (high ID)
 class CFile;
-void DebugHexDump(CFile &file);								// dal punto corrente alla fine del file			// "AA BB CC ..." (come l'originale)			// dump esadecimale nel registro di debug
+void DebugHexDump(CFile &file);								// from the current position to the end of the file			// "AA BB CC ..." (as the original)			// hex dump into the debug log
 CString DbgGetFileInfo(const uchar *hash);
 LPCTSTR DbgGetHashTypeString(const uchar *hash);
 void DebugSend(LPCSTR pszOpcode, uint32 ip, uint16 port);
-void DebugRecv(LPCSTR pszOpcode, uint32 ip, uint16 port);		// "<<< OPCODE from ip:porta"
+void DebugRecv(LPCSTR pszOpcode, uint32 ip, uint16 port);		// "<<< OPCODE from ip:port"
 class CUpDownClient;
 void DebugSend(LPCSTR pszMsg, const CUpDownClient *client, const uchar *packet = NULL);
 void DebugRecv(LPCSTR pszMsg, const CUpDownClient *client, const uchar *packet = NULL, uint32 nIP = 0);
 void Debug(LPCTSTR pszFmtMsg, ...);
-void DebugSendF(LPCSTR pszOpcode, uint32 ip, uint16 port, LPCTSTR pszMsg, ...);		// ">>> OPCODE to ip:porta" nel registro di debug (ip = ordine host, come in eMule)
+void DebugSendF(LPCSTR pszOpcode, uint32 ip, uint16 port, LPCTSTR pszMsg, ...);		// ">>> OPCODE to ip:port" in the debug log (ip = host order, as in eMule)
 void DebugLogError(LPCTSTR pszLine, ...);
 void DebugLogError(UINT uFlags, LPCTSTR pszLine, ...);
 void DebugLog(UINT uFlags, LPCTSTR pszLine, ...);

@@ -209,7 +209,7 @@ bool CServerSocket::ProcessPacket(const BYTE *packet, uint32 size, uint8 opcode)
 						iDynIP += _countof(sDynIP) - 1;
 						int iBracket = message.Find(_T(']'), iDynIP);
 						if (iBracket > 0) {
-							const CString dynip(message.Mid(iDynIP, iBracket - iDynIP).Trim());		// LINUX: copia (con "const CString &" restava un riferimento al temporaneo di Mid(), gia' distrutto)
+							const CString dynip(message.Mid(iDynIP, iBracket - iDynIP).Trim());		// LINUX: copy (with "const CString &" it stayed a reference to the temporary from Mid(), already destroyed)
 							if (!dynip.IsEmpty() && dynip.GetLength() < 51) {
 								// Verify that we really received a DN.
 								if (pServer && inet_addr((CStringA)dynip) == INADDR_NONE) {
@@ -379,7 +379,7 @@ bool CServerSocket::ProcessPacket(const BYTE *packet, uint32 size, uint8 opcode)
 				if (file) {
 					const UINT before = file->GetSourceCount();
 					file->AddSources(&sources, cur_server->GetIP(), cur_server->GetPort(), (opcode == OP_FOUNDSOURCES_OBFU));
-					// LINUX: con il debug acceso dice cosa ha risposto il server e quante fonti sono entrate (le altre sono scartate: gia' note, in lista nera, ID basso verso ID basso, filtro IP...)
+					// LINUX: with debug on, says what the server answered and how many sources got in (the others are discarded: already known, blacklisted, low ID to low ID, IP filter...)
 					if (thePrefs.GetVerbose())
 						AddDebugLogLine(false, _T("Server %s sent %u source(s) for \"%s\": %u added, now %u"), (LPCTSTR)cur_server->GetListName(), (UINT)packet[16], (LPCTSTR)file->GetFileName(), file->GetSourceCount() - before, file->GetSourceCount());
 				} else if (thePrefs.GetVerbose())

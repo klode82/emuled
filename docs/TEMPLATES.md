@@ -1,76 +1,76 @@
-# Come si crea un template d'interfaccia
+# How to create an interface template
 
-Questo documento è per chi vuole fare un nuovo aspetto per emuled. Non serve conoscere il codice di emuled: un template parla con il demone **solo tramite la sua API** (`docs/APIDOC.md`, `docs/openapi.json`) e può essere scritto come si vuole (una pagina HTML, Vue, React, quello che preferisci). L'esempio più piccolo possibile, che funziona, è in [`docs/examples/template-ciao/`](examples/template-ciao/).
+This document is for anyone who wants to make a new look for emuled. You do not need to know emuled's code: a template talks to the daemon **only through its API** (`docs/APIDOC.md`, `docs/openapi.json`) and can be written however you like (an HTML page, Vue, React, whatever you prefer). The smallest possible example that works is in [`docs/examples/template-ciao/`](examples/template-ciao/).
 
-## 1. In due parole
+## 1. In a nutshell
 
-Un *template* è una **cartella** con:
-- un file **`template.yaml`** che lo descrive;
-- una **pagina d'ingresso** (di solito `index.html`) e tutti i file che servono (script, stili, immagini);
-- facoltativamente un'**immagine di anteprima**.
+A *template* is a **folder** with:
+- a **`template.yaml`** file that describes it;
+- an **entry page** (usually `index.html`) and all the files it needs (scripts, styles, images);
+- optionally, a **preview image**.
 
-Si copia in `~/.emuled/templates/<id>/` e compare nell'elenco dei template. Quelli di serie stanno in `/usr/share/emuled/templates/` e **non si toccano**: per partire da uno di essi, copia la cartella e dagli un altro nome.
+Copy it to `~/.emuled/templates/<id>/` and it appears in the list of templates. The built-in ones live in `/usr/share/emuled/templates/` and **must not be touched**: to start from one of them, copy the folder and give it another name.
 
-## 2. Il file `template.yaml`
+## 2. The `template.yaml` file
 
-Righe `chiave: valore`, commenti con `#`, niente liste e niente annidamenti. Le chiavi che non conosce le ignora.
+`key: value` lines, comments with `#`, no lists and no nesting. Keys it does not know are ignored.
 
-| Chiave | Obbligatoria | Significato |
+| Key | Required | Meaning |
 |---|---|---|
-| `id` | sì | Da 2 a 32 caratteri: lettere minuscole, cifre e trattino (non all'inizio). **Deve essere uguale al nome della cartella.** I nomi `console`, `dashboard`, `studio`, `mobile` sono riservati ai template di serie. |
-| `name` | sì | Il nome che si vede nelle Preferenze (al massimo 60 caratteri). |
-| `version` | sì | Tre numeri separati da punti: `1.0.0`. |
-| `description` | no | Una frase (al massimo 300 caratteri). |
-| `author`, `license` | no | Chi l'ha fatto, con quale licenza. |
-| `api` | no | La versione dell'API dei template che ti serve. Predefinita `1`. Un demone più vecchio di così rifiuta il template e spiega perché. |
-| `entry` | no | La pagina d'ingresso, percorso relativo alla cartella. Predefinita `index.html`. |
-| `preview` | no | Immagine di anteprima (PNG o JPEG), percorso relativo. |
+| `id` | yes | From 2 to 32 characters: lowercase letters, digits and hyphen (not at the start). **Must be equal to the folder name.** The names `console`, `dashboard`, `studio`, `mobile` are reserved for the built-in templates. |
+| `name` | yes | The name shown in Preferences (at most 60 characters). |
+| `version` | yes | Three numbers separated by dots: `1.0.0`. |
+| `description` | no | One sentence (at most 300 characters). |
+| `author`, `license` | no | Who made it, and under which license. |
+| `api` | no | The version of the template API that you need. Default `1`. A daemon older than that rejects the template and explains why. |
+| `entry` | no | The entry page, path relative to the folder. Default `index.html`. |
+| `preview` | no | Preview image (PNG or JPEG), relative path. |
 
-I percorsi (`entry`, `preview`) possono contenere solo lettere, cifre e `. _ - /`; niente `..`, niente `/` iniziale.
+Paths (`entry`, `preview`) can only contain letters, digits and `. _ - /`; no `..`, no leading `/`.
 
-## 3. Come viene servito
+## 3. How it is served
 
-Il demone serve la cartella a **`/t/<id>/`**, senza chiedere il token (le pagine sono pubbliche; i dati no: l'API lo richiede). Quindi:
-- scrivi gli indirizzi dei tuoi file in modo **relativo** (`app.js`, `img/logo.png`, non `/app.js`), perché il template non sta alla radice;
-- le applicazioni a pagina singola vanno bene: un percorso senza estensione che non esiste dà la pagina d'ingresso;
-- non puoi uscire dalla cartella (né con `..` né con collegamenti simbolici) e non c'è codice che gira sul server: solo file.
+The daemon serves the folder at **`/t/<id>/`**, without asking for the token (the pages are public; the data is not: the API requires it). So:
+- write the addresses of your files **relative** (`app.js`, `img/logo.png`, not `/app.js`), because the template is not at the root;
+- single-page applications are fine: a path with no extension that does not exist returns the entry page;
+- you cannot get out of the folder (neither with `..` nor with symbolic links) and no code runs on the server: only files.
 
-## 4. Le regole del contratto
+## 4. The rules of the contract
 
-Sono poche, ma servono perché i template convivano.
+They are few, but they are needed so that templates can live together.
 
-1. **Il token** sta nel browser alla chiave `localStorage['emuled.token']` (testo semplice). Se c'è, usalo e **non chiedere di nuovo l'accesso**: vale per tutti i template. Se manca o il demone risponde `401`, mostra la tua schermata d'accesso e salvalo alla **stessa chiave**. L'accesso normale è con **nome utente e password**: `GET /api/v1/auth/status` dice se serve il primo avvio (`setup_required`), `POST /api/v1/auth/login` `{"username","password"}` risponde con `{"token"}`, che è un gettone di sessione da salvare alla chiave e da usare come Bearer. Il primo account si crea con `POST /api/v1/auth/setup` (serve il codice di impostazione stampato dal demone). Il token del file `emuled.token` vale ancora (script e strumenti): offri anche quello se vuoi. Dettagli in `docs/APIDOC.md`.
-2. **Lingua e tema** (facoltativi, ma graditi): `localStorage['emuled.lang']` vale `it` o `en`; `localStorage['emuled.theme']` vale `system`, `light` o `dark`.
-3. **Un modo per cambiare aspetto**: metti un link a **`/?template=console`**. Porta al template predefinito, dove si sceglie dalle Preferenze. Se vuoi dare la scelta direttamente, `GET /api/v1/templates` elenca i template (anche con `preview`) e, per cambiare, basta scrivere `localStorage['emuled.template'] = '<id>'` e aprire `/`.
-4. **Non spedire il token a nessuno**: solo a `/api/v1/…` dello stesso indirizzo da cui sei stato aperto. Niente script, stili, font o immagini presi da altri siti: un template deve funzionare anche senza internet. Il demone lo **fa rispettare** con un'intestazione di sicurezza (`Content-Security-Policy`) sulle pagine dei template: richieste (`fetch`, WebSocket), script, stili, font, immagini e audio/video sono permessi solo verso lo stesso indirizzo del demone (più `data:` e `blob:`); gli script e gli stili scritti dentro la pagina sono ammessi. Una richiesta verso un altro sito viene bloccata dal browser. Vedi anche la sezione 7.
-5. **Niente HTML dai dati**: i nomi dei file, degli utenti e i commenti li decide chi li condivide. Mostrali con `textContent` (o con l'equivalente del tuo strumento), mai con `innerHTML`.
+1. **The token** is in the browser under the key `localStorage['emuled.token']` (plain text). If it is there, use it and **do not ask to sign in again**: it is valid for all templates. If it is missing or the daemon answers `401`, show your own sign-in screen and save it under the **same key**. The normal sign-in is with **username and password**: `GET /api/v1/auth/status` says whether the first start is needed (`setup_required`), `POST /api/v1/auth/login` `{"username","password"}` answers with `{"token"}`, which is a session token to save under the key and to use as Bearer. The first account is created with `POST /api/v1/auth/setup` (it needs the setup code printed by the daemon). The token in the `emuled.token` file is still valid (scripts and tools): offer that too if you want. Details in `docs/APIDOC.md`.
+2. **Language and theme** (optional, but welcome): `localStorage['emuled.lang']` is `it` or `en`; `localStorage['emuled.theme']` is `system`, `light` or `dark`.
+3. **A way to change the look**: put a link to **`/?template=console`**. It leads to the default template, where the choice is made in Preferences. If you want to offer the choice directly, `GET /api/v1/templates` lists the templates (also with `preview`) and, to switch, just write `localStorage['emuled.template'] = '<id>'` and open `/`.
+4. **Do not send the token to anyone**: only to `/api/v1/…` on the same address you were opened from. No scripts, styles, fonts or images taken from other sites: a template must work even without internet. The daemon **enforces** this with a security header (`Content-Security-Policy`) on the template pages: requests (`fetch`, WebSocket), scripts, styles, fonts, images and audio/video are only allowed towards the same address as the daemon (plus `data:` and `blob:`); scripts and styles written inside the page are allowed. A request to another site is blocked by the browser. See also section 7.
+5. **No HTML from data**: file names, user names and comments are decided by whoever shares them. Show them with `textContent` (or the equivalent in your tool), never with `innerHTML`.
 
-## 5. Parlare con il demone
+## 5. Talking to the daemon
 
-Tutto passa dall'API REST a `/api/v1/…` con l'intestazione `Authorization: Bearer <token>`; gli aggiornamenti in diretta arrivano dal WebSocket `/api/v1/events?token=<token>`. Il manuale delle chiamate è `docs/APIDOC.md`; la descrizione per le macchine è `docs/openapi.json` (anche a `/api/v1/openapi.json`, senza token). Esempio:
+Everything goes through the REST API at `/api/v1/…` with the header `Authorization: Bearer <token>`; live updates come from the WebSocket `/api/v1/events?token=<token>`. The manual for the calls is `docs/APIDOC.md`; the machine-readable description is `docs/openapi.json` (also at `/api/v1/openapi.json`, without a token). Example:
 
 ```js
 const token = localStorage.getItem('emuled.token');
 const stato = await fetch('/api/v1/status', { headers: { Authorization: 'Bearer ' + token } }).then(r => r.json());
 ```
 
-Il «contratto» con i template è questa API: finché una chiamata del tipo `/api/v1/…` esiste, il tuo template funziona. Il numero `api` del manifest dice quale versione dei template ti serve.
+The "contract" with templates is this API: as long as a call of the `/api/v1/…` kind exists, your template works. The `api` number in the manifest says which version of the templates you need.
 
-## 6. Provarlo
+## 6. Trying it out
 
-1. Copia la cartella in `~/.emuled/templates/<id>/`.
-2. Chiedi al demone di rileggere: `POST /api/v1/templates/rescan` (oppure riavvialo). Il **Registro** di emuled dice «Template: N caricati, M non validi» e, per ogni template che non si carica, il motivo.
-3. Apri `http://127.0.0.1:8765/?template=<id>`.
-4. Se il template che avevi scelto sparisce o si rompe, la pagina d'aiuto lo dice e **toglie da sola la scelta**: la volta dopo si apre il predefinito. Se qualcosa va storto, `http://127.0.0.1:8765/?template=console` riporta al template predefinito.
+1. Copy the folder to `~/.emuled/templates/<id>/`.
+2. Ask the daemon to read again: `POST /api/v1/templates/rescan` (or restart it). The emuled **Log** says "Templates: N loaded, M invalid" and, for each template that does not load, the reason.
+3. Open `http://127.0.0.1:8765/?template=<id>`.
+4. If the template you had chosen disappears or breaks, the help page says so and **removes the choice by itself**: the next time the default one opens. If something goes wrong, `http://127.0.0.1:8765/?template=console` takes you back to the default template.
 
-Per sviluppare senza copiare ogni volta: avvia il demone con `--templates-dir <la tua cartella>` (o `templates_dir:` in `config.yaml`, o `EMULED_TEMPLATES_DIR`) e metti lì il template.
+To develop without copying every time: start the daemon with `--templates-dir <your folder>` (or `templates_dir:` in `config.yaml`, or `EMULED_TEMPLATES_DIR`) and put the template there.
 
-## 7. Sicurezza, detta chiaramente
+## 7. Security, stated plainly
 
-Un template è un **programma che gira nella pagina** e vede il token: chi lo scrive potrebbe, in teoria, usarlo per comandare il tuo demone. Per questo emuled non scarica template da nessuna parte e non scrive mai nelle cartelle dei template: **installa solo template di cui ti fidi**, come faresti con qualunque programma. Le Preferenze avvisano quando scegli un template che non è di serie.
+A template is a **program that runs in the page** and sees the token: whoever writes it could, in theory, use it to command your daemon. That is why emuled does not download templates from anywhere and never writes into the template folders: **only install templates you trust**, as you would with any program. Preferences warn you when you choose a template that is not built-in.
 
-Cosa fa il demone per limitare i danni: serve solo file normali dentro la cartella del template (niente `..`, niente collegamenti che escono; **al massimo 32 MB per file**), manda sulle pagine dei template l'intestazione `Content-Security-Policy` descritta sopra più `Referrer-Policy: no-referrer` e `X-Frame-Options: DENY` (il template non può essere incorniciato in un altro sito), accetta un manifest di al massimo 8 KB e un'anteprima di al massimo 2 MB. **Non basta a fermare tutto**: un template malevolo potrebbe ancora spostare la pagina verso un altro sito portandosi dietro il token. Per questo la regola resta: solo template di cui ti fidi.
+What the daemon does to limit the damage: it only serves normal files inside the template folder (no `..`, no links that leave it; **at most 32 MB per file**), it sends on the template pages the `Content-Security-Policy` header described above plus `Referrer-Policy: no-referrer` and `X-Frame-Options: DENY` (the template cannot be framed in another site), it accepts a manifest of at most 8 KB and a preview of at most 2 MB. **This is not enough to stop everything**: a malicious template could still move the page to another site, taking the token with it. That is why the rule remains: only templates you trust.
 
-## 8. L'esempio
+## 8. The example
 
-[`docs/examples/template-ciao/`](examples/template-ciao/) è un template completo in due file (`template.yaml` e `index.html`): chiede il token se manca, mostra la velocità e l'elenco dei download, e ha il link «Cambia aspetto». È il punto di partenza consigliato.
+[`docs/examples/template-ciao/`](examples/template-ciao/) is a complete template in two files (`template.yaml` and `index.html`): it asks for the token if it is missing, shows the speed and the list of downloads, and has the "Change look" link. It is the recommended starting point.

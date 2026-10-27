@@ -1,4 +1,4 @@
-// Stato generale (ed2k, Kad, velocita') e storico delle velocita' per i grafici
+// General state (ed2k, Kad, speeds) and speed history for the charts
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { ServerEvent, Status } from '@/types'

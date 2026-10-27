@@ -1,5 +1,5 @@
-// MediaProbe: dal JSON di mediainfo alla forma compatta (con l'uscita VERA di mediainfo su un mkv), e il lancio del programma con un finto mediainfo:
-// percorsi con spazi e caratteri della shell, programma assente, uscita non JSON, timeout.
+// MediaProbe: from mediainfo JSON to the compact form (with REAL mediainfo output on an mkv), and launching the program with a fake mediainfo:
+// paths with spaces and shell characters, missing program, non-JSON output, timeout.
 #include "media/MediaProbe.h"
 #include <chrono>
 #include <cstdio>
@@ -15,7 +15,7 @@ static double Now() { return std::chrono::duration<double>(std::chrono::steady_c
 int main(int argc, char **argv)
 {
 	const std::string data = argc > 1 ? argv[1] : "tests/data";
-	// forma compatta dall'uscita vera di mediainfo (un mkv con 1 video, 4 audio, 3 sottotitoli)
+	// compact form from real mediainfo output (an mkv with 1 video, 4 audio, 3 subtitles)
 	{
 		std::ifstream f(data + "/mediainfo_mkv.json"); json mi = json::parse(f, nullptr, false);
 		if (mi.is_discarded()) { std::printf("fixture assente: salto\n"); }
@@ -27,17 +27,17 @@ int main(int argc, char **argv)
 			CHECK(c["text"].size() == 3 && c["text"][0]["lang"] == "it" && c["text"][0]["codec"] == "UTF-8");
 		}
 	}
-	CHECK(emule::media::Compact(json{{"media", nullptr}})["recognized"] == false);			// file non riconosciuto
+	CHECK(emule::media::Compact(json{{"media", nullptr}})["recognized"] == false);			// unrecognized file
 	CHECK(emule::media::Compact(json("spazzatura"))["recognized"] == false);
-	CHECK(emule::media::Compact(json::parse(R"X({"media":{"track":[{"@type":"General","FileSize":"0"}]}})X"))["recognized"] == false);		// file vuoto o non capito: c'e solo la traccia General
-	// lancio: un finto mediainfo (script) nella cartella di prova
+	CHECK(emule::media::Compact(json::parse(R"X({"media":{"track":[{"@type":"General","FileSize":"0"}]}})X"))["recognized"] == false);		// empty or not understood file: only the General track is there
+	// launch: a fake mediainfo (script) in the test folder
 	fs::path base = fs::temp_directory_path() / ("mediaprobe_" + std::to_string(getpid())); fs::create_directories(base);
 	auto script = [&](const std::string &name, const std::string &body) { fs::path p = base / name; std::ofstream(p) << "#!/bin/sh\n" << body << "\n"; fs::permissions(p, fs::perms::owner_all); return p.string(); };
 	const std::string ok = script("ok", R"X(echo '{"media":{"track":[{"@type":"General","Format":"Matroska","Duration":"12.5"}]}}'; echo "$1|$2" > )X" + (base / "args").string());
 	const std::string weird = (base / "nome con spazi; echo x $(boh) 'e apici.mkv").string();
 	json r = emule::media::Probe(ok, weird, 5);
 	CHECK(r["state"] == "done" && r["recognized"] == true && r["general"]["format"] == "Matroska" && r["general"]["duration_s"] == 12.5);
-	{ std::ifstream a(base / "args"); std::string l; std::getline(a, l); CHECK(l == "--Output=JSON|" + weird); }		// il percorso arriva intero, senza shell
+	{ std::ifstream a(base / "args"); std::string l; std::getline(a, l); CHECK(l == "--Output=JSON|" + weird); }		// the path arrives whole, without a shell
 	CHECK(emule::media::Probe("", "/x", 5)["state"] == "unavailable");
 	CHECK(emule::media::FindBinary("/non/esiste/mediainfo").empty() && emule::media::FindBinary(ok) == ok);
 	CHECK(emule::media::Probe(script("junk", "echo 'non e json'"), "/x", 5)["reason"] == "bad_output");

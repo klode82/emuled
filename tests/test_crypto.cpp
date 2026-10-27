@@ -1,4 +1,4 @@
-// RC4, MD5Sum (stringhe come UTF-16LE, compatibili con Windows), ipstr e CEncryptedStreamSocket (obfuscation del protocollo) su localhost.
+// RC4, MD5Sum (strings as UTF-16LE, Windows-compatible), ipstr and CEncryptedStreamSocket (protocol obfuscation) on localhost.
 #include "StdAfx.h"
 #include "net/Profile.h"
 #include "Emule.h"
@@ -23,7 +23,7 @@ static bool Pump(EventLoop &l, const std::function<bool()> &pred, double secs = 
 static void Spin(EventLoop &l, double secs) { double end = Now() + secs; while (Now() < end) l.RunOnce(5); }
 static std::string Hex(const uint8_t *p, size_t n) { static const char *d = "0123456789ABCDEF"; std::string s; for (size_t i = 0; i < n; ++i) { s += d[p[i] >> 4]; s += d[p[i] & 15]; } return s; }
 
-// socket con obfuscation: legge tutto in rx (gia' decifrato)
+// socket with obfuscation: reads everything into rx (already decrypted)
 struct ES : CEncryptedStreamSocket
 {
 	std::string rx; int err = 0; std::function<void()> onSend, onClose;
@@ -31,7 +31,7 @@ struct ES : CEncryptedStreamSocket
 	void OnSend(int e) override { CEncryptedStreamSocket::OnSend(e); if (onSend) onSend(); }
 	void OnClose(int) override { if (onClose) onClose(); }
 	void OnError(int e) override { err = e; }
-	// Come CEMSocket: la sottoclasse cifra il blocco con CryptPrepareSendData PRIMA di Send (ogni byte attraversa il flusso RC4 una sola volta)
+	// As CEMSocket: the subclass encrypts the block with CryptPrepareSendData BEFORE Send (every byte goes through the RC4 stream only once)
 	bool Send(const std::string &s) { std::string c = s; CryptPrepareSendData((uchar*)c.data(), (uint32)c.size()); return CEncryptedStreamSocket::Send(c.data(), (int)c.size()) == (int)c.size(); }
 };
 struct Listener : CAsyncSocketEx
@@ -49,29 +49,29 @@ static UINT PortOf(const CAsyncSocketEx &s) { CString a; UINT p = 0; s.GetSockNa
 
 int main()
 {
-	emule::net::ScopedProfile profile;		// profilo temporaneo: preferenze iniziali e oggetti dell'applicazione
-	// --- RC4: vettori noti (con bSkipDiscard = true e' RC4 classico; eMule scarta i primi 1024 byte)
+	emule::net::ScopedProfile profile;		// temporary profile: initial preferences and application objects
+	// --- RC4: known vectors (with bSkipDiscard = true it is classic RC4; eMule discards the first 1024 bytes)
 	{
 		RC4_Key_Struct k; RC4CreateKey((const uchar*)"Key", 3, &k, true);
 		uchar out[9]; RC4Crypt((const uchar*)"Plaintext", out, 9, &k); CHECK(Hex(out, 9) == "BBF316E8D940AF0AD3");
 		RC4CreateKey((const uchar*)"Secret", 6, &k, true);
 		uchar o2[14]; RC4Crypt((const uchar*)"Attack at dawn", o2, 14, &k); CHECK(Hex(o2, 14) == "45A01F645FC35B383552544B9BF5");
-		// cifrare e decifrare con due chiavi uguali ridanno il testo; il flusso e' continuo tra una chiamata e l'altra
+		// encrypting and decrypting with two equal keys give back the text; the stream is continuous between one call and the next
 		uchar key[16] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}; RC4_Key_Struct *a = RC4CreateKey(key, 16), *b = RC4CreateKey(key, 16);
 		uchar buf[100]; for (int i = 0; i < 100; ++i) buf[i] = (uchar)i; uchar c1[100]; memcpy(c1, buf, 100);
-		RC4Crypt(c1, 40, a); RC4Crypt(c1 + 40, 60, a);									// in due pezzi
+		RC4Crypt(c1, 40, a); RC4Crypt(c1 + 40, 60, a);									// in two pieces
 		CHECK(memcmp(c1, buf, 100) != 0); RC4Crypt(c1, 100, b); CHECK(memcmp(c1, buf, 100) == 0);
 		delete a; delete b;
 	}
-	// --- MD5Sum: byte grezzi e stringhe. Una CString si hasha come UTF-16LE, come su Windows (le password del web server sono salvate cosi')
+	// --- MD5Sum: raw bytes and strings. A CString is hashed as UTF-16LE, as on Windows (the web server passwords are saved that way)
 	{
-		CHECK(CString(md4str(MD5Sum((const byte*)"", 0).GetRawHash())) == "D41D8CD98F00B204E9800998ECF8427E");		// md4str stampa 16 byte, va bene anche per l'MD5
+		CHECK(CString(md4str(MD5Sum((const byte*)"", 0).GetRawHash())) == "D41D8CD98F00B204E9800998ECF8427E");		// md4str prints 16 bytes, fine for MD5 too
 		CHECK(MD5Sum((const byte*)"abc", 3).GetHashString() == "900150983CD24FB0D6963F7D28E17F72");
 		CHECK(MD5Sum(CString("abc")).GetHashString() == "CE1473CF80C6B3FDA8E3DFC006ADC315");
 		CHECK(MD5Sum(CString("password")).GetHashString() == "B081DBE85E1EC3FFC3D4E7D0227400CD");
 		CHECK(MD5Sum(CString("p\xC3\xA0ss \xE2\x82\xAC")).GetHashString() == "0F39D532B0227ED560E790CA303DC4E6");	// "pàss €"
 	}
-	// --- ipstr: l'indirizzo e' un uint32 con i byte in ordine di rete
+	// --- ipstr: the address is a uint32 with bytes in network order
 	{
 		uint32 ip; memcpy(&ip, "\x7F\x00\x00\x01", 4);
 		CHECK(ipstr(ip) == "127.0.0.1" && ipstr(ip, 4662) == "127.0.0.1:4662" && ipstr("a.b.c", 80) == "a.b.c:80");
@@ -79,7 +79,7 @@ int main()
 	}
 
 	EventLoop loop; ScopedLoop sl(loop);
-	// --- obfuscation: handshake completo, dati in chiaro dopo la decifratura nei due sensi, sul filo non c'e' il testo ne' un marcatore eMule
+	// --- obfuscation: full handshake, plaintext after decryption in both directions, on the wire there is neither the text nor an eMule marker
 	{
 		thePrefs.SetCryptLayer(true, false, false); thePrefs.SetCryptTCPPaddingLength(40);
 		Listener sv; sv.Create(0, SOCK_STREAM, FD_ACCEPT, "127.0.0.1", AF_INET, true); sv.Listen(16); UINT port = PortOf(sv);
@@ -94,7 +94,7 @@ int main()
 		CHECK(Pump(loop, [&] { return cli.rx == back; }));
 		CHECK(cli.err == 0 && srv->err == 0);
 	}
-	// --- sul filo: cio' che un client con obfuscation manda non somiglia a un pacchetto eMule
+	// --- on the wire: what a client with obfuscation sends does not look like an eMule packet
 	{
 		thePrefs.SetCryptLayer(true, false, false); thePrefs.SetCryptTCPPaddingLength(40);
 		RawListener sv; sv.Create(0, SOCK_STREAM, FD_ACCEPT, "127.0.0.1", AF_INET, true); sv.Listen(16); UINT port = PortOf(sv);
@@ -103,12 +103,12 @@ int main()
 			ES cli; cli.Create(0, SOCK_STREAM, FD_CONNECT | FD_WRITE | FD_READ | FD_CLOSE); cli.SetConnectionEncryption(true, thePrefs.GetUserHash(), false); cli.Connect("127.0.0.1", port);
 			Pump(loop, [&] { return !sv.conns.empty() && sv.conns.back()->rx.size() >= 12; }, 3);
 			if (!sv.conns.empty() && !sv.conns.back()->rx.empty()) { uint8_t f = (uint8_t)sv.conns.back()->rx[0]; ++total; if (f != OP_EDONKEYPROT && f != OP_PACKEDPROT && f != OP_EMULEPROT) ++nonproto; }
-			CHECK(!sv.conns.empty() && sv.conns.back()->rx.size() >= 12);			// marcatore + chiave + magico + metodi + lunghezza padding
+			CHECK(!sv.conns.empty() && sv.conns.back()->rx.size() >= 12);			// marker + key + magic + methods + padding length
 			sv.conns.clear();
 		}
 		CHECK(total == 40 && nonproto == 40);
 	}
-	// --- un client senza obfuscation verso un server con obfuscation: il traffico normale passa invariato
+	// --- a client without obfuscation towards a server with obfuscation: normal traffic passes unchanged
 	{
 		thePrefs.SetCryptLayer(true, false, false);
 		Listener sv; sv.Create(0, SOCK_STREAM, FD_ACCEPT, "127.0.0.1", AF_INET, true); sv.Listen(16); UINT port = PortOf(sv);
@@ -118,7 +118,7 @@ int main()
 		const char pkt[] = "\xE3\x05\x00\x00\x00\x01hello";
 		cli.Send(pkt, 11); CHECK(Pump(loop, [&] { return srv->rx.size() == 11; })); CHECK(srv->rx == std::string(pkt, 11) && !srv->IsObfusicating() && srv->err == 0);
 	}
-	// --- obfuscation richiesta: il traffico in chiaro viene respinto (ERR_ENCRYPTION_NOTALLOWED), salvo test di firewall dei server
+	// --- obfuscation required: plaintext traffic is rejected (ERR_ENCRYPTION_NOTALLOWED), except for server firewall tests
 	{
 		thePrefs.SetCryptLayer(true, true, false);
 		Listener sv; sv.Create(0, SOCK_STREAM, FD_ACCEPT, "127.0.0.1", AF_INET, true); sv.Listen(16); UINT port = PortOf(sv);
@@ -127,7 +127,7 @@ int main()
 		CHECK(Pump(loop, [&] { return srv != nullptr && cli.GetState() == connected; }));
 		cli.Send("\xE3\x05\x00\x00\x00\x01hello", 11);
 		CHECK(Pump(loop, [&] { return srv->err == ERR_ENCRYPTION_NOTALLOWED; })); CHECK(srv->rx.empty());
-		// con un server in attesa di un test da quell'IP, la connessione in chiaro e' permessa
+		// with a server waiting for a test from that IP, the plaintext connection is allowed
 		CServerConnect *old_sc = theApp.serverconnect; CClientList *old_cl = theApp.clientlist;
 		CServerConnect sc; sc.awaiting = [](uint32) { return true; }; theApp.serverconnect = &sc; CClientList cl; theApp.clientlist = &cl;
 		Listener sv2; sv2.Create(0, SOCK_STREAM, FD_ACCEPT, "127.0.0.1", AF_INET, true); sv2.Listen(16); UINT port2 = PortOf(sv2);
@@ -136,7 +136,7 @@ int main()
 		CHECK(Pump(loop, [&] { return srv2 != nullptr && cli2.GetState() == connected; }));
 		cli2.Send("\xE3\x05\x00\x00\x00\x01hello", 11); CHECK(Pump(loop, [&] { return srv2->rx.size() == 11; })); CHECK(srv2->err == 0);
 		theApp.serverconnect = old_sc; theApp.clientlist = old_cl;
-		// modalita' "strict": ignora anche i test
+		// "strict" mode: ignores the tests too
 		thePrefs.SetCryptLayer(true, true, true); sc.awaiting = [](uint32) { return true; }; theApp.serverconnect = &sc; theApp.clientlist = &cl;
 		Listener sv3; sv3.Create(0, SOCK_STREAM, FD_ACCEPT, "127.0.0.1", AF_INET, true); sv3.Listen(16); UINT port3 = PortOf(sv3);
 		ES *srv3 = nullptr; sv3.onNew = [&](ES &c) { srv3 = &c; };
@@ -145,7 +145,7 @@ int main()
 		cli3.Send("\xE3\x05\x00\x00\x00\x01hello", 11); CHECK(Pump(loop, [&] { return srv3->err == ERR_ENCRYPTION_NOTALLOWED; }));
 		theApp.serverconnect = old_sc; theApp.clientlist = old_cl;
 	}
-	// --- obfuscation disattivata nelle preferenze: tutto in chiaro (ECS_NONE), nessuna negoziazione
+	// --- obfuscation disabled in the preferences: everything in plaintext (ECS_NONE), no negotiation
 	{
 		thePrefs.SetCryptLayer(false, false, false);
 		Listener sv; sv.Create(0, SOCK_STREAM, FD_ACCEPT, "127.0.0.1", AF_INET, true); sv.Listen(16); UINT port = PortOf(sv);
@@ -155,7 +155,7 @@ int main()
 		CHECK(cli.Send("in chiaro")); CHECK(Pump(loop, [&] { return srv->rx == "in chiaro"; })); CHECK(!cli.IsObfusicating() && !srv->IsObfusicating());
 		thePrefs.SetCryptLayer(true, false, false);
 	}
-	// --- molte negoziazioni di seguito, senza errori
+	// --- many negotiations in a row, without errors
 	{
 		thePrefs.SetCryptTCPPaddingLength(128);
 		Listener sv; sv.Create(0, SOCK_STREAM, FD_ACCEPT, "127.0.0.1", AF_INET, true); sv.Listen(64); UINT port = PortOf(sv);

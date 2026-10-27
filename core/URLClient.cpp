@@ -57,8 +57,8 @@ void CUrlClient::SetRequestFile(CPartFile *pReqFile)
 	}
 }
 
-// LINUX: l'originale usa InternetCanonicalizeUrl/InternetCrackUrl di WinInet. Qui un analizzatore semplice per "http://host[:porta]/percorso":
-// niente utente/password, solo http, il percorso e la query con i caratteri non sicuri codificati %XX (come ICU_ENCODE_PERCENT).
+// LINUX: the original uses WinInet InternetCanonicalizeUrl/InternetCrackUrl. Here a simple parser for "http://host[:port]/path":
+// no user/password, http only, the path and query with unsafe characters encoded %XX (like ICU_ENCODE_PERCENT).
 bool CUrlClient::SetUrl(LPCTSTR pszUrl, uint32 nIP)
 {
 	CString strUrl(pszUrl);

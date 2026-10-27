@@ -1,4 +1,4 @@
-// LINUX (codice nuovo): ricerche via API. Una ricerca attiva alla volta (una nuova annulla la precedente); i risultati restano finche' non ne parte un'altra.
+// LINUX (new code): searches via API. One active search at a time (a new one cancels the previous); results stay until another starts.
 #pragma once
 #include "api/HttpServer.h"
 

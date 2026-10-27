@@ -1,4 +1,4 @@
-// Tipi Windows con larghezza fissa. Decisione 3 (Bench #561): LONG/ULONG sono 32 bit anche su Linux.
+// Fixed-width Windows types. Decision 3 (Bench #561): LONG/ULONG are 32 bits on Linux too.
 #pragma once
 #include <cstdint>
 #include <cstddef>
@@ -29,11 +29,11 @@ typedef DWORD		*LPDWORD;
 #define FALSE	0
 #define MAX_PATH 4096
 
-// I tipi serializzati devono avere la dimensione del sorgente Windows.
+// Serialized types must have the size of the Windows source.
 static_assert(sizeof(DWORD) == 4 && sizeof(ULONG) == 4 && sizeof(LONG) == 4 && sizeof(WORD) == 2, "tipi Win32");
 static_assert(sizeof(ULONGLONG) == 8 && sizeof(LONGLONG) == 8, "tipi Win32 a 64 bit");
 
-// Stringhe: UTF-8 interno (Bench #554). TCHAR = char.
+// Strings: internal UTF-8 (Bench #554). TCHAR = char.
 typedef char		TCHAR, CHAR;
 typedef const char	*LPCSTR, *LPCTSTR;
 typedef char		*LPSTR, *LPTSTR;
@@ -76,7 +76,7 @@ typedef const WCHAR *LPCWSTR;
 #include <unistd.h>
 #include <ctype.h>
 
-// Suffissi letterali MSVC (es. 9728000ui64) usati dal sorgente originale.
+// MSVC literal suffixes (e.g. 9728000ui64) used by the original source.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wliteral-suffix"
 constexpr unsigned long long operator""ui64(unsigned long long v) { return v; }
@@ -92,15 +92,15 @@ constexpr long long operator""i64(unsigned long long v) { return (long long)v; }
 #define _byteswap_ulong	__builtin_bswap32
 #define _byteswap_uint64	__builtin_bswap64
 
-// GUID casuale (CoCreateGuid) per CUInt128::SetValueGUID. Sorgente: getrandom(2).
+// Random GUID (CoCreateGuid) for CUInt128::SetValueGUID. Source: getrandom(2).
 #include <sys/random.h>
 struct GUID { uint32_t Data1; uint16_t Data2; uint16_t Data3; uint8_t Data4[8]; };
 #define S_OK 0L
 inline long CoCreateGuid(GUID *g)
 {
 	if (getrandom(g, sizeof *g, 0) != (ssize_t)sizeof *g) return -1;
-	g->Data3 = (g->Data3 & 0x0FFF) | 0x4000;		// versione 4
-	g->Data4[0] = (g->Data4[0] & 0x3F) | 0x80;	// variante RFC 4122
+	g->Data3 = (g->Data3 & 0x0FFF) | 0x4000;		// version 4
+	g->Data4[0] = (g->Data4[0] & 0x3F) | 0x80;	// RFC 4122 variant
 	return S_OK;
 }
 
@@ -113,7 +113,7 @@ inline long CoCreateGuid(GUID *g)
 #define _I32_MAX	INT32_MAX
 #define __ascii_stricmp	strcasecmp
 
-// Handle opachi, attese e interbloccati
+// Opaque handles, waits and interlocked ops
 typedef void *HANDLE;
 typedef HANDLE HINSTANCE;
 typedef HANDLE HMODULE;
@@ -133,30 +133,30 @@ inline LONG64 InterlockedAdd64(volatile LONG64 *p, LONG64 v) { return __atomic_a
 #define UNREFERENCED_PARAMETER(p)	((void)(p))
 inline LONG InterlockedAdd(volatile LONG *p, LONG v) { return __atomic_add_fetch(p, v, __ATOMIC_SEQ_CST); }
 
-// LINUX: tipi geometrici di MFC: servono solo a CIni (posizioni di finestra salvate nel file di configurazione), non al daemon
+// LINUX: MFC geometric types: only needed by CIni (window positions saved in the configuration file), not by the daemon
 struct CPoint { long x = 0, y = 0; CPoint() = default; CPoint(long X, long Y) : x(X), y(Y) {} };
 struct CRect { long left = 0, top = 0, right = 0, bottom = 0; CRect() = default; CRect(long l, long t, long r, long b) : left(l), top(t), right(r), bottom(b) {} };
 typedef unsigned long COLORREF;
 #define RGB(r, g, b) ((COLORREF)(((unsigned char)(r)) | ((COLORREF)((unsigned char)(g)) << 8) | ((COLORREF)((unsigned char)(b)) << 16)))
 
-// LINUX: funzioni di <tchar.h>/<stdlib.h> di Windows usate dal codice originale
+// LINUX: Windows <tchar.h>/<stdlib.h> functions used by the original code
 #define _tstof		atof
 #define GetRValue(rgb)	((unsigned char)((rgb) & 0xFF))
 #define GetGValue(rgb)	((unsigned char)(((rgb) >> 8) & 0xFF))
 #define GetBValue(rgb)	((unsigned char)(((rgb) >> 16) & 0xFF))
-#define CPTR(s, i)	emule_cptr((s), (i))		// puntatore al carattere i di una stringa (MFC)
+#define CPTR(s, i)	emule_cptr((s), (i))		// pointer to character i of a string (MFC)
 inline char *_itot(int v, char *buf, int radix) { if (radix == 10) snprintf(buf, 34, "%d", v); else snprintf(buf, 34, radix == 16 ? "%x" : "%o", (unsigned)v); return buf; }
 inline char *_ultot(unsigned long v, char *buf, int radix) { if (radix == 10) snprintf(buf, 34, "%lu", v); else snprintf(buf, 34, radix == 16 ? "%lx" : "%lo", v); return buf; }
 inline char *_ui64tot(unsigned long long v, char *buf, int radix) { if (radix == 10) snprintf(buf, 66, "%llu", v); else snprintf(buf, 66, radix == 16 ? "%llx" : "%llo", v); return buf; }
 
-// LINUX: tipi di Windows usati qua e la
+// LINUX: Windows types used here and there
 typedef bool boolean;
 typedef void *HBITMAP;
 #ifndef INVALID_HANDLE_VALUE
 #define INVALID_HANDLE_VALUE ((HANDLE)(long long)-1)
 #endif
 
-// LINUX: altre definizioni di Windows che compaiono nelle intestazioni
+// LINUX: other Windows definitions that appear in the headers
 #ifndef __stdcall
 #define __stdcall
 #endif
@@ -167,7 +167,7 @@ typedef void *HBITMAP;
 #define FILE_ATTRIBUTE_SPARSE_FILE	0x00000200
 #define MAXGETHOSTSTRUCT			1024
 
-// --- aggiunte Fase 5 ---
+// --- Phase 5 additions ---
 #define _tcserror strerror
 #define _taccess access
 #define LODWORD(ll) ((DWORD)((ULONGLONG)(ll) & 0xffffffffu))
@@ -188,13 +188,13 @@ typedef void *(*FARPROC)();
 #define WINAPI
 #define COLOR_BTNTEXT 18
 struct CSize { long cx = 0, cy = 0; CSize() = default; CSize(long X, long Y) : cx(X), cy(Y) {} };
-// strutture della grafica: servono solo per mantenere identico il formato di preferences.dat e preferences.ini
+// graphics structures: only needed to keep the preferences.dat and preferences.ini format identical
 struct RECT { int32_t left, top, right, bottom; };
-struct __attribute__((packed)) WINDOWPLACEMENT { uint32_t length, flags, showCmd; int32_t ptMinPosition[2], ptMaxPosition[2]; RECT rcNormalPosition; };		// 44 byte come in Windows: finisce in preferences.dat
+struct __attribute__((packed)) WINDOWPLACEMENT { uint32_t length, flags, showCmd; int32_t ptMinPosition[2], ptMaxPosition[2]; RECT rcNormalPosition; };		// 44 bytes as in Windows: ends up in preferences.dat
 struct LOGFONT { int32_t lfHeight, lfWidth, lfEscapement, lfOrientation, lfWeight; unsigned char lfItalic, lfUnderline, lfStrikeOut, lfCharSet, lfOutPrecision, lfClipPrecision, lfQuality, lfPitchAndFamily; char lfFaceName[32]; };
 typedef LOGFONT *LPLOGFONT;
 
-// file e cartelle (Win32 -> POSIX)
+// files and folders (Win32 -> POSIX)
 #include <sys/stat.h>
 #include <cerrno>
 inline BOOL PathFileExists(LPCTSTR p) { struct stat st; return ::stat(p, &st) == 0; }
@@ -226,7 +226,7 @@ inline bool IsRunningXPSP2OrHigher() { return true; }
 #define IDOK 1
 #define IDCANCEL 2
 inline BOOL IsWindow(void*) { return 0; }
-inline LPCTSTR PathFindExtension(LPCTSTR p)		// puntatore al '.' dell'estensione (o alla fine del nome)
+inline LPCTSTR PathFindExtension(LPCTSTR p)		// pointer to the '.' of the extension (or to the end of the name)
 {
 	LPCTSTR slash = strrchr(p, '/'), dot = strrchr(p, '.');
 	return (dot && (!slash || dot > slash)) ? dot : p + strlen(p);
@@ -247,6 +247,6 @@ inline BOOL PathMatchSpec(LPCTSTR file, LPCTSTR spec) { return fnmatch(spec, fil
 #define _atoi64 atoll
 #define _tstoi64 atoll
 #define MAXSHORT 0x7fff
-// i flag condivisi tra thread sono std::atomic (nell'originale volatile): stessa funzione, versione atomica
+// flags shared between threads are std::atomic (volatile in the original): same function, atomic version
 #include <atomic>
 inline char InterlockedExchange8(std::atomic<char> *p, char v) { return p->exchange(v); }

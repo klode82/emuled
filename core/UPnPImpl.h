@@ -37,7 +37,7 @@ enum UPNP_IMPLEMENTATION
 
 class CUPnPImpl
 {
-	std::function<void(int /*UPNP_OK|UPNP_FAILED*/, bool /*dopo CheckAndRefresh*/)> m_onResult;		// LINUX: al posto di CWnd + messaggio di finestra
+	std::function<void(int /*UPNP_OK|UPNP_FAILED*/, bool /*after CheckAndRefresh*/)> m_onResult;		// LINUX: instead of CWnd + window message
 
 public:
 	CUPnPImpl();
@@ -59,7 +59,7 @@ public:
 
 	void LateEnableWebServerPort(uint16 nPort);	// Add Web Server port to already existing port mapping
 
-	void SetOnResult(std::function<void(int, bool)> fn) { m_onResult = std::move(fn); }		// chiamata (una volta) a esito noto; nell'originale: SetMessageOnResult(finestra, messaggio)
+	void SetOnResult(std::function<void(int, bool)> fn) { m_onResult = std::move(fn); }		// called (once) when the result is known; in the original: SetMessageOnResult(window, message)
 	TRISTATE ArePortsForwarded() const					{ return m_bUPnPPortsForwarded; }
 	uint16 GetUsedTCPPort() const						{ return m_nTCPPort; }
 	uint16 GetUsedUDPPort() const						{ return m_nUDPPort; }

@@ -55,7 +55,7 @@ bool SyncDir(const std::string &path)
 	return ok;
 }
 
-// Se <path> e' un symlink si scrive sul file vero: rename() sostituirebbe il link stesso e lo trasformerebbe in un file normale.
+// If <path> is a symlink, write to the real file: rename() would replace the link itself and turn it into a regular file.
 std::string ResolveForWrite(const std::string &path)
 {
 	struct stat st;
@@ -72,9 +72,9 @@ bool AtomicPut(const std::string &dest, const std::string &tmp, const std::strin
 	if (!WriteSynced(tmp, data, err)) { ::unlink(tmp.c_str()); return false; }
 	Fault(pt_written);
 	std::string back;
-	if (!ReadAll(tmp, back) || back != data) { err = "rilettura di '" + tmp + "' diversa da quanto scritto"; ::unlink(tmp.c_str()); return false; }
+	if (!ReadAll(tmp, back) || back != data) { err = "re-read of '" + tmp + "' differs from what was written"; ::unlink(tmp.c_str()); return false; }
 	Report rep = v((const uint8_t*)back.data(), back.size());
-	if (!rep.ok()) { err = "'" + tmp + "' non supera la validazione: " + rep.reason; ::unlink(tmp.c_str()); return false; }
+	if (!rep.ok()) { err = "'" + tmp + "' fails validation: " + rep.reason; ::unlink(tmp.c_str()); return false; }
 	if (::rename(tmp.c_str(), dest.c_str()) < 0) { err = Err("rename", dest); ::unlink(tmp.c_str()); return false; }
 	Fault(pt_renamed);
 	SyncDir(dest);
@@ -87,25 +87,25 @@ SafeWriteResult SafeWriteMet(const std::string &path_in, const std::string &data
 {
 	SafeWriteResult res;
 	const std::string path = ResolveForWrite(path_in);
-	// 1. i dati nuovi devono essere sani prima ancora di toccare il disco
+	// 1. the new data must be sane before even touching the disk
 	Report nw = v((const uint8_t*)data.data(), data.size());
-	if (!nw.ok()) { res.error = "dati nuovi non sani, nessuna scrittura: " + nw.reason; return res; }
+	if (!nw.ok()) { res.error = "new data not sound, nothing written: " + nw.reason; return res; }
 
-	// 2. backup solo se il file attuale e' sano
+	// 2. backup only if the current file is sane
 	if (opt.backup) {
 		std::string cur;
-		if (!ReadAll(path, cur)) res.backup_note = errno == ENOENT ? "file attuale assente" : Err("lettura file attuale", path);
+		if (!ReadAll(path, cur)) res.backup_note = errno == ENOENT ? "current file missing" : Err("reading current file", path);
 		else {
 			Report cr = v((const uint8_t*)cur.data(), cur.size());
-			if (!cr.ok()) res.backup_note = std::string("file attuale non sano (") + VerdictName(cr.verdict) + ": " + cr.reason + "), .bak non toccato";
+			if (!cr.ok()) res.backup_note = std::string("current file not sound (") + VerdictName(cr.verdict) + ": " + cr.reason + "), .bak untouched";
 			else {
 				std::string err;
 				if (AtomicPut(path + opt.bak_suffix, path + opt.bak_suffix + opt.tmp_suffix, cur, v, err, "bak_tmp_written", "bak_renamed")) res.backed_up = true;
-				else { res.error = "backup fallito, file non modificato: " + err; return res; }
+				else { res.error = "backup failed, file not modified: " + err; return res; }
 			}
 		}
 	}
-	// 3-4. scrittura atomica del nuovo file
+	// 3-4. atomic write of the new file
 	std::string err;
 	if (!AtomicPut(path, path + opt.tmp_suffix, data, v, err, "tmp_written", "main_renamed")) { res.error = err; return res; }
 	Fault("done");
@@ -129,7 +129,7 @@ RecoverResult RecoverMet(const std::string &path_in, Validator v, const std::vec
 		if (!ReadAll(cands[i], data)) continue;
 		if (!v((const uint8_t*)data.data(), data.size()).ok()) continue;
 		if (dry_run) { r.action = i == 0 ? RecoverResult::RestoredFromBak : RecoverResult::RestoredFromFallback; r.restored_from = cands[i]; return r; }
-		if (!missing) ::rename(path.c_str(), (path + ".corrupt").c_str());		// conserva il danneggiato per analisi
+		if (!missing) ::rename(path.c_str(), (path + ".corrupt").c_str());		// keeps the damaged one for analysis
 		std::string err;
 		if (!AtomicPut(path, path + opt.tmp_suffix, data, v, err, "rec_tmp_written", "rec_renamed")) { r.note = err; continue; }
 		r.action = i == 0 ? RecoverResult::RestoredFromBak : RecoverResult::RestoredFromFallback;
@@ -137,7 +137,7 @@ RecoverResult RecoverMet(const std::string &path_in, Validator v, const std::vec
 		return r;
 	}
 	r.action = RecoverResult::Unrecoverable;
-	r.note = missing ? "file assente e nessuna copia sana" : "file danneggiato (" + cur.reason + ") e nessuna copia sana";
+	r.note = missing ? "file missing and no sound copy" : "file damaged (" + cur.reason + ") and no sound copy";
 	return r;
 }
 

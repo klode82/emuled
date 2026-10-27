@@ -17,12 +17,12 @@ import FolderPicker from '@/components/FolderPicker.vue'
 const { t, te, locale } = useI18n()
 const route = useRoute()
 const p = usePrefs(), ui = useUi(), tpl = useTemplates(), core = useCore(), session = useSession()
-// riavvio del demone e prova delle porte da internet (il demone fa l'indirizzo, il browser lo apre su un clic dell'utente)
+// daemon restart and port test from the internet (the daemon builds the address, the browser opens it on a user click)
 const restarting = ref(false), daemonMsg = ref('')
 async function restartNow() {
   if (!(await ui.ask({ title: t('prefs.daemon.confirmTitle'), text: t('prefs.daemon.confirmText'), confirm: t('prefs.daemon.confirm') }))) return
   restarting.value = true; daemonMsg.value = ''
-  daemonMsg.value = await session.restartDaemon()		// se va bene la pagina si ricarica da sola
+  daemonMsg.value = await session.restartDaemon()		// on success the page reloads by itself
   restarting.value = false
 }
 async function testPorts() {
@@ -44,9 +44,9 @@ const anyInvalid = computed(() => PREFS.some((m) => m.key in p.draft && invalid(
 const needRestart = computed(() => (p.restart.length ? PREFS.filter((m) => p.restart.includes(m.key)).map((m) => t(`prefs.items.${m.key}.label`)) : []))
 const THEMES: Theme[] = ['system', 'light', 'dark']
 
-// ---- cartelle: si lavora su una copia e si manda al demone solo cio' che e' cambiato
+// ---- folders: work on a copy and send the daemon only what changed
 const dd = reactive<Directories>({ incoming: '', temp: [], shared: [] })
-// finestra "scegli una cartella" (Bench 874): quale campo si sta riempiendo
+// "choose a folder" window (Bench 874): which field is being filled
 const pickTarget = ref<{ kind: 'incoming' | 'temp' | 'shared'; i: number } | null>(null)
 const pickStart = computed(() => { const k = pickTarget.value; return !k ? '' : k.kind === 'incoming' ? dd.incoming : dd[k.kind][k.i] ?? '' })
 function browse(k: { kind: 'incoming' | 'temp' | 'shared'; i: number }) { pickTarget.value = k }

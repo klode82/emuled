@@ -1,4 +1,4 @@
-// LINUX (codice nuovo): vedi ServerSearch.h
+// LINUX (new code): see ServerSearch.h
 #include "StdAfx.h"
 #include "net/ServerSearch.h"
 #include "net/Profile.h"
@@ -28,16 +28,16 @@ ServerSearchResult RunServerSearch(const ServerSearchOptions &opt)
 	ServerSearchResult res;
 	std::error_code ec;
 	uint8_t hash[16]; MakeTempUserHash(hash);
-	const bool keepLanFilter = thePrefs.FilterLANIPs();		// Init() del profilo ricarica i predefiniti: il chiamante (prove su rete locale) puo' averlo cambiato
+	const bool keepLanFilter = thePrefs.FilterLANIPs();		// the profile Init() reloads the defaults: the caller (tests on a local network) may have changed it
 
 	{
 		EventLoop loop; ScopedLoop sl(loop);
-		ScopedProfile profile;									// cartella temporanea: config/ con una COPIA di server.met (il profilo vero non si tocca), con gli oggetti veri dell'app
-		if (!fs::copy_file(opt.server_met, profile.config() + "server.met", ec)) { res.error = "server.met non copiabile: " + ec.message(); return res; }
-		// identita' temporanea: hash utente casuale con i marcatori eMule, porta TCP dichiarata = quella aperta
+		ScopedProfile profile;									// temporary folder: config/ with a COPY of server.met (the real profile is not touched), with the app's real objects
+		if (!fs::copy_file(opt.server_met, profile.config() + "server.met", ec)) { res.error = "cannot copy server.met: " + ec.message(); return res; }
+		// temporary identity: random user hash with the eMule markers, declared TCP port = the open one
 		thePrefs.SetFilterLANIPs(keepLanFilter);
 		thePrefs.SetUserHash(hash); thePrefs.SetPort(opt.tcp_port ? opt.tcp_port : 4662); thePrefs.SetUserNick(CString("eMuleLinux"));
-		thePrefs.SetServerUDPPort(opt.all_servers ? _UI16_MAX : 0);		// 65535 = porta casuale (le risposte UDP rientrano dal mapping NAT del pacchetto in uscita)
+		thePrefs.SetServerUDPPort(opt.all_servers ? _UI16_MAX : 0);		// 65535 = random port (UDP replies come back through the NAT mapping of the outgoing packet)
 		UploadBandwidthThrottler *oldThr = theApp.uploadBandwidthThrottler;
 		UploadBandwidthThrottler thr; theApp.uploadBandwidthThrottler = &thr;
 		{
@@ -45,7 +45,7 @@ ServerSearchResult RunServerSearch(const ServerSearchOptions &opt)
 			if (opt.tcp_port) {
 				listener.hello_answer = BuildHelloPacket(true, hash, 0, opt.tcp_port, 0, 0, "eMuleLinux");
 				listening = listener.Start(opt.tcp_port);
-				if (!listening) res.error = "porta TCP " + std::to_string(opt.tcp_port) + " non disponibile in ascolto";
+				if (!listening) res.error = "TCP port " + std::to_string(opt.tcp_port) + " cannot be listened on";
 			}
 			CServerList &list = *theApp.serverlist;
 			if (res.error.empty()) list.Init();
@@ -55,25 +55,25 @@ ServerSearchResult RunServerSearch(const ServerSearchOptions &opt)
 				if (!opt.server_address.empty()) {
 					size_t col = opt.server_address.rfind(':');
 					if (col != std::string::npos) server = list.GetServerByAddress(opt.server_address.substr(0, col).c_str(), (uint16)std::atoi(opt.server_address.c_str() + col + 1));
-					if (!server) { res.error = "server non trovato nella lista: " + opt.server_address; for (UINT k = 0; k < list.GetServerCount(); ++k) { CServer *x = list.GetServerAt(k); res.error += std::string(" [") + (LPCTSTR)x->GetAddress() + ":" + std::to_string(x->GetPort()) + "]"; } }
-				} else if (opt.server_index < 0 || opt.server_index >= (int)res.servers_in_list) res.error = "indice del server fuori dalla lista";
+					if (!server) { res.error = "server not found in the list: " + opt.server_address; for (UINT k = 0; k < list.GetServerCount(); ++k) { CServer *x = list.GetServerAt(k); res.error += std::string(" [") + (LPCTSTR)x->GetAddress() + ":" + std::to_string(x->GetPort()) + "]"; } }
+				} else if (opt.server_index < 0 || opt.server_index >= (int)res.servers_in_list) res.error = "server index outside the list";
 				else {
-					// l'indice e' quello del FILE server.met: la lista in memoria e' in ordine casuale, quindi si cerca il server per indirizzo
+					// the index is that of the server.met FILE: the in-memory list is in random order, so the server is looked up by address
 					std::vector<emule::known::ServerEntry> entries; std::string err;
 					if (emule::known::LoadServerMet(opt.server_met, entries, err) && opt.server_index < (int)entries.size())
 						server = list.GetServerByIPTCP(entries[opt.server_index].ip, entries[opt.server_index].port);
-					if (!server) res.error = "server dell'indice non trovato nella lista";
+					if (!server) res.error = "server of the index not found in the list";
 				}
 			}
 			CServerConnect &sc = *theApp.serverconnect;
-			if (res.error.empty() && opt.all_servers && !sc.RecreateUDPSocket()) res.error = "socket UDP verso i server non creato";
+			if (res.error.empty() && opt.all_servers && !sc.RecreateUDPSocket()) res.error = "UDP socket towards the servers not created";
 			if (res.error.empty()) {
 				res.connected_server = std::string(server->GetAddress()) + ":" + std::to_string(server->GetPort());
 				sc.ConnectToServer(server);
 				double t0 = NowS();
 				while (NowS() - t0 < opt.connect_timeout_s && !(sc.IsConnected() && sc.GetClientID())) loop.RunOnce(50);
 				res.connected = sc.IsConnected(); res.client_id = sc.GetClientID(); res.high_id = res.connected && !sc.IsLowID();
-				if (!res.connected) res.error = "connessione al server non riuscita";
+				if (!res.connected) res.error = "connection to the server failed";
 			}
 			if (res.error.empty()) {
 				GlobalSearch gs;
@@ -84,15 +84,15 @@ ServerSearchResult RunServerSearch(const ServerSearchOptions &opt)
 				sp.ullMinSize = opt.min_size; sp.ullMaxSize = opt.max_size; sp.uAvailability = opt.min_sources; sp.uComplete = opt.min_complete;
 				theApp.searchlist->serverHits.clear();
 				try {
-					if (!gs.Start(sp, opt.all_servers)) res.error = "ricerca non partita";
-				} catch (const SearchParseError &e) { res.error = std::string("ricerca non valida: ") + e.what(); }
+					if (!gs.Start(sp, opt.all_servers)) res.error = "search did not start";
+				} catch (const SearchParseError &e) { res.error = std::string("invalid search: ") + e.what(); }
 				if (res.error.empty()) {
 					double t1 = NowS(), lastActivity = t1; size_t seen = 0;
 					const double limit = opt.search_timeout_s;
 					while (NowS() - t1 < limit) {
 						loop.RunOnce(50);
 						if (theApp.searchlist->serverHits.size() != seen) { seen = theApp.searchlist->serverHits.size(); lastActivity = NowS(); }
-						if (gs.Finished() && NowS() - lastActivity > opt.tail_s) break;		// fine: tutti interrogati e nessuna risposta nuova da tail_s secondi
+						if (gs.Finished() && NowS() - lastActivity > opt.tail_s) break;		// end: all queried and no new reply for tail_s seconds
 					}
 					res.servers_asked = gs.ServersAsked(); res.servers_skipped = gs.ServersSkipped();
 				}
@@ -102,16 +102,16 @@ ServerSearchResult RunServerSearch(const ServerSearchOptions &opt)
 				sc.Disconnect();
 				for (int i = 0; i < 10; ++i) loop.RunOnce(20);
 			}
-			// theApp e' globale e vive fino all'uscita del programma, il ciclo degli eventi no: i socket registrati in questo ciclo vanno chiusi QUI
-			// (altrimenti il distruttore di CServerConnect, all'uscita, li cancellerebbe da un ciclo gia' distrutto)
+			// theApp is global and lives until the program exits, the event loop does not: the sockets registered in this loop must be closed HERE
+			// (otherwise the CServerConnect destructor, at exit, would remove them from an already destroyed loop)
 			thePrefs.SetServerUDPPort(0);
-			thr.EndThread();										// il thread del throttler legge uploadqueue: si ferma prima di distruggere gli oggetti
+			thr.EndThread();										// the throttler thread reads uploadqueue: it stops before the objects are destroyed
 			theApp.serverconnect->Disconnect();
 			theApp.serverconnect->StopConnectionTry();
-			theApp.serverconnect->RecreateUDPSocket();			// con porta 0 distrugge il socket UDP e non ne crea un altro
-			theApp.DestroyObjects();							// i socket usano il throttler: vanno distrutti mentre esiste ancora
+			theApp.serverconnect->RecreateUDPSocket();			// with port 0 it destroys the UDP socket and does not create another
+			theApp.DestroyObjects();							// the sockets use the throttler: they must be destroyed while it still exists
 			for (int i = 0; i < 10; ++i) loop.RunOnce(20);
-			// niente piu' salvataggi nella cartella temporanea quando si distruggono le liste
+			// no more saves to the temporary folder when the lists are destroyed
 			thePrefs.SetConfigDir(CString());
 		}
 		theApp.uploadBandwidthThrottler = oldThr;

@@ -1,5 +1,5 @@
-// Test del firewall UDP di Kad, lato richiedente: il contatto (qui un server TCP finto su localhost) deve ricevere PRIMA OP_HELLO, POI OP_FWCHECKUDPREQ
-// con porta interna, porta esterna e chiave UDP. Senza l'hello il contatto vero rifiuta tutto (verificato sulla rete).
+// Test of Kad's UDP firewall check, requester side: the contact (here a fake TCP server on localhost) must receive OP_HELLO FIRST, THEN OP_FWCHECKUDPREQ
+// with internal port, external port and UDP key. Without the hello the real contact refuses everything (verified on the network).
 #include "StdAfx.h"
 #include "Emule.h"
 #include "ClientList.h"
@@ -36,7 +36,7 @@ int main()
 	using namespace emule::net;
 	EventLoop loop; ScopedLoop sl(loop);
 	if (getenv("TEST_VERBOSE")) emule::log::SetSink([](emule::log::Level, const std::string &t) { std::fprintf(stderr, "  [log] %s\n", t.c_str()); });
-	ScopedProfile profile;												// oggetti veri (ClientList ecc.) in una cartella temporanea
+	ScopedProfile profile;												// real objects (ClientList etc.) in a temporary folder
 	UploadBandwidthThrottler thr; theApp.uploadBandwidthThrottler = &thr;
 	thePrefs.SetUDPPort(4672); thePrefs.SetPort(4662);
 	Kademlia::CKademlia::Start(new Kademlia::CPrefs());
@@ -44,14 +44,14 @@ int main()
 	int ls = socket(AF_INET, SOCK_STREAM, 0); sockaddr_in a{}; a.sin_family = AF_INET; a.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 	bind(ls, (sockaddr*)&a, sizeof a); listen(ls, 1); socklen_t sl2 = sizeof a; getsockname(ls, (sockaddr*)&a, &sl2);
 	Pkt first, second; std::atomic<bool> ok1{false}, ok2{false};
-	std::thread srv([&] { int c = accept(ls, nullptr, nullptr); bool r1 = ReadPkt(c, first); if (r1) { uint8_t uh[16] = {1, 2, 3, 4, 5, 14, 7, 8, 9, 10, 11, 12, 13, 14 + 97, 15, 16}; std::string ans = emule::net::BuildHelloPacket(true, uh, 0, 4662, 4672, 4672, "fake"); send(c, ans.data(), ans.size(), MSG_NOSIGNAL); }		/* il contatto vero risponde all'HELLO: solo allora il client manda OP_FWCHECKUDPREQ */
+	std::thread srv([&] { int c = accept(ls, nullptr, nullptr); bool r1 = ReadPkt(c, first); if (r1) { uint8_t uh[16] = {1, 2, 3, 4, 5, 14, 7, 8, 9, 10, 11, 12, 13, 14 + 97, 15, 16}; std::string ans = emule::net::BuildHelloPacket(true, uh, 0, 4662, 4672, 4672, "fake"); send(c, ans.data(), ans.size(), MSG_NOSIGNAL); }		/* the real contact answers the HELLO: only then does the client send OP_FWCHECKUDPREQ */
 		bool r2 = r1 && ReadPkt(c, second); ok1 = r1; ok2 = r2; usleep(200000); close(c); });
 
 	Kademlia::CUInt128 id((ULONG)7);
 	Kademlia::CContact contact(id, ntohl(a.sin_addr.s_addr), 4672, ntohs(a.sin_port), id, KADEMLIA_VERSION8_49b, Kademlia::CKadUDPKey(), true);
 	CHECK(theApp.clientlist->DoRequestFirewallCheckUDP(contact));
-	for (int i = 0; i < 100 && !(ok1 && ok2); ++i) { loop.RunOnce(50); if (i % 20 == 0) theApp.clientlist->Process(); }		// Process(): nell'app lo chiama il timer di UploadQueue ogni secondo
-	if (!(ok1 && ok2)) { int c = socket(AF_INET, SOCK_STREAM, 0); connect(c, (sockaddr*)&a, sizeof a); close(c); }		// sblocca il server finto se il client non si e' connesso
+	for (int i = 0; i < 100 && !(ok1 && ok2); ++i) { loop.RunOnce(50); if (i % 20 == 0) theApp.clientlist->Process(); }		// Process(): in the app the UploadQueue timer calls it every second
+	if (!(ok1 && ok2)) { int c = socket(AF_INET, SOCK_STREAM, 0); connect(c, (sockaddr*)&a, sizeof a); close(c); }		// unblocks the fake server if the client did not connect
 	srv.join(); close(ls);
 	Kademlia::CKademlia::Stop();
 

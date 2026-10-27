@@ -58,7 +58,7 @@ export const useDownloads = defineStore('downloads', () => {
   function toggle(hash: string) { selected.value.has(hash) ? selected.value.delete(hash) : selected.value.add(hash) }
   function selectAll(on: boolean) { selected.value = on ? new Set(list.value.map((d) => d.hash)) : new Set() }
 
-  // le azioni mandano la richiesta e aggiornano l'elemento con la risposta; gli eventi del WebSocket fanno il resto
+  // actions send the request and update the item with the response; WebSocket events do the rest
   async function act(hashes: string[], what: 'pause' | 'resume' | 'stop' | 'remove', done: string) {
     const results = await Promise.allSettled(hashes.map(async (h) => {
       const r = await api()[what](h)
@@ -80,13 +80,13 @@ export const useDownloads = defineStore('downloads', () => {
   async function setCategory(hash: string, c: number) {
     try { items.value[hash] = await api().patchDownload(hash, { category: c }) } catch (e) { toasts.error(errText(e)) }
   }
-  // sposta piu' download in una categoria (0 = nessuna)
+  // move several downloads into a category (0 = none)
   async function setCategoryMany(hashes: string[], c: number) {
     let ok = 0
     for (const h of hashes) { try { items.value[h] = await api().patchDownload(h, { category: c }); ok++ } catch (e) { toasts.error(errText(e)); break } }
     if (ok) toasts.ok(t('toast.moved', ok))
   }
-  // aggiunge uno o piu' link; ritorna quanti sono stati aggiunti
+  // adds one or more links; returns how many were added
   async function addLinks(links: string[], cat = 0): Promise<number> {
     let ok = 0; const errs: string[] = []
     for (const link of links) {
@@ -96,7 +96,7 @@ export const useDownloads = defineStore('downloads', () => {
     if (errs.length) toasts.error(errs[0] + (errs.length > 1 ? ' ' + t('toast.moreErrors', { n: errs.length - 1 }) : ''))
     return ok
   }
-  // scarica piu' risultati di ricerca insieme (quelli gia' in lista si saltano); ritorna quanti ne ha aggiunti
+  // downloads several search results together (those already in the list are skipped); returns how many were added
   async function addFoundMany(fs: { hash: string; name: string; size: number }[], cat = 0): Promise<number> {
     let ok = 0; const errs: string[] = []
     for (const f of fs) {
@@ -110,14 +110,14 @@ export const useDownloads = defineStore('downloads', () => {
   async function addFound(f: { hash: string; name: string; size: number }, cat = 0): Promise<boolean> {
     try { const d = await api().addDownload({ ...f, category: cat }); items.value[d.hash] = d; toasts.ok(t('toast.added', 1)); return true } catch (e) { toasts.error(errText(e)); return false }
   }
-  // "Cerca fonti adesso": il demone azzera le attese e chiede subito al server e a Kad; il messaggio dice cosa e' partito davvero
+  // "Search sources now": the daemon resets the waits and asks the server and Kad right away; the message says what really started
   async function findSources(hash: string) {
     try {
       const r = await api().findSources(hash)
       toasts.ok(r.paused ? t('toast.sourcesPaused') : !r.server && !r.kad ? t('toast.sourcesOffline') : r.server && r.wait_s >= 5 ? t('toast.sourcesQueued', { s: r.wait_s }) : t('toast.sourcesAsked'))
     } catch (e) { toasts.error(errText(e)) }
   }
-  // "Cerca fonti" su tutti i download che stanno scaricando o aspettano (non completati, non fermi): un solo messaggio
+  // "Search sources" on all downloads that are downloading or waiting (not completed, not stopped): a single message
   async function findAllSources() {
     const todo = all.value.filter((d) => !d.stopped && d.status !== 'paused' && d.status !== 'complete')
     if (!todo.length) { toasts.info(t('toast.sourcesNone')); return }
@@ -127,7 +127,7 @@ export const useDownloads = defineStore('downloads', () => {
       else toasts.ok(t('toast.sourcesAll', { n: todo.length, s: rs[0].server ? Math.max(...rs.map((r) => r.wait_s)) : 0 }))
     } catch (e) { toasts.error(errText(e)) }
   }
-  // "Togli": un completato esce dalla lista (il file resta su disco); "Svuota": tutti i completati
+  // "Remove": a completed download leaves the list (the file stays on disk); "Clear": all completed
   async function clearCompleted() {
     try { const r = await api().clearCompleted(); await load(); toasts.ok(t('toast.cleared', r.removed)) } catch (e) { toasts.error(errText(e)) }
   }

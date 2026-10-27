@@ -14,7 +14,7 @@
 namespace emule::api {
 
 namespace {
-const unsigned kIterations = 200000;				// PBKDF2: ~0,1-0,2 s su un PC, accettabile anche su un Raspberry
+const unsigned kIterations = 200000;				// PBKDF2: ~0.1-0.2 s on a PC, acceptable even on a Raspberry
 std::string Hex(const std::string &raw) { std::string o; CryptoPP::StringSource(raw, true, new CryptoPP::HexEncoder(new CryptoPP::StringSink(o), false)); return o; }
 bool Unhex(const std::string &h, std::string &out)
 {
@@ -55,8 +55,8 @@ bool Auth::ValidName(const std::string &n)
 
 bool Auth::ValidPassword(const std::string &pw, std::string &err)
 {
-	if (pw.size() < 8) { err = "la password deve avere almeno 8 caratteri"; return false; }
-	if (pw.size() > 256) { err = "la password e' troppo lunga (massimo 256 caratteri)"; return false; }
+	if (pw.size() < 8) { err = "the password must be at least 8 characters long"; return false; }
+	if (pw.size() > 256) { err = "the password is too long (maximum 256 characters)"; return false; }
 	return true;
 }
 
@@ -85,27 +85,27 @@ bool Auth::Configured() { std::lock_guard<std::mutex> g(m_); User u; return Load
 
 bool Auth::SetUser(const std::string &name, const std::string &password, std::string &err)
 {
-	if (!ValidName(name)) { err = "nome utente non valido (1-32 caratteri: lettere, cifre, punto, trattino, trattino basso)"; return false; }
+	if (!ValidName(name)) { err = "invalid username (1-32 characters: letters, digits, dot, hyphen, underscore)"; return false; }
 	if (!ValidPassword(password, err)) return false;
 	User n; n.name = name; n.iter = iter_override_ ? iter_override_ : kIterations; n.salt = Random(16); n.secret = Random(32);
 	n.hash = Pbkdf2(password, n.salt, n.iter);
 	const std::string tmp = path_ + ".tmp";
 	{
 		int fd = ::open(tmp.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0600);
-		if (fd < 0) { err = "non riesco a scrivere " + path_; return false; }
+		if (fd < 0) { err = "cannot write " + path_; return false; }
 		const std::string txt = "user=" + n.name + "\niter=" + std::to_string(n.iter) + "\nsalt=" + Hex(n.salt) + "\nhash=" + Hex(n.hash) + "\nsecret=" + Hex(n.secret) + "\n";
 		ssize_t w = ::write(fd, txt.data(), txt.size()); ::fsync(fd); ::close(fd);
-		if (w != (ssize_t)txt.size()) { ::unlink(tmp.c_str()); err = "scrittura incompleta di " + path_; return false; }
+		if (w != (ssize_t)txt.size()) { ::unlink(tmp.c_str()); err = "incomplete write of " + path_; return false; }
 	}
-	if (::rename(tmp.c_str(), path_.c_str()) != 0) { ::unlink(tmp.c_str()); err = "non riesco a salvare " + path_; return false; }
-	std::lock_guard<std::mutex> g(m_); loaded_ = false;		// si rilegge alla prossima richiesta
+	if (::rename(tmp.c_str(), path_.c_str()) != 0) { ::unlink(tmp.c_str()); err = "cannot save " + path_; return false; }
+	std::lock_guard<std::mutex> g(m_); loaded_ = false;		// reread on the next request
 	return true;
 }
 
 bool Auth::CheckLogin(const std::string &name, const std::string &password)
 {
 	User u; { std::lock_guard<std::mutex> g(m_); if (!Load(u)) return false; }
-	const std::string h = Pbkdf2(password, u.salt, u.iter);		// sempre, anche se il nome e' sbagliato
+	const std::string h = Pbkdf2(password, u.salt, u.iter);		// always, even if the name is wrong
 	return Equal(h, u.hash) & Equal(name, u.name);
 }
 

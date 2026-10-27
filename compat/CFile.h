@@ -1,5 +1,5 @@
-// CException, CFile, CMemFile, CStdioFile con semantica MFC su POSIX. File da 64 bit.
-// Limite noto: i flag di condivisione (shareDenyWrite ...) sono accettati e ignorati; su Linux non c'e' lock obbligatorio.
+// CException, CFile, CMemFile, CStdioFile with MFC semantics on POSIX. 64-bit files.
+// Known limit: sharing flags (shareDenyWrite ...) are accepted and ignored; Linux has no mandatory locking.
 #pragma once
 #include "win_types.h"
 #include "CString.h"
@@ -45,12 +45,12 @@ public:
 	bool GetErrorMessage(LPTSTR lpszError, UINT nMaxError, UINT * = nullptr) const override
 	{
 		if (nMaxError) {
-			if (m_lOsError > 0) snprintf(lpszError, nMaxError, "%s", strerror((int)m_lOsError));	// il codice e' errno
+			if (m_lOsError > 0) snprintf(lpszError, nMaxError, "%s", strerror((int)m_lOsError));	// the code is errno
 			else snprintf(lpszError, nMaxError, "file error %d", m_cause);
 		}
 		return true;
 	}
-	[[noreturn]] static void ThrowOsError(LONG lOsError, LPCTSTR file = nullptr) { throw new CFileException(ErrnoToException((int)lOsError), lOsError, file); }	// LINUX: il codice e' errno
+	[[noreturn]] static void ThrowOsError(LONG lOsError, LPCTSTR file = nullptr) { throw new CFileException(ErrnoToException((int)lOsError), lOsError, file); }	// LINUX: the code is errno
 	static int ErrnoToException(int e)
 	{
 		switch (e) {
@@ -104,7 +104,7 @@ public:
 	{
 		int acc = (flags & 3) == modeReadWrite ? O_RDWR : (flags & 3) == modeWrite ? O_WRONLY : O_RDONLY;
 		if (flags & modeCreate) acc |= O_CREAT | ((flags & modeNoTruncate) ? 0 : O_TRUNC);
-		std::string target = AtomicTarget(path, flags);			// .met/.dat/.ini/.txt riscritti da zero: si scrive in un file accanto e lo si mette al posto dell'originale alla chiusura
+		std::string target = AtomicTarget(path, flags);			// .met/.dat/.ini/.txt rewritten from scratch: written to a sibling file and moved over the original on close
 		m_fd = ::open(target.c_str(), acc | O_CLOEXEC, 0666);
 		if (m_fd >= 0 && target != path) { m_atomicTmp = target; m_atomicFinal = path; }
 		if (m_fd < 0) {
@@ -157,15 +157,15 @@ public:
 		snprintf(rStatus.m_szFullName, sizeof rStatus.m_szFullName, "%s", (LPCTSTR)m_path);
 		return TRUE;
 	}
-	operator HANDLE() const { return FdToHandle(m_fd); }		// come MFC: CFile -> HANDLE (qui un descrittore, vedi win_files.h)
+	operator HANDLE() const { return FdToHandle(m_fd); }		// as in MFC: CFile -> HANDLE (here a descriptor, see win_files.h)
 
 	static void Remove(LPCTSTR path) { if (::unlink(path) < 0) ThrowErrno(errno, path); }
 	static void Rename(LPCTSTR from, LPCTSTR to) { if (::rename(from, to) < 0) ThrowErrno(errno, from); }
 protected:
 	int m_fd = -1;
 	CString m_path;
-	// Scrittura sicura (LINUX): un file di configurazione riscritto da zero non si tronca sul posto. Si scrive in <nome>.tmpPID_N e alla chiusura (anche implicita, come in MFC)
-	// si fa fsync e rename sopra l'originale: un crash o una spina staccata a meta' lascia o il file vecchio o quello nuovo intero, mai uno a meta'.
+	// Safe write (LINUX): a configuration file rewritten from scratch is not truncated in place. It is written to <name>.tmpPID_N and on close (also implicit, as in MFC)
+	// fsync and rename over the original: a crash or power loss midway leaves either the old file or the new one whole, never a half-written one.
 	std::string m_atomicTmp, m_atomicFinal;
 	static std::string AtomicTarget(const char *path, UINT flags)
 	{
@@ -236,13 +236,13 @@ protected:
 	bool m_bAutoDelete = true;
 };
 
-// CStdioFile: file con buffer C. In testo, ReadString toglie "\r\n"/"\n" finali.
+// CStdioFile: file with C buffer. In text mode, ReadString strips trailing "\r\n"/"\n".
 class CStdioFile : public CFile
 {
 public:
 	CStdioFile() = default;
 	CStdioFile(LPCTSTR path, UINT flags) { CFileException *e = new CFileException(); if (!Open(path, flags, e)) throw e; e->Delete(); }
-	explicit CStdioFile(FILE *pOpenStream) { m_pStream = pOpenStream; m_bClose = false; }		// come MFC: non chiude il FILE* che non ha aperto
+	explicit CStdioFile(FILE *pOpenStream) { m_pStream = pOpenStream; m_bClose = false; }		// as in MFC: does not close a FILE* it did not open
 	~CStdioFile() override { if (m_pStream && m_bClose) Abort(); }
 	BOOL Open(LPCTSTR path, UINT flags, CFileException *pError = nullptr) override
 	{
@@ -280,13 +280,13 @@ public:
 	void Close() override { if (m_pStream) { FILE *f = m_pStream; m_pStream = nullptr; if (!m_atomicTmp.empty()) { std::fflush(f); ::fsync(fileno(f)); } if (std::fclose(f) != 0) ThrowErrno(errno, m_path); CommitAtomic(true); } }
 	void Abort() override { if (m_pStream) { if (!m_atomicTmp.empty()) { std::fflush(m_pStream); ::fsync(fileno(m_pStream)); } std::fclose(m_pStream); m_pStream = nullptr; CommitAtomic(false); } }
 
-	// Con typeBinary i file di testo di eMule sono UTF-16 little endian (nell'originale la build Unicode di MFC legge e scrive wchar_t): qui si converte da/verso UTF-8,
-	// che e' la codifica delle CString di questo porting. Con typeText si legge e si scrive il testo cosi' com'e'.
+	// With typeBinary eMule's text files are UTF-16 little endian (in the original the MFC Unicode build reads and writes wchar_t): here they are converted from/to UTF-8,
+	// which is the encoding of CStrings in this port. With typeText the text is read and written as is.
 	BOOL ReadString(CString &rString)
 	{
 		rString.Empty(); std::string s; bool any = false;
 		if (m_wide) {
-			unsigned hi = 0;		// primo elemento di una coppia surrogata
+			unsigned hi = 0;		// first element of a surrogate pair
 			for (;;) {
 				int a = std::fgetc(m_pStream), b = a == EOF ? EOF : std::fgetc(m_pStream);
 				if (a == EOF || b == EOF) break;
@@ -320,7 +320,7 @@ public:
 			for (int i = 0; i < n; ++i) { unsigned char b[2] = {(unsigned char)(w[i] & 0xFF), (unsigned char)(w[i] >> 8)}; if (std::fwrite(b, 1, 2, m_pStream) != 2) ThrowErrno(errno, m_path); }
 		}
 	}
-	bool m_wide = false;		// file di testo UTF-16 (aperto con typeBinary)
+	bool m_wide = false;		// UTF-16 text file (opened with typeBinary)
 private:
 	static void AppendUtf8(std::string &s, unsigned u)
 	{
@@ -338,7 +338,7 @@ public:
 #include <dirent.h>
 #include <fnmatch.h>
 #include <vector>
-// CFileFind: FindFile("dir/*.ext"), poi "bMore = FindNextFile()" in ciclo, come in MFC (FindNextFile ritorna FALSE sull'ultimo).
+// CFileFind: FindFile("dir/*.ext"), then "bMore = FindNextFile()" in a loop, as in MFC (FindNextFile returns FALSE on the last one).
 class CFileFind
 {
 	std::vector<std::string> names_; size_t i_ = 0; std::string dir_; bool open_ = false; struct stat st_{}; std::string cur_;

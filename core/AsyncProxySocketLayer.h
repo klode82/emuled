@@ -1,5 +1,5 @@
-// STUB (sostituisce srchybrid/AsyncProxySocketLayer.h): solo i nomi che CEMSocket usa per compilare. Con il proxy disattivato non si esegue mai.
-// Decisione del 25/10/2026: i proxy SOCKS/HTTP NON si portano (si usa una VPN con porta aperta). Il blocco resta solo perche' CEMSocket lo nomina.
+// STUB (replaces srchybrid/AsyncProxySocketLayer.h): only the names that CEMSocket uses to compile. With the proxy disabled it never runs.
+// Decision of 25/10/2026: SOCKS/HTTP proxies are NOT ported (a VPN with an open port is used). The block stays only because CEMSocket names it.
 #pragma once
 #include "StdAfx.h"
 #include "net/AsyncSocketEx.h"
@@ -29,4 +29,4 @@ public:
 	void SetProxy(int, const CString &, UINT, const CString &, const CString &) {}
 };
 
-inline CString GetProxyError(int) { return CString("proxy non supportato"); }
+inline CString GetProxyError(int) { return CString("proxy not supported"); }

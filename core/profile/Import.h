@@ -1,11 +1,11 @@
-// LINUX (codice nuovo): importazione di un profilo eMule esistente (di solito quello di Windows) nel profilo di emuled, Bench 875.
-//   Si CONTA e si COPIA: la cartella di origine non viene mai modificata (si apre solo in lettura).
-//   1. ScanImportSource: guarda cosa c'e' (file noti, nome utente, cartelle) e propone le regole per i percorsi Windows ("Z:\eMule" -> "/mnt/z/eMule").
-//   2. StageImport: copia i file in <profilo>/import-ready/ correggendo i percorsi (preferences.ini, shareddir.dat, Category.ini). Il demone in funzione
-//      ha il profilo in memoria e lo riscriverebbe allo spegnimento: per questo i file non vanno al loro posto subito.
-//   3. ApplyStagedImport: al riavvio, PRIMA di leggere il profilo, sposta i file preparati al loro posto (i file sostituiti vanno in <profilo>/pre-import-AAAAMMGG-hhmmss/).
-// Si copiano le identita' e la storia (hash utente, chiave, crediti, file conosciuti, server, nodi Kad, preferenze). Non si copiano i download in corso
-// (Temp/): restano dove sono, la cartella Temp importata punta a loro, e gli indici Kad (si ricostruiscono).
+// LINUX (new code): import of an existing eMule profile (usually the Windows one) into the emuled profile, Bench 875.
+//   We COUNT and COPY: the source folder is never modified (opened read-only).
+//   1. ScanImportSource: looks at what is there (known files, user name, folders) and proposes the rules for Windows paths ("Z:\eMule" -> "/mnt/z/eMule").
+//   2. StageImport: copies the files into <profile>/import-ready/ fixing the paths (preferences.ini, shareddir.dat, Category.ini). The running daemon
+//      holds the profile in memory and would rewrite it at shutdown: so the files are not put in place immediately.
+//   3. ApplyStagedImport: at restart, BEFORE reading the profile, moves the staged files into place (replaced files go to <profile>/pre-import-YYYYMMDD-hhmmss/).
+// Identities and history are copied (user hash, key, credits, known files, servers, Kad nodes, preferences). Downloads in progress are not copied
+// (Temp/): they stay where they are, the imported Temp folder points to them, and the Kad indexes are rebuilt.
 #pragma once
 #include <cstdint>
 #include <string>
@@ -15,30 +15,30 @@ namespace emule::profile {
 
 struct ImportRule { std::string win, linux_path; };				// "Z:\eMule" -> "/mnt/z/eMule"
 struct ImportFile { std::string name; uint64_t size = 0; };
-struct ImportDir { std::string win, linux_path; bool mapped = false, exists = false; };	// una cartella del profilo di origine, com'e' scritta e dove finirebbe
+struct ImportDir { std::string win, linux_path; bool mapped = false, exists = false; };	// a folder of the source profile, as written and where it would end up
 
 struct ImportScan
 {
-	std::vector<ImportFile> files;					// quelli che verrebbero copiati
+	std::vector<ImportFile> files;					// the ones that would be copied
 	uint64_t total_bytes = 0;
 	std::string nick;
-	std::vector<ImportDir> dirs;					// Incoming, Temp e cartelle condivise (con le regole suggerite applicate)
-	std::vector<ImportRule> rules;					// regole suggerite, una per cartella-radice trovata
+	std::vector<ImportDir> dirs;					// Incoming, Temp and shared folders (with the suggested rules applied)
+	std::vector<ImportRule> rules;					// suggested rules, one per root folder found
 };
 
 inline const char *kImportStageDir = "import-ready";
 inline const char *kImportedMarker = "emuled.imported";
 
 bool ImportedAlready(const std::string &profile_dir);
-// Cartelle del computer che sembrano la configurazione di un eMule (hanno preferences.ini o known.met), cercate nei posti dove di solito stanno: le cartelle
-// ~/.emuled* (vecchie installazioni di emuled, diverse da quella in uso), ~/.config/emule, ~/eMule/config, eMule sotto Wine, /mnt e /media. Non cerca altrove.
+// Folders on the computer that look like an eMule configuration (have preferences.ini or known.met), searched in the usual places: the
+// ~/.emuled* folders (old emuled installs, other than the one in use), ~/.config/emule, ~/eMule/config, eMule under Wine, /mnt and /media. Does not search elsewhere.
 std::vector<std::string> FindImportCandidates(const std::string &home, const std::string &profile_dir);
 
-// Guarda src (sola lettura). false + err se non sembra una cartella di configurazione di eMule. rules: se vuote si propongono.
+// Looks at src (read-only). false + err if it does not look like an eMule configuration folder. rules: proposed if empty.
 bool ScanImportSource(const std::string &src, const std::string &profile_dir, const std::vector<ImportRule> &rules, ImportScan &out, std::string &err);
-// Prepara i file in <profile_dir>/import-ready/. false + err se non va (src uguale al profilo, spazio insufficiente, scrittura).
+// Prepares the files in <profile_dir>/import-ready/. false + err on failure (src equals the profile, not enough space, write error).
 bool StageImport(const std::string &src, const std::string &profile_dir, const std::vector<ImportRule> &rules, std::string &err);
-// All'avvio del demone: se c'e' qualcosa di preparato lo mette al suo posto. Ritorna true se ha importato; log riceve una riga per file.
+// At daemon start: if something is staged, puts it in place. Returns true if it imported; log receives one line per file.
 bool ApplyStagedImport(const std::string &profile_dir, std::string &log);
 
 } // namespace emule::profile

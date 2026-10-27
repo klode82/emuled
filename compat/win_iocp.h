@@ -1,8 +1,8 @@
-// Emulazione minima di CreateFile / ReadFile / WriteFile "overlapped" e delle porte di completamento (IOCP) di Windows.
-// eMule legge i file da condividere (UploadDiskIOThread) e scrive i .part (PartFileWriteThread) con I/O asincrono su una porta di completamento.
-// Su Linux l'I/O e' eseguito subito (pread/pwrite) nel thread che chiama e il completamento viene messo in coda sulla porta: il codice
-// del thread (che legge i completamenti con GetQueuedCompletionStatus) resta quello originale. ReadFile/WriteFile con OVERLAPPED
-// ritornano FALSE con ERROR_IO_PENDING, come fa Windows quando l'operazione e' in corso.
+// Minimal emulation of Windows CreateFile / ReadFile / WriteFile "overlapped" and completion ports (IOCP).
+// eMule reads the files to share (UploadDiskIOThread) and writes the .part files (PartFileWriteThread) with async I/O on a completion port.
+// On Linux the I/O is executed immediately (pread/pwrite) in the calling thread and the completion is queued on the port: the thread code
+// (which reads completions with GetQueuedCompletionStatus) stays the original. ReadFile/WriteFile with OVERLAPPED
+// return FALSE with ERROR_IO_PENDING, as Windows does when the operation is in progress.
 #pragma once
 #include "win_types.h"
 #include "win_files.h"
@@ -53,19 +53,19 @@ struct Registry
 {
 	std::mutex m;
 	std::set<Port*> ports;
-	std::map<int, std::pair<Port*, ULONG_PTR>> files;		// fd -> (porta, chiave) dopo CreateIoCompletionPort(file, porta, chiave)
+	std::map<int, std::pair<Port*, ULONG_PTR>> files;		// fd -> (port, key) after CreateIoCompletionPort(file, port, key)
 };
 inline Registry &Reg() { static Registry r; return r; }
 inline void Post(Port *p, DWORD bytes, ULONG_PTR key, LPOVERLAPPED ov)
 {
 	std::lock_guard<std::mutex> l(p->m);
 	p->q.push_back({bytes, key, ov});
-	p->cv.notify_one();		// con il blocco preso: chi chiude la porta non la distrugge mentre si notifica
+	p->cv.notify_one();		// with the lock held: whoever closes the port does not destroy it while notifying
 }
 inline uint64_t OvOffset(const OVERLAPPED *ov) { return ((uint64_t)ov->OffsetHigh << 32) | ov->Offset; }
 }
 
-// LINUX: scrive l'offset a 64 bit nei due campi (il cast a uint64* violava lo strict aliasing)
+// LINUX: writes the 64-bit offset into the two fields (the cast to uint64* violated strict aliasing)
 inline void OvSetOffset(OVERLAPPED *ov, uint64_t off) { ov->Offset = (DWORD)(off & 0xFFFFFFFFu); ov->OffsetHigh = (DWORD)(off >> 32); }
 
 inline HANDLE CreateIoCompletionPort(HANDLE hFile, HANDLE hExisting, ULONG_PTR key, DWORD)
@@ -97,7 +97,7 @@ inline BOOL GetQueuedCompletionStatus(HANDLE hPort, LPDWORD pBytes, ULONG_PTR *p
 		p->cv.wait(l, [p] { return !p->q.empty(); });
 	else if (!p->cv.wait_for(l, std::chrono::milliseconds(timeoutMs), [p] { return !p->q.empty(); })) {
 		*pOv = nullptr;
-		return FALSE;			// timeout: come Windows (lpOverlapped NULL)
+		return FALSE;			// timeout: as Windows (lpOverlapped NULL)
 	}
 	Completion c = p->q.front();
 	p->q.pop_front();
@@ -141,8 +141,8 @@ inline DWORD GetFileSize(HANDLE h, LPDWORD pHigh)
 	if (pHigh) *pHigh = (DWORD)((uint64_t)st.st_size >> 32);
 	return (DWORD)((uint64_t)st.st_size & 0xffffffffu);
 }
-// I/O con OVERLAPPED: eseguito subito; se il file e' associato a una porta il completamento viene accodato e il ritorno e' FALSE + ERROR_IO_PENDING.
-// Se non c'e' porta, il ritorno e' TRUE e *pDone contiene i byte.
+// I/O with OVERLAPPED: executed immediately; if the file is associated with a port the completion is queued and the return is FALSE + ERROR_IO_PENDING.
+// If there is no port, the return is TRUE and *pDone holds the bytes.
 inline BOOL OverlappedIo(bool bWrite, HANDLE h, void *buf, DWORD len, LPDWORD pDone, LPOVERLAPPED ov)
 {
 	using namespace iocp_detail;
@@ -155,7 +155,7 @@ inline BOOL OverlappedIo(bool bWrite, HANDLE h, void *buf, DWORD len, LPDWORD pD
 		do n = bWrite ? ::write(fd, buf, len) : ::read(fd, buf, len); while (n < 0 && errno == EINTR);
 	if (n < 0) {
 		if (ov) { ov->Internal = (ULONG_PTR)errno; ov->InternalHigh = 0; }
-		return FALSE;			// l'errore e' in errno (GetLastError)
+		return FALSE;			// the error is in errno (GetLastError)
 	}
 	if (ov) { ov->Internal = 0; ov->InternalHigh = (ULONG_PTR)n; }
 	if (pDone) *pDone = (DWORD)n;
@@ -171,7 +171,7 @@ inline BOOL OverlappedIo(bool bWrite, HANDLE h, void *buf, DWORD len, LPDWORD pD
 	if (!p)
 		return TRUE;
 	Post(p, (DWORD)n, key, ov);
-	errno = ERROR_IO_PENDING;	// ponte per GetLastError(): "in corso"; il completamento e' gia' in coda
+	errno = ERROR_IO_PENDING;	// bridge for GetLastError(): "in progress"; the completion is already queued
 	return FALSE;
 }
 inline BOOL ReadFile(HANDLE h, void *buf, DWORD len, LPDWORD pRead, LPOVERLAPPED ov) { return OverlappedIo(false, h, buf, len, pRead, ov); }

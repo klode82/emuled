@@ -38,7 +38,7 @@ CUPnPImpl::CUPnPImpl()
 void CUPnPImpl::SendResultMessage()
 {
 	if (m_onResult) {
-		auto fn = std::move(m_onResult);		// una sola volta, come l'originale (nResultMessageID = 0)
+		auto fn = std::move(m_onResult);		// only once, like the original (nResultMessageID = 0)
 		m_onResult = nullptr;
 		fn(m_bUPnPPortsForwarded == TRIS_TRUE ? UPNP_OK : UPNP_FAILED, m_bCheckAndRefresh);
 	}

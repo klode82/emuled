@@ -1,4 +1,4 @@
-// LINUX (codice nuovo): vedi EventLoop.h
+// LINUX (new code): see EventLoop.h
 #include "StdAfx.h"
 #include "net/EventLoop.h"
 #include <algorithm>
@@ -21,7 +21,7 @@ EventLoop::EventLoop()
 {
 	ep_ = ::epoll_create1(EPOLL_CLOEXEC);
 	wake_ = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
-	struct epoll_event ev = {}; ev.events = EPOLLIN; ev.data.u64 = 0;		// id 0 = eventfd di risveglio
+	struct epoll_event ev = {}; ev.events = EPOLLIN; ev.data.u64 = 0;		// id 0 = wake-up eventfd
 	::epoll_ctl(ep_, EPOLL_CTL_ADD, wake_, &ev);
 	if (!g_current) g_current = this;
 }
@@ -78,7 +78,7 @@ IoSource *EventLoop::Find(uint64_t id) const
 
 void EventLoop::ResolveAsync(std::string host, std::string service, int family, ResolveCb cb)
 {
-	for (auto it = resolvers_.begin(); it != resolvers_.end();) {		// toglie i thread gia' finiti
+	for (auto it = resolvers_.begin(); it != resolvers_.end();) {		// removes the threads that have already finished
 		if (it->done->load()) { it->th.join(); it = resolvers_.erase(it); } else ++it;
 	}
 	Resolver r; r.done = std::make_shared<std::atomic<bool>>(false);
@@ -132,7 +132,7 @@ void EventLoop::RunTimers()
 	for (auto &t : timers_) if (t.due_ms <= now) due.push_back(t.id);
 	for (uint64_t id : due) {
 		auto it = std::find_if(timers_.begin(), timers_.end(), [&](const Timer &t) { return t.id == id; });
-		if (it == timers_.end()) continue;						// annullato da un timer precedente
+		if (it == timers_.end()) continue;						// cancelled by a previous timer
 		std::function<void()> fn = it->fn;
 		if (it->period_ms) it->due_ms = now + it->period_ms; else timers_.erase(it);
 		fn();
@@ -148,14 +148,14 @@ void EventLoop::RunPosted()
 
 int EventLoop::RunOnce(int timeout_ms)
 {
-	owner_ = std::this_thread::get_id();					// il thread che gira e' il proprietario del ciclo
+	owner_ = std::this_thread::get_id();					// the running thread is the owner of the loop
 	struct epoll_event evs[128];
 	int n = ::epoll_wait(ep_, evs, 128, NextTimeoutMs(timeout_ms));
 	int delivered = 0;
 	for (int i = 0; i < n; ++i) {
 		uint64_t id = evs[i].data.u64;
 		if (id == 0) { uint64_t v; ssize_t r = ::read(wake_, &v, sizeof v); (void)r; continue; }
-		auto it = sources_.find(id);						// una sorgente tolta da un evento precedente dello stesso giro non riceve piu' nulla
+		auto it = sources_.find(id);						// a source removed by a previous event of the same round receives nothing more
 		if (it == sources_.end()) continue;
 		it->second.s->OnIo(evs[i].events); ++delivered;
 	}

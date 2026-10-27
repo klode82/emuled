@@ -24,7 +24,7 @@ std::string FindBinary(const std::string &configured)
 	return std::string();
 }
 
-// il valore come testo (mediainfo scrive tutto come stringa) -> numero, o null se non e' un numero
+// the value as text (mediainfo writes everything as a string) -> number, or null if it is not a number
 static json Num(const json &t, const char *k)
 {
 	auto it = t.find(k); if (it == t.end() || !it->is_string()) return nullptr;
@@ -47,7 +47,7 @@ json Compact(const json &mi)
 		else if (ty == "Audio") audio.push_back({{"codec", Str(t, "Format")}, {"commercial", Str(t, "Format_Commercial_IfAny")}, {"bitrate", Num(t, "BitRate")}, {"channels", Num(t, "Channels")}, {"sampling", Num(t, "SamplingRate")}, {"lang", Str(t, "Language")}, {"title", Str(t, "Title")}, {"default", t.value("Default", std::string()) == "Yes"}});
 		else if (ty == "Text") text.push_back({{"codec", Str(t, "Format")}, {"lang", Str(t, "Language")}, {"title", Str(t, "Title")}, {"default", t.value("Default", std::string()) == "Yes"}, {"forced", t.value("Forced", std::string()) == "Yes"}});
 	}
-	// mediainfo descrive sempre un file leggibile con una traccia General: se non ha capito il formato e non ha trovato flussi, per noi il file non e riconosciuto
+	// mediainfo always describes a readable file with a General track: if it did not understand the format and found no streams, for us the file is not recognized
 	if (general.is_null() || (general["format"].is_null() && video.empty() && audio.empty() && text.empty())) return out;
 	out["recognized"] = true; out["general"] = general; out["video"] = video; out["audio"] = audio; out["text"] = text;
 	return out;
@@ -69,7 +69,7 @@ json Probe(const std::string &binary, const std::string &path, int timeout_s)
 		const auto left = std::chrono::duration_cast<std::chrono::milliseconds>(end - std::chrono::steady_clock::now()).count();
 		if (left <= 0) { timedOut = true; break; }
 		pollfd p{fd[0], POLLIN, 0}; int n = ::poll(&p, 1, (int)std::min<long long>(left, 200));
-		if (n > 0) { char buf[8192]; ssize_t r = ::read(fd[0], buf, sizeof buf); if (r <= 0) break; out.append(buf, (size_t)r); if (out.size() > (8u << 20)) { timedOut = true; break; } }		// oltre 8 MB non e' un rapporto
+		if (n > 0) { char buf[8192]; ssize_t r = ::read(fd[0], buf, sizeof buf); if (r <= 0) break; out.append(buf, (size_t)r); if (out.size() > (8u << 20)) { timedOut = true; break; } }		// beyond 8 MB it is not a report
 	}
 	::close(fd[0]);
 	if (timedOut) ::kill(pid, SIGKILL);

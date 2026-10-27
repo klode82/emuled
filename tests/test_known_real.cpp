@@ -1,5 +1,5 @@
-// SOLA LETTURA. Per ogni file condiviso gia' in known.met ricalcola l'hash ed2k e lo confronta con quello di eMule Windows.
-// Uso: test_known_real CONFIG_DIR MAX_BYTE CARTELLA...   (i file piu' piccoli per primi, fino a MAX_BYTE totali)
+// READ ONLY. For every shared file already in known.met, recompute the ed2k hash and compare it with the one from Windows eMule.
+// Usage: test_known_real CONFIG_DIR MAX_BYTES FOLDER...   (smallest files first, up to MAX_BYTES total)
 #include "StdAfx.h"
 #include "known/SharedScanner.h"
 #include "known/Hasher.h"
@@ -19,7 +19,7 @@ int main(int argc, char **argv)
 	for (int i = 3; i < argc; ++i) {
 		if (!fs::is_directory(argv[i])) continue;
 		o.dirs.push_back(argv[i]);
-		for (auto &e : fs::directory_iterator(argv[i])) if (e.is_directory()) o.dirs.push_back(e.path().string());	// un livello di sottocartelle
+		for (auto &e : fs::directory_iterator(argv[i])) if (e.is_directory()) o.dirs.push_back(e.path().string());	// one level of subfolders
 	}
 	ScanResult r = ScanShared(o, kl);
 	std::printf("  cartelle: %zu  gia' note: %zu (%.1f GB)  da calcolare: %zu (%.1f GB)  ignorati: %zu  sottocartelle: %zu  vuoti: %zu\n",

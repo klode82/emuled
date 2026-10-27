@@ -1,4 +1,4 @@
-// LINUX (codice nuovo): GET/DELETE /api/v1/log e le righe "[api] ..." con cui il demone annota le azioni fatte via API
+// LINUX (new code): GET/DELETE /api/v1/log and the "[api] ..." lines with which the daemon records actions done via API
 #include "StdAfx.h"
 #include "api/Api.h"
 #include "EventLog.h"
@@ -32,8 +32,8 @@ void RegisterLogRoutes(HttpServer &srv)
 		auto q = [&](const char *k) -> std::string { auto it = r.query.find(k); return it == r.query.end() ? std::string() : it->second; };
 		log::Level min = log::Level::Info; uint64_t after = 0, limit = 500; bool hasAfter = false;
 		if (!q("level").empty() && !ParseLevel(q("level"), min)) return Response::Error(422, "level: debug | info | warning | error");
-		if (!q("limit").empty() && (!Num(q("limit"), limit, 2000) || limit == 0)) return Response::Error(422, "limit: da 1 a 2000");
-		if (!q("after").empty()) { if (!Num(q("after"), after, UINT64_MAX / 2)) return Response::Error(422, "after: numero dell'ultima riga gia' vista"); hasAfter = true; }
+		if (!q("limit").empty() && (!Num(q("limit"), limit, 2000) || limit == 0)) return Response::Error(422, "limit: from 1 to 2000");
+		if (!q("after").empty()) { if (!Num(q("after"), after, UINT64_MAX / 2)) return Response::Error(422, "after: number of the last line already seen"); hasAfter = true; }
 		bool truncated = false;
 		auto lines = hasAfter ? EventLog::Instance().Since(after, (size_t)limit, min, truncated) : EventLog::Instance().Last((size_t)limit, min);
 		return Ok({{"lines", LogLinesJson(lines)}, {"last_id", EventLog::Instance().LastId()}, {"truncated", truncated}});

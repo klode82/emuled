@@ -10,7 +10,7 @@ describe('template d\'interfaccia', () => {
     expect(currentTemplateId('/t/mio-2/assets/app.js')).toBe('mio-2')
     expect(currentTemplateId('/')).toBeNull()
     expect(currentTemplateId('/t/')).toBeNull()
-    expect(currentTemplateId('/t/A/')).toBeNull()        // maiuscole non valide
+    expect(currentTemplateId('/t/A/')).toBeNull()        // uppercase is not valid
     expect(currentTemplateId('/api/t/x/')).toBeNull()
   })
   it('la scelta si ricorda nel browser e porta alla pagina del template, mantenendo la schermata', () => {

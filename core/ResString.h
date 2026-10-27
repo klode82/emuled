@@ -1,5 +1,5 @@
-// LINUX: le traduzioni dei messaggi non stanno piu' nel core ma nell'interfaccia web. I file portati chiamano ancora GetResString(IDS_X): le macro
-// IDS_X (SearchStrings.h, ServerStrings.h) sono gia' il testo inglese, e questa funzione lo restituisce come CString (come in MFC: si puo' concatenare).
+// LINUX: message translations no longer live in the core but in the web interface. Ported files still call GetResString(IDS_X): the
+// IDS_X macros (SearchStrings.h, ServerStrings.h) are already the English text, and this function returns it as a CString (as in MFC: it can be concatenated).
 #pragma once
 #include "StdAfx.h"
 #include "search/SearchStrings.h"

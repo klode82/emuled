@@ -1,5 +1,5 @@
-// Crash reali sulla scrittura sicura: kill del processo a meta' scrittura, scrittura fallita (file troppo grande), symlink.
-// Limite dichiarato: un kill di processo prova l'atomicita' del rename, non la perdita di corrente (serve una macchina virtuale).
+// Real crashes on the safe write: process kill mid-write, failed write (file too big), symlink.
+// Declared limit: a process kill proves the atomicity of the rename, not power loss (needs a virtual machine).
 #include "StdAfx.h"
 #include "met/SafeMet.h"
 #include "met_builders.h"
@@ -47,16 +47,16 @@ int main()
 		}
 		std::printf("  400 kill a meta' scrittura: file danneggiati %d, interruzioni con .tmp rimasto %d\n", bad, killed_in_tmp);
 		CHECK(bad == 0);
-		CHECK(killed_in_tmp > 0);			// il test prova davvero qualcosa: almeno una volta il kill e' arrivato con il .tmp in mano
+		CHECK(killed_in_tmp > 0);			// the test really proves something: at least once the kill arrived with the .tmp in hand
 	}
-	// 2. scrittura fallita per limite di dimensione (EFBIG): l'originale resta intatto, nessun .tmp
+	// 2. write failed due to size limit (EFBIG): the original stays intact, no .tmp
 	{
 		std::string big = PartMet("grande_" + std::string(3000, 'g') + ".mkv", 40000), small = PartMet("piccolo.mkv", 40000);
 		fs::remove(f + ".bak"); fs::remove(f + ".tmp"); spit(f, small);
 		pid_t pid = fork();
 		if (pid == 0) {
 			signal(SIGXFSZ, SIG_IGN);
-			struct rlimit rl = {800, 800};		// il vecchio (~150 byte, per il .bak) ci sta, il nuovo (~3 KB) no
+			struct rlimit rl = {800, 800};		// the old one (~150 bytes, for the .bak) fits, the new one (~3 KB) does not
 			setrlimit(RLIMIT_FSIZE, &rl);
 			SafeWriteResult r = SafeWriteMet(f, big, ValidatePartMet);
 			_exit(!r.ok && r.error.find("write") != std::string::npos ? 0 : 1);
@@ -66,20 +66,20 @@ int main()
 		CHECK(slurp(f) == small && !fs::exists(f + ".tmp") && !fs::exists(f + ".bak.tmp"));
 		std::printf("  scrittura fallita (EFBIG): originale intatto, nessun file temporaneo\n");
 	}
-	// 3. il .tmp e' una directory: errore pulito, originale intatto
+	// 3. the .tmp is a directory: clean error, original intact
 	{
 		fs::create_directories(f + ".tmp"); std::string small = PartMet("piccolo.mkv", 40000), nw = PartMet("nuovo.mkv", 41000); spit(f, small);
 		SafeWriteResult r = SafeWriteMet(f, nw, ValidatePartMet);
 		CHECK(!r.ok && slurp(f) == small); fs::remove_all(f + ".tmp");
 	}
-	// 4. symlink: si scrive sul file vero, il link resta un link
+	// 4. symlink: the real file is written, the link stays a link
 	{
 		std::string real = root + "/vero.met", link = root + "/link.met"; spit(real, PartMet("a.mkv", 40000)); fs::create_symlink(real, link);
 		SafeWriteResult r = SafeWriteMet(link, PartMet("b.mkv", 41000), ValidatePartMet);
 		CHECK(r.ok && fs::is_symlink(link) && slurp(real) == PartMet("b.mkv", 41000) && slurp(real + ".bak") == PartMet("a.mkv", 40000));
 		CHECK(!fs::exists(link + ".bak"));
 	}
-	// 5. permessi del file originale in sola lettura: la sostituzione per rename riesce (e' la cartella a contare)
+	// 5. original file permissions read-only: replacement by rename succeeds (the directory is what counts)
 	if (geteuid() != 0) {
 		std::string g = root + "/ro.met"; spit(g, PartMet("a.mkv", 40000)); fs::permissions(g, fs::perms::owner_read);
 		SafeWriteResult r = SafeWriteMet(g, PartMet("b.mkv", 41000), ValidatePartMet);

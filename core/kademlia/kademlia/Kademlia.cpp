@@ -56,7 +56,7 @@ static char THIS_FILE[] = __FILE__;
 
 using namespace Kademlia;
 
-// LINUX: cartella dei file di Kad (nodes.dat, *_index.dat), impostata da chi avvia Kad; vuota = nessun file letto ne scritto.
+// LINUX: Kad files folder (nodes.dat, *_index.dat), set by whoever starts Kad; empty = no file read or written.
 static CString s_sConfigDir;
 void CKademlia::SetConfigDir(LPCTSTR szDir) { s_sConfigDir = szDir ? szDir : _T(""); }
 

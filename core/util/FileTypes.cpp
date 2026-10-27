@@ -4,7 +4,7 @@
 #include <cstdlib>
 #include <cstring>
 
-// equivalente di ::PathFindExtension (Windows): punta all'ultimo '.' del nome senza percorso, oppure alla fine
+// equivalent of ::PathFindExtension (Windows): points to the last '.' of the name without path, or to the end
 static LPCTSTR FindExtension(LPCTSTR pszPath)
 {
 	LPCTSTR pszDot = nullptr;
@@ -406,7 +406,7 @@ LPCTSTR GetED2KFileTypeSearchTerm(EED2KFileType iFileID)
 		return _T(ED2KFTSTR_DOCUMENT);
 	case ED2KFT_EMULECOLLECTION:
 		return _T(ED2KFTSTR_EMULECOLLECTION);
-	// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+	// LINUX: the other values do nothing (listed so -Wswitch flags new values)
 	case ED2KFT_ANY:
 		break;
 	}
@@ -428,7 +428,7 @@ EED2KFileType GetED2KFileTypeSearchID(EED2KFileType iFileID)
 	case ED2KFT_ARCHIVE:
 	case ED2KFT_CDIMAGE:
 		return ED2KFT_PROGRAM;
-	// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+	// LINUX: the other values do nothing (listed so -Wswitch flags new values)
 	case ED2KFT_ANY:
 	case ED2KFT_EMULECOLLECTION:
 		break;

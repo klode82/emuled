@@ -1,4 +1,4 @@
-// LINUX (codice nuovo): vedi GlobalSearch.h. Origine: srchybrid/SearchResultsWnd.cpp (DoNewEd2kSearch righe 1196-1262, OnTimer righe 233-312).
+// LINUX (new code): see GlobalSearch.h. Origin: srchybrid/SearchResultsWnd.cpp (DoNewEd2kSearch lines 1196-1262, OnTimer lines 233-312).
 #include "StdAfx.h"
 #include "search/GlobalSearch.h"
 #include "net/EventLoop.h"
@@ -39,12 +39,12 @@ bool GlobalSearch::Start(SSearchParams params, bool allServers)
 	finished_ = false;
 
 	if (allServers_) {
-		// timeout del server locale: se non risponde, la ricerca globale parte lo stesso
+		// timeout of the local server: if it does not answer, the global search starts anyway
 		std::shared_ptr<bool> alive = alive_;
 		localTimer_ = EventLoop::Current()->AddTimer(50000, [this, alive] { if (!*alive) return; localTimer_ = 0; StartGlobalTimer(); });
 		if (thePrefs.GetUseServerPriorities())
 			theApp.serverlist->ResetSearchServerPos();
-		searchPacket_->opcode = OP_GLOBSEARCHREQ;		// verra' cambiato al momento dell'invio
+		searchPacket_->opcode = OP_GLOBSEARCHREQ;		// will be changed when sending
 		packetUses64Bit_ = bPacketUsing64Bit;
 		serverCount_ = 0;
 	}
@@ -54,7 +54,7 @@ bool GlobalSearch::Start(SSearchParams params, bool allServers)
 void GlobalSearch::OnLocalServerAnswered()
 {
 	if (finished_) return;
-	if (!allServers_) { finished_ = true; return; }		// ricerca solo sul server connesso: finita
+	if (!allServers_) { finished_ = true; return; }		// search on the connected server only: finished
 	if (localTimer_) { EventLoop::Current()->CancelTimer(localTimer_); localTimer_ = 0; }
 	StartGlobalTimer();
 }
@@ -84,8 +84,8 @@ void GlobalSearch::Tick()
 		pConnectedServer = theApp.serverlist->GetServerByAddress(pConnectedServer->GetAddress(), pConnectedServer->GetPort());
 
 	CServer *toask = NULL;
-	// DIFFERENZA DALL'ORIGINALE: l'originale fa "while (++m_servercount < numero_server)", cioe' al massimo N-1 passi; se il server connesso e' fra i primi, saltarlo
-	// consuma uno dei passi e l'ULTIMO server della lista non viene mai interrogato. Qui ogni posizione si visita una volta (N passi); il connesso si salta.
+	// DIFFERENCE FROM THE ORIGINAL: the original does "while (++m_servercount < number_of_servers)", i.e. at most N-1 steps; if the connected server is among the first, skipping it
+	// consumes one of the steps and the LAST server in the list is never queried. Here every position is visited once (N steps); the connected one is skipped.
 	while (serverCount_ < (unsigned)theApp.serverlist->GetServerCount()) {
 		++serverCount_;
 		toask = theApp.serverlist->GetNextSearchServer();
@@ -93,7 +93,7 @@ void GlobalSearch::Tick()
 			break;
 		toask = NULL;
 	}
-	if (!toask) { Cancel(); return; }					// tutti interrogati
+	if (!toask) { Cancel(); return; }					// all queried
 
 	bool bRequestSent = false;
 	if (toask->SupportsLargeFilesUDP() && (toask->GetUDPFlags() & SRV_UDPFLG_EXT_GETFILES)) {

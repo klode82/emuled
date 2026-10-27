@@ -1,13 +1,13 @@
-// LINUX (codice nuovo): scrittura e recupero sicuri dei file .met (requisito Bench #626, modello MetGuardian).
+// LINUX (new code): safe writing and recovery of .met files (Bench #626 requirement, MetGuardian model).
 //
-// Scrittura di un .met:
-//  1. valida i dati nuovi in memoria (se non sono sani non si scrive nulla)
-//  2. se il file attuale e' SANO lo copia in <file>.bak (tmp + fsync + rename); se NON e' sano il .bak resta com'e'
-//  3. scrive <file>.tmp, fsync, lo rilegge dal disco e lo valida
-//  4. rename atomico su <file>, fsync della cartella
-// Dopo una caduta in qualunque punto, <file> e' o il vecchio intero o il nuovo intero.
+// Writing a .met:
+//  1. validates the new data in memory (if not sane, nothing is written)
+//  2. if the current file is SANE copies it to <file>.bak (tmp + fsync + rename); if NOT sane the .bak is left as is
+//  3. writes <file>.tmp, fsync, re-reads it from disk and validates it
+//  4. atomic rename onto <file>, fsync of the directory
+// After a crash at any point, <file> is either the whole old one or the whole new one.
 //
-// Presuppone un solo scrittore sul profilo (lock di istanza unica, Bench #624).
+// Assumes a single writer on the profile (single-instance lock, Bench #624).
 #pragma once
 #include "met/MetFormat.h"
 #include <functional>
@@ -23,8 +23,8 @@ struct SafeWriteOptions {
 struct SafeWriteResult {
 	bool ok = false;
 	bool backed_up = false;
-	std::string backup_note;	// perche' il backup e' stato saltato (se lo e')
-	std::string error;			// se !ok
+	std::string backup_note;	// why the backup was skipped (if it was)
+	std::string error;			// if !ok
 };
 
 SafeWriteResult SafeWriteMet(const std::string &path, const std::string &data, Validator v, const SafeWriteOptions &opt = {});
@@ -35,12 +35,12 @@ struct RecoverResult {
 	std::string restored_from;
 };
 
-// Controlla <path>. Se e' Invalid o assente cerca una copia sana in <path>.bak e poi nei fallback;
-// il file danneggiato non viene cancellato: diventa <path>.corrupt. Se e' Unsupported o IoError non si tocca nulla.
-// dry_run: calcola e riporta cosa farebbe (action e restored_from) senza toccare nulla.
+// Checks <path>. If it is Invalid or missing, looks for a sane copy in <path>.bak and then in the fallbacks;
+// the damaged file is not deleted: it becomes <path>.corrupt. If it is Unsupported or IoError nothing is touched.
+// dry_run: computes and reports what it would do (action and restored_from) without touching anything.
 RecoverResult RecoverMet(const std::string &path, Validator v, const std::vector<std::string> &fallbacks = {}, const SafeWriteOptions &opt = {}, bool dry_run = false);
 
-// Solo per i test: viene chiamata nei punti della scrittura con un nome. Se lancia, simula una caduta.
+// Tests only: called at the write points with a name. If it throws, it simulates a crash.
 std::function<void(const char *)> &FaultHook();
 
 } // namespace emule::met

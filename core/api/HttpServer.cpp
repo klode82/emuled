@@ -1,4 +1,4 @@
-// LINUX (codice nuovo): vedi HttpServer.h
+// LINUX (new code): see HttpServer.h
 #include "api/HttpServer.h"
 #include <algorithm>
 #include <arpa/inet.h>
@@ -24,9 +24,9 @@ using emule::net::IoSource;
 
 static constexpr size_t kMaxHeader = 16 * 1024, kMaxBody = 1 << 20, kMaxConns = 64, kMaxWsBacklog = 8u << 20;
 static constexpr int kIdleSeconds = 60;
-static constexpr uint64_t kMaxServedFile = 32u << 20;		// un file statico piu' grande non si serve (si legge tutto in memoria)
+static constexpr uint64_t kMaxServedFile = 32u << 20;		// a larger static file is not served (it is all read into memory)
 
-// ---- SHA-1 e base64: servono solo all'handshake WebSocket (RFC 6455)
+// ---- SHA-1 e base64: only needed for the WebSocket (RFC 6455)
 namespace {
 struct Sha1
 {
@@ -94,25 +94,25 @@ std::string Mime(const std::string &ext)
 double NowS() { return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
 } // namespace
 
-// Codice stabile dell'errore: l'interfaccia lo traduce nella lingua scelta, il testo italiano (error) resta per chi usa curl. Si riconosce dall'inizio del messaggio;
-// se nessuno corrisponde si ripiega sul solo numero di stato.
+// Stable error code: the web interface translates it into the chosen language; the English text (error) stays for people using curl. It is recognised from the START of the message
+// (the prefixes below must match the start of the messages written in the API sources); if none matches, the HTTP status alone gives the code.
 static std::string ErrorCode(int status, const std::string &m)
 {
 	static const struct { const char *prefix, *code; } kTable[] = {
-		{"serve un oggetto JSON", "bad_json"}, {"ricerca non trovata", "search_not_found"}, {"ciclo di eventi", "loop_unavailable"}, {"serve un indirizzo http", "url_not_http"},
-		{"priority:", "bad_priority"}, {"category:", "bad_category"}, {"server non in lista", "server_not_found"}, {"file inesistente", "file_not_found"},
-		{"token mancante", "unauthorized"}, {"intestazioni troppo lunghe", "headers_too_long"}, {"hash non valido", "bad_hash"}, {"ricerca non valida", "bad_search"},
-		{"ricerca rifiutata", "bad_search"}, {"ricerca non partita", "search_not_started"}, {"scope:", "bad_scope"}, {"server non ammesso", "server_refused"},
-		{"preferenza sconosciuta", "unknown_pref"}, {"campo sconosciuto", "unknown_field"}, {"link non valido", "bad_link"}, {"il link non e'", "bad_link"},
-		{"l'indirizzo del nodo", "bad_address"}, {"address deve essere", "bad_address"}, {"indirizzo non valido", "bad_address"}, {"il file non e' stato aggiunto", "not_added"},
-		{"limit:", "bad_param"}, {"level:", "bad_param"}, {"after:", "bad_param"}, {"la categoria 0", "category_zero"}, {"un bootstrap", "job_running"}, {"un aggiornamento", "job_running"},
-		{"Kad non partita", "kad_unavailable"}, {"Kad non disponibile", "kad_unavailable"}, {"Kad non e' acceso", "kad_off"}, {"Kad non connesso", "kad_not_connected"},
-		{"Kad e' gia' collegato", "kad_already_connected"}, {"non connesso a un server", "ed2k_not_connected"}, {"ne' un server", "no_network"},
-		{"il server e' gia' in lista", "server_exists"}, {"il file e' gia' in download", "already_downloading"}, {"metodo non consentito", "method_not_allowed"},
-		{"percorso inesistente", "route_not_found"}, {"link di streaming", "stream_expired"}, {"questa parte del file", "range_not_ready"}, {"nessuna interfaccia web", "no_web_ui"}, {"file non condiviso", "not_shared"}, {"download non trovato", "download_not_found"},
-		{"categoria non trovata", "category_not_found"}, {"percorso non consentito", "forbidden_path"}, {"cartella inesistente", "dir_not_found"}, {"la cartella esiste", "dir_exists"}, {"il percorso non e' una cartella", "not_a_directory"}, {"serve un percorso assoluto", "bad_path"}, {"nome di cartella", "bad_dirname"}, {"corpo troppo grande", "body_too_large"}, {"errore interno", "internal"},
-		{"nome utente o password errati", "bad_credentials"}, {"codice di impostazione", "bad_setup_code"}, {"l'account e' gia'", "account_exists"}, {"nome utente non valido", "bad_username"}, {"la password", "bad_password"},
-		{"temp:", "bad_directories"}, {"shared:", "bad_directories"}, {"la cartella", "bad_directories"}, {"cartella", "bad_directories"}, {"il percorso deve", "bad_directories"},
+		{"a JSON object is required", "bad_json"}, {"search not found", "search_not_found"}, {"event loop", "loop_unavailable"}, {"an http address is required", "url_not_http"},
+		{"priority:", "bad_priority"}, {"category:", "bad_category"}, {"server not in the list", "server_not_found"}, {"file does not exist", "file_not_found"},
+		{"token missing", "unauthorized"}, {"headers too long", "headers_too_long"}, {"invalid hash", "bad_hash"}, {"invalid search", "bad_search"},
+		{"search refused", "bad_search"}, {"search did not start", "search_not_started"}, {"scope:", "bad_scope"}, {"server not allowed", "server_refused"},
+		{"unknown preference", "unknown_pref"}, {"unknown field", "unknown_field"}, {"invalid link", "bad_link"}, {"the link is not", "bad_link"},
+		{"the node address", "bad_address"}, {"address must be", "bad_address"}, {"invalid address", "bad_address"}, {"the file was not added", "not_added"},
+		{"limit:", "bad_param"}, {"level:", "bad_param"}, {"after:", "bad_param"}, {"category 0", "category_zero"}, {"a bootstrap", "job_running"}, {"an update", "job_running"},
+		{"Kad did not start", "kad_unavailable"}, {"Kad not available", "kad_unavailable"}, {"Kad is not on", "kad_off"}, {"Kad not connected", "kad_not_connected"},
+		{"Kad is already connected", "kad_already_connected"}, {"not connected to a server", "ed2k_not_connected"}, {"neither a server", "no_network"},
+		{"the server is already in the list", "server_exists"}, {"the file is already downloading", "already_downloading"}, {"method not allowed", "method_not_allowed"},
+		{"route does not exist", "route_not_found"}, {"streaming link", "stream_expired"}, {"this part of the file", "range_not_ready"}, {"no web interface", "no_web_ui"}, {"file not shared", "not_shared"}, {"download not found", "download_not_found"},
+		{"category not found", "category_not_found"}, {"path not allowed", "forbidden_path"}, {"folder does not exist", "dir_not_found"}, {"the folder already exists", "dir_exists"}, {"the path is not a folder", "not_a_directory"}, {"an absolute path is required", "bad_path"}, {"folder name", "bad_dirname"}, {"body too large", "body_too_large"}, {"internal error", "internal"},
+		{"wrong username or password", "bad_credentials"}, {"setup code", "bad_setup_code"}, {"the account already", "account_exists"}, {"invalid username", "bad_username"}, {"the password", "bad_password"},
+		{"temp:", "bad_directories"}, {"shared:", "bad_directories"}, {"the folder", "bad_directories"}, {"folder", "bad_directories"}, {"the path must", "bad_directories"},
 	};
 	for (auto &e : kTable) if (m.rfind(e.prefix, 0) == 0) return e.code;
 	switch (status) { case 400: return "bad_request"; case 401: return "unauthorized"; case 403: return "forbidden"; case 404: return "not_found"; case 405: return "method_not_allowed";
@@ -131,7 +131,7 @@ std::string HttpServer::UrlDecode(const std::string &s)
 	return o;
 }
 
-// ---- una connessione: HTTP, poi eventualmente WebSocket
+// ---- one connection: HTTP, then possibly WebSocket
 class HttpServer::Conn : public IoSource
 {
 public:
@@ -185,16 +185,16 @@ private:
 	{
 		if (closed_) return;
 		out_ += s;
-		if (ws_ && out_.size() > kMaxWsBacklog) { Close(); return; }		// consumatore troppo lento
+		if (ws_ && out_.size() > kMaxWsBacklog) { Close(); return; }		// consumer too slow
 		Flush();
 	}
-	// legge il prossimo pezzo del file (256 KB) in out_: un solo pezzo alla volta, cosi' un client lento non fa crescere la memoria
+	// reads the next chunk of the file (256 KB) into out_: one chunk at a time, so a slow client does not make memory grow
 	bool Pump()
 	{
 		size_t want = (size_t)std::min<uint64_t>(fleft_, 256u << 10);
 		std::string chunk(want, '\0');
 		ssize_t n = ::pread(ffd_, chunk.data(), want, (off_t)foff_);
-		if (n <= 0) { Close(); return false; }		// file accorciato o errore: la lunghezza era gia' promessa, si chiude
+		if (n <= 0) { Close(); return false; }		// file shortened or error: the length was already promised, so close
 		out_.append(chunk, 0, (size_t)n); foff_ += (uint64_t)n; fleft_ -= (uint64_t)n;
 		if (fleft_ == 0) { ::close(ffd_); ffd_ = -1; }
 		return true;
@@ -212,26 +212,26 @@ private:
 		const bool idle = out_.empty() && fleft_ == 0;
 		loop_->Update(loop_id_, fd_, EPOLLIN | EPOLLRDHUP | (idle ? 0 : EPOLLOUT));
 		if (idle && close_after_) { Close(); return; }
-		if (idle && !ws_ && !in_.empty()) ProcessHttp();		// richieste arrivate mentre il file andava via
+		if (idle && !ws_ && !in_.empty()) ProcessHttp();		// requests that arrived while the file was being sent
 	}
 
 	void ProcessHttp()
 	{
-		while (!closed_ && !close_after_ && fleft_ == 0) {		// durante l'invio di un file le richieste successive aspettano
+		while (!closed_ && !close_after_ && fleft_ == 0) {		// while a file is being sent, subsequent requests wait
 			size_t he = in_.find("\r\n\r\n");
-			if (he == std::string::npos) { if (in_.size() > kMaxHeader) { Reply(Response::Error(400, "intestazioni troppo lunghe"), true); } return; }
-			if (he > kMaxHeader) { Reply(Response::Error(400, "intestazioni troppo lunghe"), true); return; }
+			if (he == std::string::npos) { if (in_.size() > kMaxHeader) { Reply(Response::Error(400, "headers too long"), true); } return; }
+			if (he > kMaxHeader) { Reply(Response::Error(400, "headers too long"), true); return; }
 			Request r; r.peer = peer_;
 			std::istringstream hs(in_.substr(0, he));
 			std::string line; std::getline(hs, line);
 			std::istringstream rl(line); std::string target, ver; rl >> r.method >> target >> ver;
-			if (r.method.empty() || target.empty() || ver.rfind("HTTP/1.", 0) != 0) { Reply(Response::Error(400, "richiesta non valida"), true); return; }
+			if (r.method.empty() || target.empty() || ver.rfind("HTTP/1.", 0) != 0) { Reply(Response::Error(400, "invalid request"), true); return; }
 			while (std::getline(hs, line)) { size_t c = line.find(':'); if (c != std::string::npos) r.headers[Lower(Trim(line.substr(0, c)))] = Trim(line.substr(c + 1)); }
 			size_t clen = 0;
-			if (r.headers.count("content-length")) { try { clen = (size_t)std::stoull(r.headers["content-length"]); } catch (...) { Reply(Response::Error(400, "Content-Length non valido"), true); return; } }
-			if (r.headers.count("transfer-encoding")) { Reply(Response::Error(400, "Transfer-Encoding non supportato"), true); return; }
-			if (clen > kMaxBody) { Reply(Response::Error(413, "corpo troppo grande"), true); return; }
-			if (in_.size() < he + 4 + clen) return;							// corpo incompleto: si attende
+			if (r.headers.count("content-length")) { try { clen = (size_t)std::stoull(r.headers["content-length"]); } catch (...) { Reply(Response::Error(400, "invalid Content-Length"), true); return; } }
+			if (r.headers.count("transfer-encoding")) { Reply(Response::Error(400, "Transfer-Encoding not supported"), true); return; }
+			if (clen > kMaxBody) { Reply(Response::Error(413, "body too large"), true); return; }
+			if (in_.size() < he + 4 + clen) return;							// incomplete body: wait
 			r.body = in_.substr(he + 4, clen);
 			in_.erase(0, he + 4 + clen);
 			size_t q = target.find('?');
@@ -245,9 +245,9 @@ private:
 			bool keep = Lower(r.headers.count("connection") ? r.headers["connection"] : "") != "close" && ver != "HTTP/1.0";
 			// WebSocket?
 			if (!srv_->ws_path_.empty() && r.path == srv_->ws_path_ && Lower(r.headers.count("upgrade") ? r.headers["upgrade"] : "") == "websocket" && r.method == "GET") {
-				if (!srv_->Authorized(r)) { Reply(Response::Error(401, "token mancante o errato"), true); return; }
+				if (!srv_->Authorized(r)) { Reply(Response::Error(401, "token missing or wrong"), true); return; }
 				auto k = r.headers.find("sec-websocket-key");
-				if (k == r.headers.end()) { Reply(Response::Error(400, "manca Sec-WebSocket-Key"), true); return; }
+				if (k == r.headers.end()) { Reply(Response::Error(400, "Sec-WebSocket-Key missing"), true); return; }
 				Write("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: " + Base64(Sha1::Digest(k->second + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11")) + "\r\n\r\n");
 				ws_ = true;
 				if (!in_.empty()) ProcessWs();
@@ -267,13 +267,13 @@ private:
 		if (close) close_after_ = true;
 		if (!head && !resp.file_path.empty() && resp.file_len > 0) {
 			int f = ::open(resp.file_path.c_str(), O_RDONLY | O_CLOEXEC);
-			if (f < 0) { Reply(Response::Error(500, "errore interno: file non leggibile"), true); return; }
+			if (f < 0) { Reply(Response::Error(500, "internal error: file not readable"), true); return; }
 			ffd_ = f; foff_ = resp.file_offset; fleft_ = resp.file_len;
 		}
 		Write(h);
 	}
 
-	// WebSocket (RFC 6455): i client mascherano i frame; il server no
+	// WebSocket (RFC 6455): clients mask frames; the server does not
 	void WsFrame(uint8_t op, const std::string &payload)
 	{
 		std::string f; f += (char)(0x80 | op);
@@ -289,7 +289,7 @@ private:
 			uint8_t b0 = (uint8_t)in_[0], b1 = (uint8_t)in_[1]; bool masked = b1 & 0x80; uint64_t len = b1 & 0x7f; size_t pos = 2;
 			if (len == 126) { if (in_.size() < 4) return; len = (uint8_t)in_[2] << 8 | (uint8_t)in_[3]; pos = 4; }
 			else if (len == 127) { if (in_.size() < 10) return; len = 0; for (int i = 0; i < 8; ++i) len = len << 8 | (uint8_t)in_[2 + i]; pos = 10; }
-			if (!masked || len > kMaxBody) { WsFrame(0x8, std::string("\x03\xea", 2)); Close(); return; }		// 1002: protocollo violato
+			if (!masked || len > kMaxBody) { WsFrame(0x8, std::string("\x03\xea", 2)); Close(); return; }		// 1002: protocol violated
 			if (in_.size() < pos + 4 + len) return;
 			uint8_t mask[4]; memcpy(mask, in_.data() + pos, 4); pos += 4;
 			std::string payload = in_.substr(pos, (size_t)len);
@@ -310,7 +310,7 @@ private:
 
 	HttpServer *srv_; EventLoop *loop_ = nullptr; int fd_; uint64_t id_, loop_id_ = 0; std::string peer_, in_, out_, frag_; double last_;
 	bool ws_ = false, closed_ = false, close_after_ = false;
-	int ffd_ = -1; uint64_t foff_ = 0, fleft_ = 0;			// file in invio (risposta da file)
+	int ffd_ = -1; uint64_t foff_ = 0, fleft_ = 0;			// file being sent (file response)
 };
 
 class HttpServer::Listener : public IoSource
@@ -341,12 +341,12 @@ HttpServer::~HttpServer() { Stop(); }
 bool HttpServer::Start(const std::string &bind_addr, uint16_t port)
 {
 	loop_ = EventLoop::Current();
-	if (!loop_) { error_ = "nessun ciclo di eventi"; return false; }
+	if (!loop_) { error_ = "no event loop"; return false; }
 	int fd = ::socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
 	if (fd < 0) { error_ = std::string("socket: ") + strerror(errno); return false; }
 	int one = 1; ::setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof one);
 	sockaddr_in a{}; a.sin_family = AF_INET; a.sin_port = htons(port);
-	if (inet_pton(AF_INET, bind_addr.c_str(), &a.sin_addr) != 1) { error_ = "indirizzo non valido: " + bind_addr; ::close(fd); return false; }
+	if (inet_pton(AF_INET, bind_addr.c_str(), &a.sin_addr) != 1) { error_ = "invalid address: " + bind_addr; ::close(fd); return false; }
 	if (::bind(fd, (sockaddr*)&a, sizeof a) != 0 || ::listen(fd, 64) != 0) { error_ = bind_addr + ":" + std::to_string(port) + ": " + strerror(errno); ::close(fd); return false; }
 	socklen_t l = sizeof a; ::getsockname(fd, (sockaddr*)&a, &l); port_ = ntohs(a.sin_port);
 	listener_ = std::make_unique<Listener>(this, fd);
@@ -371,7 +371,7 @@ void HttpServer::Stop()
 void HttpServer::Drop(uint64_t id)
 {
 	auto alive = alive_;
-	loop_->Post([this, alive, id] { if (*alive) conns_.erase(id); });		// mai distruggere la connessione dentro una sua callback
+	loop_->Post([this, alive, id] { if (*alive) conns_.erase(id); });		// never destroy the connection inside one of its callbacks
 }
 
 void HttpServer::Route(const std::string &method, const std::string &pattern, Handler h)
@@ -389,13 +389,13 @@ bool HttpServer::Authorized(const Request &r) const
 	if (it != r.headers.end() && it->second.rfind("Bearer ", 0) == 0) given = it->second.substr(7);
 	else if (auto q = r.query.find("token"); q != r.query.end()) given = q->second;
 	if (given.empty()) return false;
-	return ConstEq(given, token_) || (verifier_ && verifier_(given));		// token del file (script e strumenti) o sessione di un account (Auth)
+	return ConstEq(given, token_) || (verifier_ && verifier_(given));		// file token (scripts and tools) or account session (Auth)
 }
 
 Response HttpServer::Dispatch(Request &r)
 {
 	if (r.path.rfind("/api/", 0) == 0 || r.path == "/api") {
-		if (r.path != "/api/v1/ping" && r.path != "/api/v1/openapi.json" && !public_.count(r.path) && r.path.rfind("/api/v1/stream/", 0) != 0 && !Authorized(r)) { Response x = Response::Error(401, "token mancante o errato"); x.headers["WWW-Authenticate"] = "Bearer"; return x; }
+		if (r.path != "/api/v1/ping" && r.path != "/api/v1/openapi.json" && !public_.count(r.path) && r.path.rfind("/api/v1/stream/", 0) != 0 && !Authorized(r)) { Response x = Response::Error(401, "token missing or wrong"); x.headers["WWW-Authenticate"] = "Bearer"; return x; }
 		std::vector<std::string> parts; { std::stringstream ss(r.path); std::string p; while (std::getline(ss, p, '/')) if (!p.empty()) parts.push_back(p); }
 		bool pathMatched = false;
 		for (auto &e : routes_) {
@@ -407,11 +407,11 @@ Response HttpServer::Dispatch(Request &r)
 			if (e.method != r.method && !(r.method == "HEAD" && e.method == "GET")) continue;
 			r.params = params;
 			try { return e.h(r); }
-			catch (const std::exception &ex) { return Response::Error(500, std::string("errore interno: ") + ex.what()); }
+			catch (const std::exception &ex) { return Response::Error(500, std::string("internal error: ") + ex.what()); }
 		}
-		return pathMatched ? Response::Error(405, "metodo non consentito") : Response::Error(404, "percorso inesistente");
+		return pathMatched ? Response::Error(405, "method not allowed") : Response::Error(404, "route does not exist");
 	}
-	if (r.method != "GET" && r.method != "HEAD") return Response::Error(405, "metodo non consentito");
+	if (r.method != "GET" && r.method != "HEAD") return Response::Error(405, "method not allowed");
 	if (templates_) {
 		if (r.path == "/t" || r.path.rfind("/t/", 0) == 0) return Template(r);
 		if (launcher_ && r.path == "/") return Launcher();
@@ -421,30 +421,30 @@ Response HttpServer::Dispatch(Request &r)
 
 Response HttpServer::Static(const Request &r) const
 {
-	if (static_dir_.empty()) return Response::Error(404, "nessuna interfaccia web configurata");
+	if (static_dir_.empty()) return Response::Error(404, "no web interface configured");
 	return ServeFrom(static_dir_, r.path, "index.html");
 }
 
-// serve un file da `root_dir`: i percorsi che escono dalla cartella (anche tramite collegamenti simbolici) sono rifiutati; una cartella o un percorso
-// senza estensione che non esiste danno la pagina d'ingresso (applicazioni a pagina singola)
+// serves a file from `root_dir`: paths that leave the folder (even via symlinks) are rejected; a folder or a non-existent path
+// without extension gives the entry page (single-page apps)
 Response HttpServer::ServeFrom(const std::string &root_dir, const std::string &path, const std::string &entry) const
 {
 	std::error_code ec;
-	if (path.find('\0') != std::string::npos) return Response::Error(400, "percorso non valido");
+	if (path.find('\0') != std::string::npos) return Response::Error(400, "invalid path");
 	fs::path root = fs::weakly_canonical(root_dir, ec);
 	std::string rel = path; while (!rel.empty() && rel[0] == '/') rel.erase(0, 1);
 	fs::path p = fs::weakly_canonical(root / rel, ec);
 	auto inside = [&](const fs::path &x) { auto rs = root.string(); auto xs = x.string(); return xs == rs || xs.rfind(rs + "/", 0) == 0; };
-	if (ec || !inside(p)) return Response::Error(403, "percorso non consentito");
-	if (fs::is_directory(p, ec)) p /= (p == root ? entry : "index.html");		// la cartella del template ha la sua pagina d'ingresso, le sottocartelle index.html
+	if (ec || !inside(p)) return Response::Error(403, "path not allowed");
+	if (fs::is_directory(p, ec)) p /= (p == root ? entry : "index.html");		// the template folder has its entry page, subfolders index.html
 	if (!fs::is_regular_file(p, ec)) {
-		if (fs::path(rel).has_extension()) return Response::Error(404, "file inesistente");
+		if (fs::path(rel).has_extension()) return Response::Error(404, "file does not exist");
 		p = fs::weakly_canonical(root / entry, ec);
-		if (ec || !inside(p) || !fs::is_regular_file(p, ec)) return Response::Error(404, "file inesistente");
+		if (ec || !inside(p) || !fs::is_regular_file(p, ec)) return Response::Error(404, "file does not exist");
 	}
-	if (!inside(fs::weakly_canonical(p, ec))) return Response::Error(403, "percorso non consentito");
+	if (!inside(fs::weakly_canonical(p, ec))) return Response::Error(403, "path not allowed");
 	uint64_t size = fs::file_size(p, ec);
-	if (ec || size > kMaxServedFile) return Response::Error(413, "file troppo grande per essere servito");
+	if (ec || size > kMaxServedFile) return Response::Error(413, "file too large to be served");
 	std::ifstream f(p, std::ios::binary); std::ostringstream ss; ss << f.rdbuf();
 	Response resp; resp.content_type = Mime(p.extension().string()); resp.body = ss.str();
 	return resp;
@@ -458,48 +458,48 @@ static std::string HtmlEscape(const std::string &s)
 static Response Html(int status, const std::string &body)
 {
 	Response r; r.status = status; r.content_type = "text/html; charset=utf-8";
-	r.body = "<!doctype html><html lang=\"it\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta name=\"color-scheme\" content=\"light dark\"><title>emuled</title></head><body>" + body + "</body></html>";
+	r.body = "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta name=\"color-scheme\" content=\"light dark\"><title>emuled</title></head><body>" + body + "</body></html>";
 	r.headers["Cache-Control"] = "no-store";
 	return r;
 }
 
-// se il browser aveva scelto proprio questo template (che non c'e' piu' o e' rotto), si toglie la scelta: la prossima volta si apre il predefinito.
-// L'id e' inserito nello script solo se ha la forma di un id di template (lettere minuscole, cifre, trattino): niente testo libero nella pagina.
+// if the browser had chosen exactly this template (which no longer exists or is broken), the choice is removed: next time the default opens.
+// The id is inserted in the script only if it has the shape of a template id (lowercase letters, digits, hyphen): no free text in the page.
 static std::string ForgetChoice(const std::string &id)
 {
 	if (id.size() < 2 || id.size() > 32) return "";
 	for (char c : id) if (!((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-')) return "";
-	return "<p id=\"scelta\"></p><script>try{if(localStorage.getItem('emuled.template')==='" + id + "'){localStorage.removeItem('emuled.template');document.getElementById('scelta').textContent='Ho tolto questo template dalla tua scelta: la prossima volta si apre quello predefinito.';}}catch(e){}</script>";
+	return "<p id=\"scelta\"></p><script>try{if(localStorage.getItem('emuled.template')==='" + id + "'){localStorage.removeItem('emuled.template');document.getElementById('scelta').textContent='I removed this template from your choice: next time the default one opens.';}}catch(e){}</script>";
 }
 
-// /t/<id>/... : la cartella del template
+// /t/<id>/... : the template folder
 Response HttpServer::Template(const Request &r) const
 {
-	std::string rest = r.path.size() > 3 ? r.path.substr(3) : "";		// dopo "/t/"
+	std::string rest = r.path.size() > 3 ? r.path.substr(3) : "";		// after "/t/"
 	size_t slash = rest.find('/'); std::string id = rest.substr(0, slash);
 	TemplateTarget t;
 	if (id.empty() || !templates_(id, t))
-		return Html(404, "<h1>Template non trovato</h1><p>Il template &laquo;" + HtmlEscape(id) + "&raquo; non c'&egrave; o non &egrave; valido.</p>"
-			"<p>I template stanno in <code>/usr/share/emuled/templates/</code> (quelli di serie) e in <code>~/.emuled/templates/</code> (i tuoi); ogni template ha una cartella con un file <code>template.yaml</code>. Il Registro di emuled dice perch&eacute; un template non viene caricato.</p>"
-			"<p><a href=\"/?template=console\">Torna al template predefinito (console)</a></p>" + ForgetChoice(id));
-	if (slash == std::string::npos) {		// /t/<id> senza barra finale: gli indirizzi relativi dentro il template funzionano solo con la barra
+		return Html(404, "<h1>Template not found</h1><p>The template &laquo;" + HtmlEscape(id) + "&raquo; does not exist or is not valid.</p>"
+			"<p>Templates live in <code>/usr/share/emuled/templates/</code> (the built-in ones) and in <code>~/.emuled/templates/</code> (yours); each template has a folder with a <code>template.yaml</code> file. The emuled registry tells why a template is not loaded.</p>"
+			"<p><a href=\"/?template=console\">Back to the default template (console)</a></p>" + ForgetChoice(id));
+	if (slash == std::string::npos) {		// /t/<id> without trailing slash: relative addresses inside the template only work with the slash
 		Response x; x.status = 301; x.content_type = "text/plain; charset=utf-8"; x.headers["Location"] = "/t/" + id + "/";
 		return x;
 	}
 	Response x = ServeFrom(t.dir, rest.substr(slash), t.entry);
-	// Un template e' codice che gira nella pagina e vede il token: queste intestazioni lo tengono dentro lo stesso indirizzo del demone (richieste solo verso se' stesso,
-	// niente script, stili, font o immagini da altri siti: un template funziona anche senza internet), non incorniciabile in altre pagine, niente 'Referer'.
-	// 'unsafe-inline' resta per script e stili: molti template (anche questo documento d'esempio) ne hanno. Non ferma tutto (un template puo' ancora spostare la pagina
-	// altrove) ma toglie le vie piu' facili per far uscire il token; vedi docs/TEMPLATES.md.
+	// A template is code that runs in the page and sees the token: these headers keep it within the daemon's own address (requests only to itself,
+	// no scripts, styles, fonts or images from other sites: a template also works without internet), not frameable in other pages, no 'Referer'.
+	// 'unsafe-inline' stays for scripts and styles: many templates (even this example document) have them. It does not stop everything (a template can still redirect the page
+	// elsewhere) but removes the easiest ways to leak the token; see docs/TEMPLATES.md.
 	x.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'";
 	x.headers["Referrer-Policy"] = "no-referrer"; x.headers["X-Frame-Options"] = "DENY";
 	return x;
 }
 
-// "/" : sceglie il template in base a cio' che il browser ha salvato. ?template=<id> imposta la scelta (e' anche l'indirizzo di emergenza: /?template=console).
+// "/" : picks the template based on what the browser saved. ?template=<id> sets the choice (it is also the emergency address: /?template=console).
 Response HttpServer::Launcher() const
 {
-	return Html(200, "<p>Apro l'interfaccia&hellip;</p><noscript><p><a href=\"/t/console/\">Apri il template predefinito (console)</a></p></noscript>"
+	return Html(200, "<p>Opening the interface&hellip;</p><noscript><p><a href=\"/t/console/\">Open the default template (console)</a></p></noscript>"
 		"<script>(function(){var k='emuled.template',ok=/^[a-z0-9][a-z0-9-]{1,31}$/,id='console',q=new URLSearchParams(location.search).get('template');"
 		"try{if(q!==null){if(ok.test(q)){localStorage.setItem(k,q);}else{localStorage.removeItem(k);}}var s=localStorage.getItem(k);if(s&&ok.test(s))id=s;}catch(e){}"
 		"if(q!==null&&ok.test(q))id=q;location.replace('/t/'+id+'/'+location.hash);})();</script>");

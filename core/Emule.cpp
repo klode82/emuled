@@ -1,19 +1,19 @@
-// STUB: vedi Emule.h
+// STUB: see Emule.h
 #include "StdAfx.h"
 #include "Emule.h"
 #include "Statistics.h"
 #include <cstdarg>
 
-// LINUX: l'ordine conta: theApp costruisce oggetti (CServerConnect...) che leggono thePrefs e theStats gia' nel costruttore; in un file solo le globali
-// si costruiscono nell'ordine in cui sono scritte.
-// thePrefs e theStats (Preferences.cpp, Statistics.cpp) hanno init_priority(101): nascono prima di theApp, che nel costruttore crea ServerConnect ecc.
+// LINUX: order matters: theApp constructs objects (CServerConnect...) that already read thePrefs and theStats in the constructor; in a single file globals
+// are constructed in the order they are written.
+// thePrefs and theStats (Preferences.cpp, Statistics.cpp) have init_priority(101): they are created before theApp, whose constructor creates ServerConnect etc.
 CemuleApp theApp;
 
 void CemuleApp::QueueDebugLogLine(bool, LPCTSTR fmt, ...) { va_list ap; va_start(ap, fmt); CString s; s.FormatV(fmt, ap); va_end(ap); emule::log::Write(emule::log::Level::Debug, (LPCTSTR)s); }
 void CemuleApp::QueueDebugLogLineEx(UINT, LPCTSTR fmt, ...) { va_list ap; va_start(ap, fmt); CString s; s.FormatV(fmt, ap); va_end(ap); emule::log::Write(emule::log::Level::Debug, (LPCTSTR)s); }
 void CemuleApp::QueueLogLine(bool, LPCTSTR fmt, ...) { va_list ap; va_start(ap, fmt); CString s; s.FormatV(fmt, ap); va_end(ap); emule::log::Write(emule::log::Level::Info, (LPCTSTR)s); }
 
-// LINUX: vedi CServerListCtrl in Emule.h. Originale: ServerListCtrl.cpp AddServer / RemoveServer, senza le righe della lista grafica.
+// LINUX: see CServerListCtrl in Emule.h. Original: ServerListCtrl.cpp AddServer / RemoveServer, without the graphical list lines.
 #include "ServerList.h"
 #include "util/Random.h"
 bool CServerListCtrl::AddServer(const CServer *pServer, bool /*bAddToList*/, bool bRandom)
@@ -23,7 +23,7 @@ bool CServerListCtrl::AddServer(const CServer *pServer, bool /*bAddToList*/, boo
 }
 void CServerListCtrl::RemoveServer(const CServer *pServer) { theApp.serverlist->RemoveServer(pServer); }
 
-// LINUX: vedi CSearchList in AppBridge.h
+// LINUX: see CSearchList in AppBridge.h
 UINT CSearchList::ProcessSearchAnswer(const uchar *packet, uint32 size, bool /*bOptUTF8*/, uint32 nServerIP, uint16 nServerPort, bool *pbMoreResultsAvailable)
 {
 	return emule::net::ParseSearchAnswer(packet, size, serverHits, pbMoreResultsAvailable, nServerIP, nServerPort);
@@ -37,7 +37,7 @@ UINT CSearchList::ProcessUDPSearchAnswer(CFileDataIO &packet, bool /*bOptUTF8*/,
 	return 1;
 }
 
-// LINUX: queste funzioni sono quelle di CemuleApp (Emule.cpp originale, righe 1017-1085), con gli stessi risultati.
+// LINUX: these functions are those of CemuleApp (original Emule.cpp, lines 1017-1085), with the same results.
 #include "kademlia/kademlia/Kademlia.h"
 #include "kademlia/kademlia/Prefs.h"
 #include "ServerConnect.h"
@@ -127,9 +127,9 @@ bool CemuleApp::CanDoCallback(CUpDownClient *client)
 void CemuleApp::AddDebugLogLine(bool addtostatusbar, LPCTSTR fmt, ...) { va_list ap; va_start(ap, fmt); CString s; s.FormatV(fmt, ap); va_end(ap); (void)addtostatusbar; emule::log::Write(emule::log::Level::Debug, (LPCTSTR)s); }
 void CemuleApp::AddDebugLogLine(EDebugLogPriority, bool, LPCTSTR fmt, ...) { va_list ap; va_start(ap, fmt); CString s; s.FormatV(fmt, ap); va_end(ap); emule::log::Write(emule::log::Level::Debug, (LPCTSTR)s); }
 
-// Creazione degli oggetti dell'applicazione (nell'originale: CemuleApp::InitInstance, righe 588-610). Ordine identico.
-// ServerConnect, ServerList e SearchList esistono sempre (membri); qui nascono gli oggetti della Fase 5.
-// Va chiamata dal thread che fa girare l'EventLoop (la coda di upload vi registra il suo timer da 100 ms).
+// Creation of the application objects (original: CemuleApp::InitInstance, lines 588-610). Same order.
+// ServerConnect, ServerList and SearchList always exist (members); here the Phase 5 objects are created.
+// Must be called from the thread running the EventLoop (the upload queue registers its 100 ms timer there).
 void CemuleApp::CreateObjects()
 {
 	if (clientlist != nullptr)
@@ -147,8 +147,8 @@ void CemuleApp::CreateObjects()
 	m_pPartFileWriteThread = new CPartFileWriteThread();
 }
 
-// Chiusura (nell'originale: CemuleDlg::OnClose, righe 1697-1770). I thread di I/O si fermano per primi, poi si salva e si distruggono gli oggetti
-// nello stesso ordine dell'originale.
+// Shutdown (in the original: CemuleDlg::OnClose, lines 1697-1770). The I/O threads stop first, then it saves and destroys the objects
+// in the same order as the original.
 void CemuleApp::DestroyObjects()
 {
 	if (clientlist == nullptr)

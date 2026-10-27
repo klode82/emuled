@@ -1,4 +1,4 @@
-// IniFile, PathMap, ProfileLock, DaemonConfig/CoreConfig, codepage cp1252. Con profilo reale in sola lettura se presente.
+// IniFile, PathMap, ProfileLock, DaemonConfig/CoreConfig, cp1252 codepage. With the real profile read-only if present.
 #include "StdAfx.h"
 #include "profile/Profile.h"
 #include "StringConversion.h"
@@ -16,7 +16,7 @@ static void spit(const std::string &p, const std::string &d) { FILE *f = fopen(p
 
 int main(int argc, char **argv)
 {
-	// --- IniFile: lettura, senza distinzione di maiuscole, prima chiave vince
+	// --- IniFile: reading, case-insensitive, first key wins
 	std::string src = "[eMule]\r\nNick=Steve\r\nport = 4662 \r\nPort=9999\r\n; commento\r\n\r\n[Proxy]\r\nEnabled=1\r\n";
 	{
 		IniFile f = IniFile::FromBytes(src);
@@ -24,7 +24,7 @@ int main(int argc, char **argv)
 		CHECK(!f.Has("eMule", "nope") && f.Get("x", "y", "dflt") == "dflt" && f.GetInt("eMule", "Nick", -7) == -7);
 		CHECK(f.Bytes() == src);					// nessuna modifica = identico al byte
 	}
-	// --- Set: tocca una riga sola, mantiene CRLF e grafia
+	// --- Set: touches a single line, keeps CRLF and spelling
 	{
 		IniFile f = IniFile::FromBytes(src); f.Set("eMule", "NICK", "Gigi");
 		CHECK(f.Bytes() == "[eMule]\r\nNick=Gigi\r\nport = 4662 \r\nPort=9999\r\n; commento\r\n\r\n[Proxy]\r\nEnabled=1\r\n");
@@ -33,12 +33,12 @@ int main(int argc, char **argv)
 		CHECK(g.Get("eMule", "Nuova") == "1" && g.Get("Altra", "k") == "v" && g.Get("Proxy", "Enabled") == "1");
 		CHECK(f.Bytes().find("Nuova=1\r\nport") != std::string::npos || f.Bytes().find("Nuova=1\r\n") != std::string::npos);
 	}
-	// --- LF e senza riga finale
+	// --- LF and no final line
 	{
 		std::string lf = "[a]\nk=v"; IniFile f = IniFile::FromBytes(lf); CHECK(f.Get("a", "k") == "v" && f.Bytes() == lf);
 		f.Set("a", "k", "w"); CHECK(f.Bytes() == "[a]\nk=w");
 	}
-	// --- UTF-16LE con BOM (come shareddir.dat): round trip e modifica
+	// --- UTF-16LE with BOM (like shareddir.dat): round trip and modification
 	{
 		auto u16 = [](const std::string &u8) { std::string w = "\xFF\xFE"; for (unsigned char c : u8) { w += (char)c; w += '\0'; } return w; };
 		std::string w = u16("[eMule]\r\nNick=Pi\r\n");
@@ -46,14 +46,14 @@ int main(int argc, char **argv)
 		f.Set("eMule", "Nick", "Po"); CHECK(f.Bytes() == u16("[eMule]\r\nNick=Po\r\n"));
 		DecodedText d = DecodeText(u16("Y:\\a\r\nY:\\b\r\n")); CHECK(d.lines.size() == 2 && d.lines[1] == "Y:\\b" && d.enc == TextEnc::Utf16LE);
 	}
-	// --- ANSI con byte cp1252: lettura decodificata, righe non toccate conservate al byte
+	// --- ANSI with cp1252 bytes: decoded reading, untouched lines preserved byte for byte
 	{
 		std::string a = "[eMule]\r\nNick=Caf\xE9 \x80\r\nAltro=1\r\n";
 		IniFile f = IniFile::FromBytes(a); CHECK(f.Get("eMule", "Nick") == "Caf\xC3\xA9 \xE2\x82\xAC" && f.Bytes() == a);
 		f.Set("eMule", "Altro", "2"); CHECK(f.Bytes() == "[eMule]\r\nNick=Caf\xE9 \x80\r\nAltro=2\r\n");
 		f.Set("eMule", "Nick", "\xE2\x82\xAC"); CHECK(f.Bytes().find("Nick=\x80\r\n") != std::string::npos);
 	}
-	// --- cp1252 / latin1 sul filo
+	// --- cp1252 / latin1 on the wire
 	{
 		CHECK(LocalCpToStr("\x80\x93\x94", 3) == "\xE2\x82\xAC\xE2\x80\x9C\xE2\x80\x9D");
 		CHECK(StrToLocalCp(CString("\xE2\x82\xAC")) == "\x80" && StrToLocalCp(CString("\xE4\xBD\xA0")) == "?");
@@ -65,8 +65,8 @@ int main(int argc, char **argv)
 		PathMap m; m.Add("Y:\\eMule", "/home/u/eMule"); m.Add("Y:\\eMule\\Incoming\\Film", "/mnt/nas/film"); bool ok;
 		CHECK(m.ToLinux("Y:\\eMule\\Incoming\\", &ok) == "/home/u/eMule/Incoming/" && ok);
 		CHECK(m.ToLinux("y:\\EMULE\\Temp", &ok) == "/home/u/eMule/Temp" && ok);
-		CHECK(m.ToLinux("Y:\\eMule\\Incoming\\Film\\2020", &ok) == "/mnt/nas/film/2020" && ok);		// vince il prefisso piu' lungo
-		CHECK(m.ToLinux("Y:\\eMuleX\\a", &ok) == "Y:/eMuleX/a" && !ok);								// prefisso parziale di nome: nessuna regola
+		CHECK(m.ToLinux("Y:\\eMule\\Incoming\\Film\\2020", &ok) == "/mnt/nas/film/2020" && ok);		// the longest prefix wins
+		CHECK(m.ToLinux("Y:\\eMuleX\\a", &ok) == "Y:/eMuleX/a" && !ok);								// partial prefix of a name: no rule
 		CHECK(m.ToLinux("Z:\\altro", &ok) == "Z:/altro" && !ok);
 		CHECK(m.ToLinux("/gia/linux", &ok) == "/gia/linux" && ok);
 	}
@@ -76,28 +76,28 @@ int main(int argc, char **argv)
 		fs::create_directories(t + "/Incoming/EBOOK/Sub"); fs::create_directories(t + "/Dup/A"); fs::create_directories(t + "/Dup/a");
 		bool f, amb;
 		CHECK(ResolveCaseInsensitive(t + "/incoming/ebook/sub/", &f) == t + "/Incoming/EBOOK/Sub/" && f);
-		CHECK(ResolveCaseInsensitive(t + "/Incoming/EBOOK", &f) == t + "/Incoming/EBOOK" && f);				// esatto: invariato
+		CHECK(ResolveCaseInsensitive(t + "/Incoming/EBOOK", &f) == t + "/Incoming/EBOOK" && f);				// exact: unchanged
 		CHECK(ResolveCaseInsensitive(t + "/INCOMING/nope", &f) == t + "/INCOMING/nope" && !f);
 		CHECK(ResolveCaseInsensitive(t + "/Dup/A", &f, &amb) == t + "/Dup/A" && f);							// esiste esatto
 		CHECK(ResolveCaseInsensitive(t + "/dup/A", &f, &amb) == t + "/Dup/A" && f);
 		fs::create_directories(t + "/X/Foo"); fs::create_directories(t + "/X/FOO");
-		CHECK(ResolveCaseInsensitive(t + "/X/foo", &f, &amb) == t + "/X/foo" && !f && amb);					// ambiguo: non si indovina
+		CHECK(ResolveCaseInsensitive(t + "/X/foo", &f, &amb) == t + "/X/foo" && !f && amb);					// ambiguous: no guessing
 		fs::remove_all(t);
 	}
 	std::string dir = (fs::temp_directory_path() / ("emule_prof_" + std::to_string(getpid()))).string();
 	fs::create_directories(dir);
-	// --- Save: usa SafeWriteMet, crea il .bak solo da file sano
+	// --- Save: uses SafeWriteMet, creates the .bak only from a healthy file
 	{
 		spit(dir + "/p.ini", src); IniFile f; std::string err; CHECK(IniFile::Load(dir + "/p.ini", f, err));
 		f.Set("eMule", "Nick", "Nuovo"); CHECK(f.Save(dir + "/p.ini", err));
 		CHECK(slurp(dir + "/p.ini").find("Nick=Nuovo") != std::string::npos && slurp(dir + "/p.ini.bak") == src && !fs::exists(dir + "/p.ini.tmp"));
-		IniFile e; CHECK(!IniFile::Load(dir + "/manca.ini", e, err) && err == "assente");
+		IniFile e; CHECK(!IniFile::Load(dir + "/manca.ini", e, err) && err == "absent");
 		CHECK(!f.Save(dir + "/nonesiste/x.ini", err));
 	}
-	// --- ProfileLock: il secondo tentativo fallisce, dopo il rilascio riesce, tra processi diversi
+	// --- ProfileLock: the second attempt fails, after release it succeeds, across different processes
 	{
 		std::string err; auto a = ProfileLock::Acquire(dir, err); CHECK(a);
-		auto b = ProfileLock::Acquire(dir, err); CHECK(!b && err.find("gia' in uso") != std::string::npos);
+		auto b = ProfileLock::Acquire(dir, err); CHECK(!b && err.find("already in use") != std::string::npos);
 		pid_t pid = fork();
 		if (pid == 0) { std::string e2; auto c = ProfileLock::Acquire(dir, e2); _exit(c ? 1 : 0); }
 		int st; waitpid(pid, &st, 0); CHECK(WIFEXITED(st) && WEXITSTATUS(st) == 0);
@@ -111,7 +111,7 @@ int main(int argc, char **argv)
 	}
 	CHECK(ResolveProfileDir("/x") == "/x");
 
-	// --- Profilo reale, SOLA LETTURA (argv[1] = cartella config). Saltato se assente.
+	// --- Real profile, READ ONLY (argv[1] = config folder). Skipped if absent.
 	if (argc > 1 && fs::is_directory(argv[1])) {
 		std::string cfg = argv[1], err;
 		std::string orig = slurp(cfg + "/preferences.ini");
@@ -130,7 +130,7 @@ int main(int argc, char **argv)
 		CHECK(fs::is_directory(cc.incoming_dir) && !cc.temp_dirs.empty() && fs::is_directory(cc.temp_dirs[0]));
 		int missing = 0; for (auto &s : cc.shared_dirs) if (!fs::is_directory(s)) { ++missing; std::printf("  cartella condivisa assente: %s\n", s.c_str()); }
 		std::printf("  cartelle condivise non trovate su disco: %d\n", missing);
-		DaemonConfig none; CoreConfig c2; CHECK(CoreConfig::Load(cfg, none, c2, err) && !c2.unmapped.empty());	// senza regole i percorsi Windows sono segnalati
+		DaemonConfig none; CoreConfig c2; CHECK(CoreConfig::Load(cfg, none, c2, err) && !c2.unmapped.empty());	// without rules the Windows paths are reported
 	}
 	fs::remove_all(dir);
 	std::printf(fails ? "FALLITO (%d)\n" : "OK\n", fails);

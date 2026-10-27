@@ -425,7 +425,7 @@ void CClientReqSocket::ProcessPacket(const BYTE *packet, uint32 size, UINT opcod
 					if (!client->SwapToAnotherFile(_T("Source says it doesn't have the file. CClientReqSocket::ProcessPacket()"), true, true, true, NULL, false, false)) // ZZ:DownloadManager
 						theApp.downloadqueue->RemoveSource(client);
 					break;
-				// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+				// LINUX: the other values do nothing (listed so -Wswitch flags new values)
 				case DS_BANNED:
 				case DS_CONNECTING:
 				case DS_DOWNLOADING:
@@ -1914,9 +1914,9 @@ bool CListenSocket::StartListening()
 	// socket is already used by some other application (e.g. a 2nd emule), we though bind
 	// to that socket leading to the situation that 2 applications are listening on the same
 	// port!
-	// LINUX: qui SO_REUSEADDR va attivato. Il timore del commento sopra vale per Windows (li' permette a due programmi di ascoltare sulla stessa porta);
-	// su Linux invece il bind fallisce se un altro socket sta ascoltando, e attivarlo permette di riavviare subito il demone: senza, le connessioni rimaste
-	// in TIME-WAIT (circa un minuto) bloccano la porta e si ottiene "porta TCP non disponibile in ascolto".
+	// LINUX: SO_REUSEADDR must be enabled here. The worry in the comment above applies to Windows (where it lets two programs listen on the same port);
+	// on Linux instead bind fails if another socket is listening, and enabling it allows restarting the daemon right away: without it, connections left
+	// in TIME-WAIT (about a minute) block the port and you get "TCP port not available for listening".
 	if (!Create(thePrefs.GetPort(), SOCK_STREAM, FD_ACCEPT, thePrefs.GetBindAddr(), AF_INET, true))
 		return false;
 
@@ -1983,8 +1983,8 @@ void CListenSocket::StopListening()
 	++maxconnectionreached;
 }
 
-// LINUX: l'accettazione condizionale (WSAAccept con funzione di condizione) e' una funzione di Windows: i filtri IP e i client bannati si applicano
-// subito dopo l'accept, come nel ramo "normale" dell'originale.
+// LINUX: conditional accept (WSAAccept with a condition function) is a Windows feature: IP filters and banned clients are applied
+// right after accept, as in the "normal" branch of the original.
 
 void CListenSocket::OnAccept(int nErrorCode)
 {

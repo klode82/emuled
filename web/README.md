@@ -1,91 +1,91 @@
-# emuled — interfaccia web
+# emuled — web interface
 
-Vue 3 + Vite + TypeScript + Pinia + Tailwind. Parla con il demone solo tramite la sua API (`docs/APIDOC.md`, `docs/openapi.json`):
-REST per i comandi, WebSocket (`/api/v1/events`) per gli aggiornamenti in diretta. Se il WebSocket cade, l'interfaccia si ricollega da sola e,
-nel frattempo, interroga l'API ogni 5 secondi.
+Vue 3 + Vite + TypeScript + Pinia + Tailwind. It talks to the daemon only through its API (`docs/APIDOC.md`, `docs/openapi.json`):
+REST for commands, WebSocket (`/api/v1/events`) for live updates. If the WebSocket drops, the interface reconnects by itself and,
+in the meantime, polls the API every 5 seconds.
 
-## Vederla subito
+## See it right away
 
 ```bash
-cd web && npm install && ./demo.sh        # avvia un demone OFFLINE su una cartella temporanea, con download e server d'esempio
+cd web && npm install && ./demo.sh        # starts an OFFLINE daemon on a temporary folder, with sample downloads and servers
 ```
-Stampa l'indirizzo e il token (che al primo avvio serve da codice per creare l'account); Ctrl-C ferma tutto e cancella la cartella temporanea. Il tuo profilo non viene toccato.
+It prints the address and the token (which on first start serves as the code to create the account); Ctrl-C stops everything and deletes the temporary folder. Your profile is not touched.
 
-## Provarla con il tuo profilo
+## Try it with your profile
 
 ```bash
 cd web
 npm install
-npm run build                                   # crea dist/templates/<id>/ (un template per cartella)
-emuled --profile CONFIG --templates-dir dist/templates    # il demone serve l'API e i template sulla stessa porta (8765)
-# poi apri http://127.0.0.1:8765/ e crea il tuo account con il codice di impostazione stampato dal demone (CONFIG/emuled.token) ed entra con nome utente e password
+npm run build                                   # creates dist/templates/<id>/ (one template per folder)
+emuled --profile CONFIG --templates-dir dist/templates    # the daemon serves the API and the templates on the same port (8765)
+# then open http://127.0.0.1:8765/ and create your account with the setup code printed by the daemon (CONFIG/emuled.token) and sign in with username and password
 ```
-La pagina `/` porta al template scelto nel browser (senza scelta, `console`); `http://127.0.0.1:8765/?template=console` è l'indirizzo di emergenza.
-Per usarlo sempre così, nel `config.yaml` del demone: `templates_dir: /percorso/di/web/dist/templates`.
+The `/` page leads to the template chosen in the browser (with no choice, `console`); `http://127.0.0.1:8765/?template=console` is the emergency address.
+To always use it this way, in the daemon's `config.yaml`: `templates_dir: /path/to/web/dist/templates`.
 
-In sviluppo (`TEMPLATE=dashboard npm run dev`) Vite serve il template scelto sulla porta 5173 e gira `/api` (anche il WebSocket) verso il demone: `EMULED_API=http://127.0.0.1:8765 npm run dev`.
+In development (`TEMPLATE=dashboard npm run dev`) Vite serves the chosen template on port 5173 and proxies `/api` (the WebSocket too) to the daemon: `EMULED_API=http://127.0.0.1:8765 npm run dev`.
 
-## Template di serie
+## Built-in templates
 
-L'interfaccia è fatta di **template**: ognuno è una piccola applicazione indipendente (`dist/templates/<id>/`, con il suo `template.yaml`) che parla solo con l'API.
-I quattro di serie hanno gli stessi dati, le stesse schermate comuni (Ricerca, Server, Condivisi, Kad, Registro, Statistiche, Preferenze) e lo stesso pannello di
-dettaglio del download; cambiano la cornice, i colori e la schermata Trasferimenti. Come si crea un template tuo: `docs/TEMPLATES.md` (da zero) e `docs/TEMPLATE-DA-CONSOLE.md` (da Console, con il kit).
+The interface is made of **templates**: each one is a small independent application (`dist/templates/<id>/`, with its own `template.yaml`) that only talks to the API.
+The four built-in ones have the same data, the same common screens (Search, Servers, Shared, Kad, Log, Statistics, Preferences) and the same
+download detail panel; they change the frame, the colors and the Transfers screen. How to create your own template: `docs/TEMPLATES.md` (from scratch) and `docs/TEMPLATE-FROM-CONSOLE.md` (from Console, with the kit).
 
-| Template | Cartella | Com'è |
+| Template | Folder | What it looks like |
 |---|---|---|
-| A · Console (`console`) | `templates/console/` | barra laterale, tabella densa, barra di stato (predefinito e di ripiego) |
-| B · Cruscotto (`dashboard`) | `templates/dashboard/` | sezioni come pillole in alto, tessere di riepilogo (velocità con andamento, server ed2k, Kad), una scheda con anello per ogni download, dettaglio in un pannello a lato |
-| C · Studio (`studio`) | `templates/studio/` | schede in alto, casella comandi (Ctrl+K), elenco compatto a sinistra e dettaglio a destra, barra di stato a caratteri fissi |
-| D · Mobile first (`mobile`) | `templates/mobile/` | grande casella di ricerca, righe con anello, dettaglio come foglio dal basso (telefono) o colonna a destra, barra in basso e pulsante + |
+| A · Console (`console`) | `templates/console/` | side bar, dense table, status bar (default and fallback) |
+| B · Dashboard (`dashboard`) | `templates/dashboard/` | sections as pills at the top, summary tiles (speed with trend, ed2k server, Kad), a card with a ring for each download, detail in a side panel |
+| C · Studio (`studio`) | `templates/studio/` | tabs at the top, command box (Ctrl+K), compact list on the left and detail on the right, fixed-width status bar |
+| D · Mobile first (`mobile`) | `templates/mobile/` | large search box, rows with a ring, detail as a sheet from the bottom (phone) or a column on the right, bottom bar and + button |
 
-Ogni cartella ha: `Shell.vue` (il guscio), `TransfersView.vue` (la schermata Trasferimenti), `tokens.css` (i colori), `main.ts` (l'ingresso), `index.html`, `template.yaml`
-(il manifest) e `preview.png`. Il **kit comune** (`src/`: dati, schermate, componenti, traduzioni) viene incluso in ogni template al momento della costruzione; a runtime i template
-non condividono niente. I colori sono token CSS (`--bg`, `--accent`, ...): ogni template ridefinisce gli stessi nomi; il resto è solo classi Tailwind. **I caratteri sono del template**: Console usa IBM Plex Sans, Cruscotto Manrope, Studio Public Sans, Mobile first DM Sans (più IBM Plex Mono per il testo a caratteri fissi). Si importano in `main.ts` del template (`@fontsource/…`, pacchetti locali) e la famiglia è la variabile `--font-sans` (e `--font-mono`) di `tokens.css`: i file dei caratteri finiscono nella cartella del template e non si scarica niente da fuori. Codice condiviso fra i gusci: `src/lib/shell.ts` (casella cerca/link, stato ed2k e Kad), `src/lib/transferActions.ts` (annulla, pausa), `src/template.ts` (monta l'applicazione).
+Each folder has: `Shell.vue` (the shell), `TransfersView.vue` (the Transfers screen), `tokens.css` (the colors), `main.ts` (the entry point), `index.html`, `template.yaml`
+(the manifest) and `preview.png`. The **common kit** (`src/`: data, screens, components, translations) is included in every template at build time; at runtime templates
+share nothing. Colors are CSS tokens (`--bg`, `--accent`, ...): each template redefines the same names; the rest is only Tailwind classes. **Fonts belong to the template**: Console uses IBM Plex Sans, Dashboard Manrope, Studio Public Sans, Mobile first DM Sans (plus IBM Plex Mono for fixed-width text). They are imported in the template's `main.ts` (`@fontsource/…`, local packages) and the family is the `--font-sans` (and `--font-mono`) variable in `tokens.css`: the font files end up in the template folder and nothing is downloaded from outside. Code shared between the shells: `src/lib/shell.ts` (search/link box, ed2k and Kad status), `src/lib/transferActions.ts` (cancel, pause), `src/template.ts` (mounts the application).
 
-## Comandi
+## Commands
 
-| Comando | Cosa fa |
+| Command | What it does |
 |---|---|
-| `npm run build` | controlla i tipi (`vue-tsc`) e costruisce **tutti** i template in `dist/templates/` |
-| `npm run build:template -- dashboard` | costruisce un solo template |
-| `TEMPLATE=studio npm run dev` | sviluppo di un template (predefinito `console`) |
-| `npm run typecheck` | solo il controllo dei tipi |
-| `npm test` | test di unità (Vitest): formati (italiano e inglese), store, client API, WebSocket, traduzioni |
-| `npm run e2e:templates` | prova nel browser della scelta del template (pagina d'ingresso, Preferenze, avviso, emergenza): vedi la testa di `e2e/templates.mjs` |
-| `npm run e2e` | prova nel browser vero (Chrome + puppeteer-core) contro un demone acceso: vedi `e2e/flow.mjs` (usa `EMULED_URL=…/t/console/`) |
-| `npm run screenshots` | rifà gli screenshot del README (`docs/images/frontend-*.png`) e le anteprime dei template (`templates/*/preview.png`): avvia da solo un demone di prova offline con quattro download d'esempio (serve `../build/emuled` e `dist/templates`); poi `npm run build` |
+| `npm run build` | checks the types (`vue-tsc`) and builds **all** templates in `dist/templates/` |
+| `npm run build:template -- dashboard` | builds a single template |
+| `TEMPLATE=studio npm run dev` | development of a template (default `console`) |
+| `npm run typecheck` | type check only |
+| `npm test` | unit tests (Vitest): formats (Italian and English), stores, API client, WebSocket, translations |
+| `npm run e2e:templates` | browser test of the template choice (entry page, Preferences, warning, emergency): see the top of `e2e/templates.mjs` |
+| `npm run e2e` | test in the real browser (Chrome + puppeteer-core) against a running daemon: see `e2e/flow.mjs` (uses `EMULED_URL=…/t/console/`) |
+| `npm run screenshots` | redoes the README screenshots (`docs/images/frontend-*.png`) and the template previews (`templates/*/preview.png`): it starts an offline test daemon by itself with four sample downloads (needs `../build/emuled` and `dist/templates`); then `npm run build` |
 
-## Com'è fatta
+## How it is made
 
 ```
-src/lib/        client API (api.ts), WebSocket con riconnessione (events.ts), formati (format.ts), testi (labels.ts, prefsMeta.ts), shell.ts, transferActions.ts
-src/stores/     Pinia: session (token, collegamento), core (stato, storico velocità), downloads, search, servers, shared, prefs, ui, toasts
-src/components/ pezzi senza modello grafico: Icon, ProgressBar, Ring, Sparkline, Modal, dialoghi, DownloadDetail, SpeedChart, ...
-src/views/      schermate comuni a tutti i template: Ricerca, Server, Condivisi, Kad, Statistiche, Preferenze, Accesso
-src/i18n/       traduzioni: it.ts (riferimento) e en.ts; scelta della lingua
-src/template.ts, src/router.ts, src/App.vue   l'applicazione comune: il template le passa il suo guscio e la sua schermata Trasferimenti
-templates/<id>/ i template di serie (vedi sopra)
-build-templates.mjs   costruisce i template (uno alla volta, ciascuno in dist/templates/<id>/)
+src/lib/        API client (api.ts), WebSocket with reconnection (events.ts), formats (format.ts), texts (labels.ts, prefsMeta.ts), shell.ts, transferActions.ts
+src/stores/     Pinia: session (token, connection), core (state, speed history), downloads, search, servers, shared, prefs, ui, toasts
+src/components/ pieces with no graphic model: Icon, ProgressBar, Ring, Sparkline, Modal, dialogs, DownloadDetail, SpeedChart, ...
+src/views/      screens common to all templates: Search, Servers, Shared, Kad, Statistics, Preferences, Login
+src/i18n/       translations: it.ts (reference) and en.ts; language choice
+src/template.ts, src/router.ts, src/App.vue   the common application: the template gives it its shell and its Transfers screen
+templates/<id>/ the built-in templates (see above)
+build-templates.mjs   builds the templates (one at a time, each in dist/templates/<id>/)
 ```
 
-**Perché gli stati e i componenti stanno nel kit.** Un template è solo un *guscio* (navigazione e disposizione) più la schermata Trasferimenti. Logica, API, filtri, ordinamenti e formati
-sono scritti una volta: aggiungere un template di serie non tocca nulla di tutto questo.
+**Why the states and components live in the kit.** A template is only a *shell* (navigation and layout) plus the Transfers screen. Logic, API, filters, sorting and formats
+are written once: adding a built-in template touches none of this.
 
-## Il token
+## The token
 
-Ogni richiesta porta `Authorization: Bearer TOKEN`; il WebSocket lo prende da `?token=`. Il token resta nel `localStorage` del browser finché non si esce
-(o finché il demone risponde 401). Il demone ascolta solo su `127.0.0.1`: per usarlo da un'altra macchina serve un proxy con TLS davanti.
+Every request carries `Authorization: Bearer TOKEN`; the WebSocket takes it from `?token=`. The token stays in the browser's `localStorage` until you sign out
+(or until the daemon answers 401). The daemon only listens on `127.0.0.1`: to use it from another machine you need a proxy with TLS in front.
 
-## Tastiera
+## Keyboard
 
-`Canc` annulla i download selezionati (con conferma) · `Ctrl+A` seleziona tutti · `Esc` chiude il dettaglio o toglie la selezione · `Invio` nella casella in alto cerca (o apre «Aggiungi» se è un link ed2k).
+`Del` cancels the selected downloads (with confirmation) · `Ctrl+A` selects all · `Esc` closes the detail or clears the selection · `Enter` in the top box searches (or opens "Add download" if it is an ed2k link).
 
-## Lingue (i18n)
+## Languages (i18n)
 
-Italiano, inglese e altre 12 lingue (spagnolo, cinese, hindi, arabo, francese, portoghese, russo, tedesco, giapponese, coreano, turco, indonesiano). Si sceglie dalle Preferenze o dalla schermata di accesso e si ricorda nel browser; la prima volta si parte SEMPRE in inglese (anche con un browser in italiano), poi la cambia l'utente.
+Italian, English and 12 other languages (Spanish, Chinese, Hindi, Arabic, French, Portuguese, Russian, German, Japanese, Korean, Turkish, Indonesian). It is chosen in Preferences or on the sign-in screen and remembered in the browser; the first time it ALWAYS starts in English (even with an Italian browser), then the user changes it.
 
-- Nessun testo sta nei componenti: ci sono solo chiavi (`t('transfers.emptyTitle')`). I testi sono in `src/i18n/it.ts`; `en.ts` e le altre 12 lingue (`es zh hi ar fr pt ru de ja ko tr id`) hanno **le stesse chiavi** (il tipo TypeScript lo impone).
-- Il test `i18n` controlla anche: nessun testo vuoto, stessi segnaposto (`{n}`) e stesse forme plurali in tutte le lingue, e che ogni chiave usata nel codice esista.
-- Plurali: `"1 file | {n} file"`; numeri, dimensioni, date e durate seguono la lingua (`15,47 MB` in italiano, `15.47 MB` in inglese).
-- **Per aggiungere una lingua**: copiare `it.ts`, tradurre, aggiungerla a `LANGS` in `src/i18n/index.ts` e a `messages`.
-- Limite attuale: i messaggi di errore che arrivano dal demone sono in italiano (li scrive il demone). Il passo successivo è dare agli errori dell'API un codice stabile, da tradurre qui.
+- No text lives in the components: there are only keys (`t('transfers.emptyTitle')`). The texts are in `src/i18n/it.ts`; `en.ts` and the other 12 languages (`es zh hi ar fr pt ru de ja ko tr id`) have **the same keys** (the TypeScript type enforces it).
+- The `i18n` test also checks: no empty text, same placeholders (`{n}`) and same plural forms in all languages, and that every key used in the code exists.
+- Plurals: `"1 file | {n} file"`; numbers, sizes, dates and durations follow the language (`15,47 MB` in Italian, `15.47 MB` in English).
+- **To add a language**: copy `it.ts`, translate, add it to `LANGS` in `src/i18n/index.ts` and to `messages`.
+- Error messages coming from the daemon are in English (curl users see them as they are) and carry a stable `code`; the interface shows the translation of the code (`apiErrors`) and falls back to the daemon's English text when a code has no translation.

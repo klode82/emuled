@@ -126,7 +126,7 @@ bool IsThumbsDb(const CString &sFilePath, const CString &sFileName)
 {
 	if (sFileName.CompareNoCase(_T("thumbs.db")) != 0)
 		return false;
-	static const unsigned char ole[8] = {0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1};	// intestazione dei file OLE ("Storage")
+	static const unsigned char ole[8] = {0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1};	// header of OLE files ("Storage")
 	unsigned char b[8] = {};
 	FILE *fp = fopen(sFilePath, "rb");
 	bool bOle = fp != NULL && fread(b, 1, sizeof b, fp) == sizeof b && memcmp(b, ole, sizeof b) == 0;

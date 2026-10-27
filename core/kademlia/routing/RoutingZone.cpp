@@ -80,7 +80,7 @@ CRoutingZone::CRoutingZone()
 	// Set our KadID for creating the contact tree
 	CKademlia::GetPrefs()->GetKadID(uMe);
 	// Set the nodes file name.
-	// LINUX: senza percorso non si legge ne scrive nodes.dat (lo passa chi crea la zona: vedi il costruttore con nome file)
+	// LINUX: without a path nodes.dat is neither read nor written (the zone creator passes it: see the constructor taking a file name)
 	m_sFilename.Empty();
 	// Init our root node.
 	Init(NULL, 0, CUInt128((ULONG)0));
@@ -344,9 +344,9 @@ void CRoutingZone::WriteFile()
 		return;
 	}
 
-	// LINUX: il file si compone in memoria e si scrive con la scrittura sicura (controllo, file temporaneo, rinomina atomica, .bak sano);
-	// un nodes.dat che non supera il controllo (per esempio senza contatti) non sostituisce quello esistente.
-	// Il formato resta quello dell'originale (versione 2).
+	// LINUX: the file is built in memory and written with the safe write (check, temp file, atomic rename, healthy .bak);
+	// a nodes.dat that fails the check (e.g. no contacts) does not replace the existing one.
+	// The format stays the original one (version 2).
 	CSafeMemFile file(4096);
 	// The bootstrap method gets a very nice sample of contacts to save.
 	ContactArray listContacts;

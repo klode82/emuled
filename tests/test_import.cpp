@@ -1,4 +1,4 @@
-// Importazione di un profilo eMule di Windows (profile/Import): origine finta con percorsi "Z:\...", profilo di destinazione temporaneo. L'origine non si modifica.
+// Import of a Windows eMule profile (profile/Import): fake source with "Z:\..." paths, temporary destination profile. The source is not modified.
 #include "profile/Import.h"
 #include <cstdio>
 #include <filesystem>
@@ -35,14 +35,14 @@ int main()
 	for (auto &d : sc.dirs) { if (d.win == "Z:\\eMule\\Incoming\\") incomingOk = d.mapped && d.exists && d.linux_path == z + "/eMule/Incoming/"; if (d.win == "C:\\Perso\\Altro\\") otherUnmapped = !d.mapped; }
 	CHECK(incomingOk); CHECK(otherUnmapped);
 
-	CHECK(!ScanImportSource(prof, prof, {}, sc, err));		// e' il profilo stesso
+	CHECK(!ScanImportSource(prof, prof, {}, sc, err));		// it is the profile itself
 	fs::create_directories(base / "vuota");
-	CHECK(!ScanImportSource((base / "vuota").string(), prof, {}, sc, err));		// non e' una cartella di eMule
+	CHECK(!ScanImportSource((base / "vuota").string(), prof, {}, sc, err));		// it is not an eMule folder
 
 	CHECK(StageImport(src, prof, {}, err));
 	CHECK(fs::exists(prof + "/import-ready/READY"));
-	CHECK(!fs::exists(prof + "/preferences.ini"));				// niente al suo posto finche' non si riavvia
-	Put(prof + "/preferences.ini", "[eMule]\r\nNick=Vecchio\r\n");		// il profilo vuoto del demone
+	CHECK(!fs::exists(prof + "/preferences.ini"));				// nothing in its place until restart
+	Put(prof + "/preferences.ini", "[eMule]\r\nNick=Vecchio\r\n");		// the daemon's empty profile
 	Put(prof + "/clients.met.bak", "VECCHIA COPIA");
 	std::string log;
 	CHECK(ApplyStagedImport(prof, log));
@@ -54,21 +54,21 @@ int main()
 	CHECK(ini.find("Nick=Pippo") != std::string::npos);
 	CHECK(ini.find("IncomingDir=" + z + "/eMule/Incoming/") != std::string::npos);
 	CHECK(ini.find("TempDir=" + z + "/eMule/Temp/") != std::string::npos);
-	CHECK(ini.find("C:\\ProgramData") != std::string::npos);		// cio' che non e' una cartella dei dati resta com'e'
+	CHECK(ini.find("C:\\ProgramData") != std::string::npos);		// what is not a data folder stays as it is
 	const std::string sh = Slurp(prof + "/shareddir.dat");
 	CHECK(sh.compare(0, 2, "\xFF\xFE") == 0);				// ancora UTF-16
 	CHECK(sh.find(U16(z + "/eMule/Incoming/Film/").substr(2)) != std::string::npos);
-	CHECK(sh.find(U16("C:\\Perso\\Altro\\").substr(2)) != std::string::npos);		// senza regola: invariata
+	CHECK(sh.find(U16("C:\\Perso\\Altro\\").substr(2)) != std::string::npos);		// without rule: unchanged
 	bool bak = false; for (auto &e : fs::directory_iterator(prof)) if (e.path().filename().string().rfind("pre-import-", 0) == 0) bak = Slurp((e.path() / "preferences.ini").string()).find("Vecchio") != std::string::npos;
 	CHECK(bak);
 	CHECK(!fs::exists(prof + "/import-ready"));
-	CHECK(snap() == before);							// l'origine e' intatta
-	CHECK(!ApplyStagedImport(prof, log));					// niente da fare la seconda volta
+	CHECK(snap() == before);							// the source is intact
+	CHECK(!ApplyStagedImport(prof, log));					// nothing to do the second time
 
-	fs::create_directories(prof + "/import-ready"); Put(prof + "/import-ready/known.met", "A META");		// preparazione interrotta (senza READY)
+	fs::create_directories(prof + "/import-ready"); Put(prof + "/import-ready/known.met", "A META");		// preparation interrupted (without READY)
 	CHECK(!ApplyStagedImport(prof, log) && !fs::exists(prof + "/import-ready") && !fs::exists(prof + "/known.met"));
 
-	{	// dove cercare: vecchie installazioni di emuled (cartella nascosta), ~/.config/emule, Wine; non quella in uso
+	{	// where to look: old emuled installations (hidden folder), ~/.config/emule, Wine; not the one in use
 		const fs::path home = base / "casa", live = home / ".emuled/profile";
 		for (const fs::path &d : {home / ".emuled/profile", home / ".emuled.old/profile", home / ".config/emule", home / ".wine/drive_c/Program Files (x86)/eMule/config", home / "vuota/profile"}) fs::create_directories(d);
 		for (const fs::path &d : {live, home / ".emuled.old/profile", home / ".config/emule", home / ".wine/drive_c/Program Files (x86)/eMule/config"}) Put((d / "preferences.ini").string(), "[eMule]\r\n");

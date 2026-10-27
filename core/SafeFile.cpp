@@ -14,7 +14,7 @@
 //You should have received a copy of the GNU General Public License
 //along with this program; if not, write to the Free Software
 //Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-// LINUX: 4 righe "CStringW(acRaw, uRawSize)" -> LocalCpToStr(): la codepage locale non e' piu' implicita nel costruttore.
+// LINUX: 4 lines "CStringW(acRaw, uRawSize)" -> LocalCpToStr(): the local codepage is no longer implicit in the constructor.
 #include "stdafx.h"
 #include "SafeFile.h"
 #include "StringConversion.h"
@@ -295,7 +295,7 @@ uint16 CSafeMemFile::ReadUInt16()
 {
 	if (m_nPosition + sizeof(uint16) > m_nFileSize)
 		AfxThrowFileException(CFileException::endOfFile, 0, GetFileName());
-	uint16 nResult; memcpy(&nResult, &m_lpBuffer[m_nPosition], sizeof nResult); // LINUX: no cast non allineato
+	uint16 nResult; memcpy(&nResult, &m_lpBuffer[m_nPosition], sizeof nResult); // LINUX: no unaligned cast
 	m_nPosition += sizeof(uint16);
 	return nResult;
 }
@@ -304,7 +304,7 @@ uint32 CSafeMemFile::ReadUInt32()
 {
 	if (m_nPosition + sizeof(uint32) > m_nFileSize)
 		AfxThrowFileException(CFileException::endOfFile, 0, GetFileName());
-	uint32 nResult; memcpy(&nResult, &m_lpBuffer[m_nPosition], sizeof nResult); // LINUX: no cast non allineato
+	uint32 nResult; memcpy(&nResult, &m_lpBuffer[m_nPosition], sizeof nResult); // LINUX: no unaligned cast
 	m_nPosition += sizeof(uint32);
 	return nResult;
 }
@@ -313,7 +313,7 @@ uint64 CSafeMemFile::ReadUInt64()
 {
 	if (m_nPosition + sizeof(uint64) > m_nFileSize)
 		AfxThrowFileException(CFileException::endOfFile, 0, GetFileName());
-	uint64 nResult; memcpy(&nResult, &m_lpBuffer[m_nPosition], sizeof nResult); // LINUX: no cast non allineato
+	uint64 nResult; memcpy(&nResult, &m_lpBuffer[m_nPosition], sizeof nResult); // LINUX: no unaligned cast
 	m_nPosition += sizeof(uint64);
 	return nResult;
 }
@@ -344,7 +344,7 @@ void CSafeMemFile::WriteUInt16(uint16 nVal)
 {
 	if (m_nPosition + sizeof(uint16) > m_nBufferSize)
 		GrowFile(m_nPosition + sizeof(uint16));
-	memcpy(&m_lpBuffer[m_nPosition], &nVal, sizeof nVal); // LINUX: no cast non allineato
+	memcpy(&m_lpBuffer[m_nPosition], &nVal, sizeof nVal); // LINUX: no unaligned cast
 	m_nPosition += sizeof(uint16);
 	if (m_nPosition > m_nFileSize)
 		m_nFileSize = m_nPosition;
@@ -354,7 +354,7 @@ void CSafeMemFile::WriteUInt32(uint32 nVal)
 {
 	if (m_nPosition + sizeof(uint32) > m_nBufferSize)
 		GrowFile(m_nPosition + sizeof(uint32));
-	memcpy(&m_lpBuffer[m_nPosition], &nVal, sizeof nVal); // LINUX: no cast non allineato
+	memcpy(&m_lpBuffer[m_nPosition], &nVal, sizeof nVal); // LINUX: no unaligned cast
 	m_nPosition += sizeof(uint32);
 	if (m_nPosition > m_nFileSize)
 		m_nFileSize = m_nPosition;
@@ -364,7 +364,7 @@ void CSafeMemFile::WriteUInt64(uint64 nVal)
 {
 	if (m_nPosition + sizeof(uint64) > m_nBufferSize)
 		GrowFile(m_nPosition + sizeof(uint64));
-	memcpy(&m_lpBuffer[m_nPosition], &nVal, sizeof nVal); // LINUX: no cast non allineato
+	memcpy(&m_lpBuffer[m_nPosition], &nVal, sizeof nVal); // LINUX: no unaligned cast
 	m_nPosition += sizeof(uint64);
 	if (m_nPosition > m_nFileSize)
 		m_nFileSize = m_nPosition;

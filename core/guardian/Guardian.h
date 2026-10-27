@@ -1,7 +1,7 @@
-// LINUX (codice nuovo): guardiano dei .part.met, la logica di MetGuardian dentro il daemon (Bench #630).
-// Controlla la cartella Temp. Ogni .part.met sano si copia in <backup>/<hash>.met (l'hash e' l'identita' del download);
-// il backup si sovrascrive solo se lo stesso download e' avanzato. Gli stati e le transizioni sono registrati in un file di stato,
-// cosi' un evento (es. DAMAGED) si notifica una volta sola, anche dopo un riavvio. I backup non si cancellano mai.
+// LINUX (new code): guardian of the .part.met files, the MetGuardian logic inside the daemon (Bench #630).
+// It watches the Temp folder. Every healthy .part.met is copied to <backup>/<hash>.met (the hash is the identity of the download);
+// the backup is overwritten only if the same download has progressed. States and transitions are recorded in a state file,
+// so an event (e.g. DAMAGED) is notified only once, even after a restart. Backups are never deleted.
 #pragma once
 #include "met/SafeMet.h"
 #include <ctime>
@@ -12,12 +12,12 @@
 namespace emule::guardian {
 
 enum class State {
-	New,			// non ancora tracciato: solo come stato di partenza di un evento
+	New,			// not tracked yet: only as the starting state of an event
 	Ok,				// leggibile e salvato
-	Pending,		// non leggibile adesso: modificato da pochi secondi o file bloccato. Non e' un danno
-	Damaged,		// non sano e non in scrittura: c'e' (o no) un backup da cui ripristinare
-	Unsupported,	// formato riconosciuto ma non gestito: non si giudica e non si salva
-	Replaced,		// un altro download ha preso lo stesso numero di slot (archiviato)
+	Pending,		// not readable now: modified a few seconds ago or file locked. Not damage
+	Damaged,		// not healthy and not being written: there is (or not) a backup to restore from
+	Unsupported,	// format recognized but not handled: not judged and not saved
+	Replaced,		// another download took the same slot number (archived)
 	Removed			// sparito da Temp (download completato o cancellato) (archiviato)
 };
 const char *StateName(State s);
@@ -25,29 +25,29 @@ const char *StateName(State s);
 struct Slot {
 	std::string number;			// "001"
 	State state = State::Ok;
-	std::string hash;			// 32 caratteri esadecimali minuscoli, vuoto se mai letto sano
+	std::string hash;			// 32 lowercase hexadecimal characters, empty if never read healthy
 	std::string name;
 	uint64_t size = 0, missing = 0;
-	bool backup = false;		// esiste un backup per questo hash
-	time_t since = 0;			// da quando e' in questo stato
+	bool backup = false;		// a backup exists for this hash
+	time_t since = 0;			// since when it has been in this state
 };
 
 struct Event { std::string slot; State from, to; std::string detail; };
 
 struct Options {
 	std::string temp_dir, backup_dir, state_file;
-	double write_guard_sec = 10;		// un file non sano modificato da meno di cosi' e' Pending
-	double active_sec = 120;			// Restore rifiuta se il file e' stato modificato da meno di cosi' (eMule attivo)
+	double write_guard_sec = 10;		// an unhealthy file modified less than this ago is Pending
+	double active_sec = 120;			// Restore refuses if the file was modified less than this ago (eMule active)
 };
 
 class Guardian {
 public:
 	explicit Guardian(Options o) : o_(std::move(o)) {}
-	bool Load(std::string &err);						// legge il file di stato (assente = vuoto)
-	std::vector<Event> Scan(time_t now);				// un giro; ritorna solo le transizioni
-	bool Save(std::string &err);						// file di stato in modo sicuro
+	bool Load(std::string &err);						// reads the state file (missing = empty)
+	std::vector<Event> Scan(time_t now);				// one pass; returns only the transitions
+	bool Save(std::string &err);						// state file, written safely
 	struct RestoreResult { bool ok = false; std::string error, from; };
-	RestoreResult Restore(const std::string &slot, bool force = false, time_t now = 0);	// now = 0: ora di sistema	// ripristina uno slot DAMAGED dalla copia sana piu' avanzata
+	RestoreResult Restore(const std::string &slot, bool force = false, time_t now = 0);	// now = 0: system time	// restores a DAMAGED slot from the most advanced healthy copy
 	const std::map<std::string, Slot> &active() const { return active_; }	// slot presenti in Temp
 	const std::vector<Slot> &archive() const { return archive_; }			// Replaced e Removed
 	std::string BackupPath(const std::string &hash) const { return o_.backup_dir + "/" + hash + ".met"; }

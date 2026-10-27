@@ -1,4 +1,4 @@
-// Etichette dell'API (stati, priorita'): qui solo le chiavi di traduzione e i toni; il testo sta in i18n/*.ts.
+// API labels (states, priorities): here only the translation keys and the tones; the text lives in i18n/*.ts.
 import type { Download, Priority } from '@/types'
 
 export type Tone = 'ok' | 'warn' | 'bad' | 'mute'

@@ -27,7 +27,7 @@ const { sorted, sorter } = useSort(() => sv.list, {
   ping: { get: (s) => s.ping_ms || 1e9 }, errors: { get: (s) => s.failed_count, desc: true }, priority: { get: (s) => PRIO_RANK[s.priority], desc: true },
 }, '', 1, 'servers')
 
-// aggiungi un server
+// add a server
 const dialog = ref(false), busy = ref(false)
 const form = reactive({ address: '', name: '', priority: 'normal' as ServerPriority, static: false })
 const addrOk = computed(() => /^[^\s:/|]+:\d{1,5}$/.test(form.address.trim()) && Number(form.address.trim().split(':').pop()) <= 65535 && Number(form.address.trim().split(':').pop()) > 0)

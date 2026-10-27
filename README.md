@@ -102,7 +102,7 @@ Known gaps — please read before relying on it:
 - Web templates *Dashboard*, *Studio* and *Mobile first* need more testing with real data and on touch screens
 - Translations other than Italian and English were produced with automatic help and **need native-speaker review**; right-to-left layout is only checked on the *Console* template
 - Some features are not ported or not finished (scheduler, friends/messages, desktop notifications, IP filter auto-update); see [`ROADMAP.md`](ROADMAP.md)
-- Project documentation in `docs/` is currently written in **Italian**
+- Project documentation in `docs/` is in **English**; the terminal messages and log lines of the daemon are still partly in Italian (being translated)
 
 ## Installation
 
@@ -233,7 +233,7 @@ A *template* is a folder with a `template.yaml` manifest and a page; it talks to
 
 Write your own:
 - From scratch (any framework, even one HTML file): [`docs/TEMPLATES.md`](docs/TEMPLATES.md) and the example in [`docs/examples/template-ciao/`](docs/examples/template-ciao/)
-- Starting from *Console*, reusing the shared kit (data stores, views, components, translations): [`docs/TEMPLATE-DA-CONSOLE.md`](docs/TEMPLATE-DA-CONSOLE.md)
+- Starting from *Console*, reusing the shared kit (data stores, views, components, translations): [`docs/TEMPLATE-FROM-CONSOLE.md`](docs/TEMPLATE-FROM-CONSOLE.md)
 
 > Templates are programs running in your browser and they see your API token: install only templates you trust.
 
@@ -304,8 +304,8 @@ git push origin master v0.1.0
 
 ## Documentation
 
-All in [`docs/`](docs/) (currently in Italian):
-[`MANUAL.md`](docs/MANUAL.md) glossary and reference · [`APIDOC.md`](docs/APIDOC.md) API · [`openapi.json`](docs/openapi.json) · [`TEMPLATES.md`](docs/TEMPLATES.md) · [`TEMPLATE-DA-CONSOLE.md`](docs/TEMPLATE-DA-CONSOLE.md) · [`ROADMAP.md`](ROADMAP.md)
+All in [`docs/`](docs/):
+[`MANUAL.md`](docs/MANUAL.md) glossary and reference · [`APIDOC.md`](docs/APIDOC.md) API · [`openapi.json`](docs/openapi.json) · [`TEMPLATES.md`](docs/TEMPLATES.md) · [`TEMPLATE-FROM-CONSOLE.md`](docs/TEMPLATE-FROM-CONSOLE.md) · [`ROADMAP.md`](ROADMAP.md)
 
 ## Licence and third-party code
 

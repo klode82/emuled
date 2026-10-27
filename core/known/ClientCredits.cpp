@@ -31,11 +31,11 @@ bool ClientCreditsFile::LoadBytes(const std::string &b, std::string &err)
 bool ClientCreditsFile::Load(const std::string &path, std::string &err)
 {
 	FILE *fp = fopen(path.c_str(), "rb");
-	if (!fp) { err = errno == ENOENT ? "assente" : strerror(errno); return false; }
+	if (!fp) { err = errno == ENOENT ? "absent" : strerror(errno); return false; }
 	std::string b; char buf[1 << 16]; size_t k;
 	while ((k = fread(buf, 1, sizeof buf, fp)) > 0) b.append(buf, k);
 	bool bad = ferror(fp); fclose(fp);
-	if (bad) { err = "errore di lettura"; return false; }
+	if (bad) { err = "read error"; return false; }
 	return LoadBytes(b, err);
 }
 

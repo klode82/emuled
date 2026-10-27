@@ -1,7 +1,7 @@
-// Hash ed2k di un file reale, con MD4 portato. Uso: test_ed2k_file FILE HASH_ATTESO
-// ed2k: file < PARTSIZE -> MD4 del file. Altrimenti MD4 della concatenazione degli MD4 di ogni parte.
-// Se la dimensione è multiplo esatto di PARTSIZE, eMule aggiunge l'MD4 di una parte vuota.
-// Esce con 0 anche se il file manca (test saltato), così ctest resta verde su altre macchine.
+// ed2k hash of a real file, with ported MD4. Usage: test_ed2k_file FILE EXPECTED_HASH
+// ed2k: file < PARTSIZE -> MD4 of the file. Otherwise MD4 of the concatenation of the MD4s of each part.
+// If the size is an exact multiple of PARTSIZE, eMule appends the MD4 of an empty part.
+// Exits 0 even if the file is missing (test skipped), so ctest stays green on other machines.
 #include "StdAfx.h"
 #include "MD4.h"
 #include "Opcodes.h"

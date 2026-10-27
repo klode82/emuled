@@ -1,4 +1,4 @@
-// LINUX: stringhe di debug (nomi degli opcode, blocchi, stato dei file). Origine: OtherFunctions.cpp:2320-2544 e SearchResultsWnd.cpp:588.
+// LINUX: debug strings (opcode names, blocks, file status). Origin: OtherFunctions.cpp:2320-2544 and SearchResultsWnd.cpp:588.
 #include "StdAfx.h"
 #include "DbgStrings.h"
 #include "OtherFunctions.h"

@@ -1,4 +1,4 @@
-// LINUX: origine srchybrid/OtherFunctions.cpp:100-250 (GetForceSpeedsToKB: opzione della UI, qui sempre falsa)
+// LINUX: origin srchybrid/OtherFunctions.cpp:100-250 (GetForceSpeedsToKB: UI option, always false here)
 #include "util/Text.h"
 #include <climits>
 #include "Opcodes.h"
@@ -148,7 +148,7 @@ CString CastSecondsToHM(time_t tSeconds)
 }
 
 
-// --- Fase 5: funzioni di OtherFunctions.cpp usate dai file portati ---
+// --- Phase 5: OtherFunctions.cpp functions used by the ported files ---
 #include "SHAHashSet.h"
 #include "Strings.h"
 #include "util/Hash.h"

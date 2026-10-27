@@ -1,4 +1,4 @@
-// SharedIndex: known.met + scansione + hashing a thread, applicazione dei risultati solo dal thread logico.
+// SharedIndex: known.met + scan + threaded hashing, results applied only from the logical thread.
 #include "StdAfx.h"
 #include "known/SharedIndex.h"
 #include "met_builders.h"
@@ -25,63 +25,63 @@ int main()
 	std::string km = root + "/cfg/known.met";
 	spit(d + "/uno.bin", "contenuto uno"); setm(d + "/uno.bin", 1700000000);
 	spit(d + "/due.bin", "contenuto due piu' lungo"); setm(d + "/due.bin", 1700000100);
-	spit(d + "/copia.bin", "contenuto uno"); setm(d + "/copia.bin", 1700000200);		// stesso contenuto di uno.bin
+	spit(d + "/copia.bin", "contenuto uno"); setm(d + "/copia.bin", 1700000200);		// same content as uno.bin
 	spit(d + "/x.mkv:Zone.Identifier", "z"); spit(d + "/vecchio.part", "p");
 	spit(root + "/singolo.dat", "file scelto a mano"); setm(root + "/singolo.dat", 1700000300);
 
 	SharedIndex::Config cfg; cfg.known_met = km; cfg.share.dirs = {d}; cfg.share.files = {root + "/singolo.dat", d + "/uno.bin"}; cfg.hash_threads = 3;
 	std::string err;
 	{
-		SharedIndex ix(cfg); CHECK(ix.Open(err) && ix.known().size() == 0);			// known.met assente: elenco vuoto
+		SharedIndex ix(cfg); CHECK(ix.Open(err) && ix.known().size() == 0);			// known.met missing: empty list
 		ScanResult sr = ix.Rescan();
-		CHECK(sr.to_hash.size() == 4 && sr.known.empty() && sr.ignored == 2);			// uno, due, copia, singolo (uno.bin dato due volte: una sola)
+		CHECK(sr.to_hash.size() == 4 && sr.known.empty() && sr.ignored == 2);			// uno, due, copia, singolo (uno.bin given twice: counted once)
 		ix.WaitIdle();
 		CHECK(ix.stats().hashed == 3 && ix.stats().duplicates == 1 && ix.duplicate_paths().size() == 1 && ix.errors().empty());
 		CHECK(ix.known().size() == 3 && ix.shared().size() == 3 && ix.dirty());
 		const KnownFile *k = ix.known().Find("due.bin", 1700000100, 24);
 		CHECK(k && k->hash == md4("contenuto due piu' lungo") && k->FindTag(FT_LASTSHARED));
 		CHECK(ix.Save(err) && !ix.dirty() && fs::exists(km));
-		CHECK(ix.Save(err));															// niente da salvare: no-op
+		CHECK(ix.Save(err));															// nothing to save: no-op
 	}
-	// riapertura: tutto gia' noto, niente da calcolare, known.met identico
+	// reopen: everything already known, nothing to compute, known.met identical
 	{
 		std::string before = slurp(km);
 		SharedIndex ix(cfg); CHECK(ix.Open(err) && ix.known().size() == 3);
 		ScanResult sr = ix.Rescan();
-		CHECK(sr.known.size() + sr.to_hash.size() == 4 && sr.to_hash.size() == 1);	// copia.bin e' duplicato: non e' nel known.met, quindi si ricalcola ogni volta
+		CHECK(sr.known.size() + sr.to_hash.size() == 4 && sr.to_hash.size() == 1);	// copia.bin is a duplicate: it is not in known.met, so it is recomputed every time
 		ix.WaitIdle(); CHECK(ix.stats().duplicates == 1 && !ix.dirty());
 		CHECK(ix.Save(err) && slurp(km) == before);
 		CHECK(ix.shared().size() == 3);
-		// file modificato (contenuto e data): da ricalcolare, il vecchio record resta in known.met
+		// modified file (content and date): to be recomputed, the old record stays in known.met
 		spit(d + "/due.bin", "contenuto diverso"); setm(d + "/due.bin", 1700009999);
 		sr = ix.Rescan(); ix.WaitIdle();
 		CHECK(ix.stats().hashed == 1 && ix.known().size() == 4 && ix.dirty());
 		CHECK(ix.Save(err) && fs::exists(km + ".bak"));
-		// file sparito: esce dall'elenco condiviso ma resta in known.met
+		// vanished file: leaves the shared list but stays in known.met
 		fs::remove(d + "/uno.bin"); ix.Rescan(); ix.WaitIdle();
 		bool has_uno = false; for (auto &s : ix.shared()) if (s.path == d + "/uno.bin") has_uno = true;
 		CHECK(!has_uno && ix.known().size() == 4);
 	}
-	// known.met danneggiato: Open rifiuta e il file non viene toccato
+	// damaged known.met: Open refuses and the file is not touched
 	{
 		std::string bad = slurp(km).substr(0, 100); spit(km, bad);
 		SharedIndex ix(cfg); CHECK(!ix.Open(err) && err.find("known.met") != std::string::npos && slurp(km) == bad);
 	}
-	// annullamento a meta' e ripresa
+	// cancellation midway and resume
 	{
 		fs::remove(km); for (int i = 0; i < 6; ++i) { spit(d + "/g" + std::to_string(i), std::string(2000000, (char)('a' + i))); setm(d + "/g" + std::to_string(i), 1700001000 + i); }
 		SharedIndex::Config c2 = cfg; c2.hash_threads = 1; SharedIndex ix(c2); CHECK(ix.Open(err));
 		ix.Rescan(); ix.CancelHashing();
 		CHECK(ix.hashing() == 0); CHECK(ix.stats().hashed <= 8);
 		ix.Rescan(); ix.WaitIdle();
-		CHECK(ix.known().size() >= 9);												// dopo l'annullamento tutto si ricalcola senza buchi
+		CHECK(ix.known().size() >= 9);												// after cancellation everything is recomputed with no gaps
 	}
-	// file che cambia mentre e' in coda: il risultato si scarta e il prossimo Rescan lo riprende
+	// file that changes while queued: the result is discarded and the next Rescan picks it up
 	{
 		fs::remove(km); SharedIndex ix(cfg); ix.Open(err);
 		spit(d + "/mutevole.bin", std::string(500000, 'm')); setm(d + "/mutevole.bin", 1700002000);
 		ix.Rescan();
-		spit(d + "/mutevole.bin", std::string(500000, 'n')); setm(d + "/mutevole.bin", 1700002001);	// cambia subito dopo la messa in coda
+		spit(d + "/mutevole.bin", std::string(500000, 'n')); setm(d + "/mutevole.bin", 1700002001);	// changes right after being queued
 		ix.WaitIdle();
 		bool saw = false; for (auto &s : ix.shared()) if (s.path == d + "/mutevole.bin") saw = true;
 		CHECK(!saw && ix.stats().changed_while_hashing == 1);

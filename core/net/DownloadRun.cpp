@@ -1,4 +1,4 @@
-// LINUX (codice nuovo): vedi DownloadRun.h
+// LINUX (new code): see DownloadRun.h
 #include "StdAfx.h"
 #include "net/DownloadRun.h"
 #include "net/Profile.h"
@@ -36,7 +36,7 @@
 #include <csignal>
 namespace fs = std::filesystem;
 static std::atomic<bool> g_stop{false};
-static void OnStopSignal(int) { g_stop = true; }		// arresto pulito: il ciclo esce, i .part.met si salvano come alla chiusura di eMule
+static void OnStopSignal(int) { g_stop = true; }		// clean shutdown: the loop exits, the .part.met files are saved as when eMule closes
 namespace emule::net {
 
 static double NowS() { return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
@@ -56,22 +56,22 @@ DownloadResult RunDownload(const DownloadOptions &opt)
 	DownloadResult res;
 	std::error_code ec;
 	uchar want[16];
-	if (opt.hash.size() != 32 || !strmd4(CString(opt.hash.c_str()), want)) { res.error = "hash non valido (servono 32 caratteri esadecimali)"; return res; }
+	if (opt.hash.size() != 32 || !strmd4(CString(opt.hash.c_str()), want)) { res.error = "invalid hash (32 hexadecimal characters needed)"; return res; }
 	uint8_t userhash[16]; MakeTempUserHash(userhash);
 	const double t0 = NowS();
 	g_stop = false; std::signal(SIGINT, OnStopSignal); std::signal(SIGTERM, OnStopSignal);
 	{
 		EventLoop loop; ScopedLoop sl(loop);
-		ScopedProfile profile(opt.work_dir);						// cartella di lavoro (o temporanea): config/, Temp/ (file .part), Incoming/
-		theApp.emuledlg->SetMainLoop(&loop);					// messaggi dai thread (hash, completamento) nel ciclo
+		ScopedProfile profile(opt.work_dir);						// working folder (or temporary): config/, Temp/ (.part files), Incoming/
+		theApp.emuledlg->SetMainLoop(&loop);					// messages from threads (hash, completion) into the loop
 		UploadBandwidthThrottler thr; theApp.uploadBandwidthThrottler = &thr;
-		theApp.downloadqueue->Init();							// come CemuleDlg::OnInitDialog: ricarica i .part.met di Temp/ (download interrotti)
-		if (opt.verbose) { thePrefs.SetVerbose(true); thePrefs.SetDebugClientTCPLevel(2); }		// log dettagliato dei pacchetti TCP dei client (opcode, indirizzi)
+		theApp.downloadqueue->Init();							// like CemuleDlg::OnInitDialog: reloads the .part.met files from Temp/ (interrupted downloads)
+		if (opt.verbose) { thePrefs.SetVerbose(true); thePrefs.SetDebugClientTCPLevel(2); }		// detailed log of the clients' TCP packets (opcode, addresses)
 		if (opt.verbose) emule::log::SetSink([](emule::log::Level, const std::string &t) { std::printf("  [log] %s\n", t.c_str()); std::fflush(stdout); });
-		if (!fs::copy_file(opt.server_met, profile.config() + "server.met", fs::copy_options::overwrite_existing, ec)) { res.error = "server.met non copiabile: " + ec.message(); }
+		if (!fs::copy_file(opt.server_met, profile.config() + "server.met", fs::copy_options::overwrite_existing, ec)) { res.error = "cannot copy server.met: " + ec.message(); }
 		else {
 			thePrefs.SetUserHash(userhash); thePrefs.SetPort(opt.tcp_port); thePrefs.SetUserNick(CString("eMuleLinux"));
-			if (opt.tcp_port && !theApp.listensocket->StartListening()) res.error = "porta TCP " + std::to_string(opt.tcp_port) + " non disponibile in ascolto";
+			if (opt.tcp_port && !theApp.listensocket->StartListening()) res.error = "TCP port " + std::to_string(opt.tcp_port) + " cannot be listened on";
 		}
 		CServerList &list = *theApp.serverlist;
 		CServer *server = nullptr;
@@ -81,12 +81,12 @@ DownloadResult RunDownload(const DownloadOptions &opt)
 				size_t col = opt.server_address.rfind(':');
 				if (col != std::string::npos) server = list.GetServerByAddress(opt.server_address.substr(0, col).c_str(), (uint16)std::atoi(opt.server_address.c_str() + col + 1));
 			} else {
-				// l'indice e' quello del FILE server.met: la lista in memoria e' in ordine casuale (come in eMule), quindi si cerca il server per indirizzo
+				// the index is that of the server.met FILE: the in-memory list is in random order (as in eMule), so the server is looked up by address
 				std::vector<emule::known::ServerEntry> entries; std::string err;
 				if (emule::known::LoadServerMet(opt.server_met, entries, err) && opt.server_index >= 0 && opt.server_index < (int)entries.size())
 					server = list.GetServerByIPTCP(entries[opt.server_index].ip, entries[opt.server_index].port);
 			}
-			if (!server) res.error = "server non trovato nella lista";
+			if (!server) res.error = "server not found in the list";
 		}
 		CServerConnect &sc = *theApp.serverconnect;
 		if (res.error.empty()) {
@@ -95,17 +95,17 @@ DownloadResult RunDownload(const DownloadOptions &opt)
 			double t1 = NowS();
 			while (NowS() - t1 < opt.connect_timeout_s && !(sc.IsConnected() && sc.GetClientID())) loop.RunOnce(50);
 			res.connected = sc.IsConnected(); res.client_id = sc.GetClientID(); res.high_id = res.connected && !sc.IsLowID();
-			if (!res.connected) res.error = "connessione al server non riuscita";
+			if (!res.connected) res.error = "connection to the server failed";
 		}
-		// download interrotto in una esecuzione precedente: il .part e' gia' in coda (DownloadQueue::Init), niente ricerca
+		// download interrupted in a previous run: the .part is already queued (DownloadQueue::Init), no search
 		if (res.error.empty()) {
 			if (CPartFile *old = theApp.downloadqueue->GetFileByID(want)) {
 				res.name = (LPCTSTR)old->GetFileName(); res.size = (uint64_t)old->GetFileSize();
 				res.resumed = true; res.resumed_from = (uint64_t)old->GetCompletedSize();
-				std::printf("  RIPRESA: trovato il download interrotto \"%s\", gia' scaricati %llu byte (%.1f%%)\n", res.name.c_str(), (unsigned long long)res.resumed_from, old->GetPercentCompleted()); std::fflush(stdout);
+				std::printf("  RESUMED: found the interrupted download \"%s\", %llu bytes already downloaded (%.1f%%)\n", res.name.c_str(), (unsigned long long)res.resumed_from, old->GetPercentCompleted()); std::fflush(stdout);
 			}
 		}
-		// nome e dimensione: ricerca per hash sul server (stessa espressione del campo di ricerca: link ed2k)
+		// name and size: search by hash on the server (same expression as the search field: ed2k link)
 		if (res.error.empty() && !res.resumed) {
 			GlobalSearch gs;
 			theApp.emuledlg->searchwnd->onLocalEnd = [&gs](UINT, bool) { gs.OnLocalServerAnswered(); };
@@ -113,7 +113,7 @@ DownloadResult RunDownload(const DownloadOptions &opt)
 			SSearchParams sp; sp.eType = SearchTypeEd2kServer;
 			sp.strExpression = ("ed2k://|file|x|1|" + opt.hash + "|/").c_str();
 			theApp.searchlist->serverHits.clear();
-			try { if (!gs.Start(sp, false)) res.error = "ricerca per hash non partita"; } catch (const SearchParseError &e) { res.error = std::string("ricerca non valida: ") + e.what(); }
+			try { if (!gs.Start(sp, false)) res.error = "hash search did not start"; } catch (const SearchParseError &e) { res.error = std::string("invalid search: ") + e.what(); }
 			const SearchHit *found = nullptr;
 			std::string up = opt.hash; for (auto &c : up) c = (char)toupper((unsigned char)c);
 			for (double t2 = NowS(); res.error.empty() && !found && NowS() - t2 < opt.search_timeout_s;) {
@@ -121,7 +121,7 @@ DownloadResult RunDownload(const DownloadOptions &opt)
 				for (auto &h : theApp.searchlist->serverHits) if (h.hash == up && h.size) { found = &h; break; }
 			}
 			theApp.emuledlg->searchwnd->onLocalEnd = nullptr; theApp.emuledlg->searchwnd->onCancel = nullptr;
-			if (res.error.empty() && !found) res.error = "il server non conosce il file (nessun risultato per quell'hash)";
+			if (res.error.empty() && !found) res.error = "the server does not know the file (no result for that hash)";
 			if (found) { res.name = found->name; res.size = found->size; }
 		}
 		CPartFile *pf = nullptr;
@@ -129,30 +129,30 @@ DownloadResult RunDownload(const DownloadOptions &opt)
 		else if (res.error.empty()) {
 			CString link; link.Format(_T("ed2k://|file|%s|%llu|%s|/"), (LPCTSTR)EncodeUrlUtf8(CString(res.name.c_str())), (unsigned long long)res.size, (LPCTSTR)CString(opt.hash.c_str()).MakeUpper());
 			std::unique_ptr<CED2KLink> pLink(CED2KLink::CreateLinkFromUrl(link));
-			if (!pLink || pLink->GetKind() != CED2KLink::kFile) res.error = "link ed2k non valido";
+			if (!pLink || pLink->GetKind() != CED2KLink::kFile) res.error = "invalid ed2k link";
 			else {
 				theApp.downloadqueue->AddFileLinkToDownload(*pLink->GetFileLink());
 				pf = theApp.downloadqueue->GetFileByID(want);
-				if (!pf) res.error = "il file non e' entrato nella coda dei download";
+				if (!pf) res.error = "the file did not enter the download queue";
 			}
 		}
-		// Kad (facoltativo): socket UDP, routing da nodes.dat copiato, processo ogni secondo; PartFile::Process vi cerca le sorgenti del file
+		// Kad (optional): UDP socket, routing from the copied nodes.dat, process every second; PartFile::Process looks for the file's sources there
 		std::unique_ptr<CClientUDPSocket> udp; uint64_t kadTimer = 0;
 		if (res.error.empty() && !opt.kad_nodes.empty()) {
-			if (!fs::copy_file(opt.kad_nodes, profile.config() + "nodes.dat", fs::copy_options::overwrite_existing, ec)) res.error = "nodes.dat non copiabile: " + ec.message();
+			if (!fs::copy_file(opt.kad_nodes, profile.config() + "nodes.dat", fs::copy_options::overwrite_existing, ec)) res.error = "cannot copy nodes.dat: " + ec.message();
 			else {
 				thePrefs.SetUDPPort(opt.udp_port);
 				udp = std::make_unique<CClientUDPSocket>(); theApp.clientudp = udp.get();
-				if (!udp->Create()) res.error = "socket UDP " + std::to_string(opt.udp_port) + " non creato (occupata?)";
+				if (!udp->Create()) res.error = "UDP socket " + std::to_string(opt.udp_port) + " not created (port in use?)";
 				else {
 					Kademlia::CKademlia::SetConfigDir(profile.config().c_str());
 					Kademlia::CKademlia::Start(new Kademlia::CPrefs((profile.config() + "preferencesKad.dat").c_str()));
-					kadTimer = loop.AddTimer(1000, [] { Kademlia::CKademlia::Process(); }, true);		// l'originale lo chiama una volta al secondo
+					kadTimer = loop.AddTimer(1000, [] { Kademlia::CKademlia::Process(); }, true);		// the original calls it once per second
 				}
 			}
 		}
 		if (res.error.empty()) {
-			std::printf("  file: %s  %.2f MB  (dal server); download avviato\n", res.name.c_str(), res.size / 1048576.0); std::fflush(stdout);
+			std::printf("  file: %s  %.2f MB  (from the server); download started\n", res.name.c_str(), res.size / 1048576.0); std::fflush(stdout);
 			const uint64_t up0 = theStats.sessionSentBytes;
 			double lastPrint = 0; std::string incoming;
 			while (NowS() - t0 < opt.seconds && !g_stop) {
@@ -162,9 +162,9 @@ DownloadResult RunDownload(const DownloadOptions &opt)
 					res.bytes_done = (uint64_t)cur->GetCompletedSize();
 					res.max_sources = std::max<unsigned>(res.max_sources, cur->GetSourceCount());
 					res.max_transferring = std::max<unsigned>(res.max_transferring, cur->GetTransferringSrcCount());
-					if (NowS() - lastPrint > 5) { lastPrint = NowS(); std::printf("  %5.1f%%  %llu/%llu byte  sorgenti %u (in trasferimento %u)  %.1f KB/s%s\n", cur->GetPercentCompleted(), (unsigned long long)res.bytes_done, (unsigned long long)res.size, cur->GetSourceCount(), cur->GetTransferringSrcCount(), cur->GetDatarate() / 1024.0, opt.kad_nodes.empty() ? "" : (Kademlia::CKademlia::IsConnected() ? "  [Kad connesso]" : "  [Kad in avvio]")); std::fflush(stdout); }
+					if (NowS() - lastPrint > 5) { lastPrint = NowS(); std::printf("  %5.1f%%  %llu/%llu bytes  sources %u (transferring %u)  %.1f KB/s%s\n", cur->GetPercentCompleted(), (unsigned long long)res.bytes_done, (unsigned long long)res.size, cur->GetSourceCount(), cur->GetTransferringSrcCount(), cur->GetDatarate() / 1024.0, opt.kad_nodes.empty() ? "" : (Kademlia::CKademlia::IsConnected() ? "  [Kad connected]" : "  [Kad starting]")); std::fflush(stdout); }
 				}
-				// completato: il file sta in Incoming/ con il nome pulito
+				// completed: the file is in Incoming/ with the clean name
 				const std::string cand = profile.incoming() + (LPCTSTR)StripInvalidFilenameChars(CString(res.name.c_str()));
 				if (fs::exists(cand, ec) && fs::file_size(cand, ec) == res.size && (!cur || cur->GetStatus() == PS_COMPLETE || cur->GetStatus() == PS_COMPLETING || !cur)) { incoming = cand; break; }
 			}
@@ -177,10 +177,10 @@ DownloadResult RunDownload(const DownloadOptions &opt)
 				fs::create_directories(opt.out_dir, ec);
 				const fs::path dst = fs::path(opt.out_dir) / fs::path(incoming).filename();
 				fs::copy_file(incoming, dst, fs::copy_options::overwrite_existing, ec);
-				if (ec) res.error = "copia del file completato non riuscita: " + ec.message(); else res.out_path = dst.string();
-			} else res.error = "tempo scaduto: download non completato";
+				if (ec) res.error = "copy of the completed file failed: " + ec.message(); else res.out_path = dst.string();
+			} else res.error = "time limit reached: download not completed";
 		}
-		// chiusura ordinata (come ServerSearch): i socket registrati in questo ciclo vanno chiusi prima della sua fine
+		// orderly shutdown (like ServerSearch): sockets registered in this loop must be closed before it ends
 		if (!opt.kad_nodes.empty()) {
 			res.kad_connected = Kademlia::CKademlia::IsConnected();
 			res.kad_tcp_firewalled = Kademlia::CKademlia::IsFirewalled();

@@ -7,13 +7,13 @@ import { useSession } from '@/stores/session'
 import LangSwitch from '@/components/LangSwitch.vue'
 const { t } = useI18n()
 const s = useSession()
-// 'setup' = nessun account ancora (primo avvio); 'account' = nome utente e password; 'token' = il token del file (script, strumenti, demoni senza account)
+// 'setup' = no account yet (first start); 'account' = username and password; 'token' = the file token (scripts, tools, daemons without accounts)
 const mode = ref<'account' | 'setup' | 'token'>('account')
 const token = ref(''), username = ref(''), password = ref(''), repeat = ref(''), code = ref('')
 const mismatch = ref(false)
 const canSubmit = computed(() => !s.busy && (mode.value === 'token' ? !!token.value.trim() : mode.value === 'setup' ? !!(code.value.trim() && username.value.trim() && password.value && repeat.value) : !!(username.value.trim() && password.value)))
 onMounted(async () => {
-  try { mode.value = (await authStatus()).setup_required ? 'setup' : 'account' } catch { mode.value = 'token' }		// demone senza account (o vecchio): resta il token
+  try { mode.value = (await authStatus()).setup_required ? 'setup' : 'account' } catch { mode.value = 'token' }		// daemon without accounts (or old): the token stays
 })
 async function submit() {
   mismatch.value = false

@@ -1,4 +1,4 @@
-// Preferenze dell'interfaccia (tema, modello) salvate nel browser, finestra "Aggiungi" e conferme
+// Interface preferences (theme, model) saved in the browser, "Add" window and confirmations
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 
@@ -7,7 +7,7 @@ export interface ConfirmItem { label: string; info?: string }
 export interface ConfirmReq { title: string; text: string; confirm: string; danger?: boolean; list?: ConfirmItem[]; resolve: (ok: boolean) => void }
 
 const get = (k: string, d: string) => { try { return localStorage.getItem(k) ?? d } catch { return d } }
-const set = (k: string, v: string) => { try { localStorage.setItem(k, v) } catch { /* archivio non disponibile */ } }
+const set = (k: string, v: string) => { try { localStorage.setItem(k, v) } catch { /* storage not available */ } }
 
 export const useUi = defineStore('ui', () => {
   const theme = ref<Theme>(get('emuled.theme', 'system') as Theme)

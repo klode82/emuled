@@ -1,4 +1,4 @@
-// LINUX (codice nuovo): API delle preferenze e delle categorie. Le preferenze sono una tabella (chiave, tipo, lettura, scrittura): aggiungerne una = una riga.
+// LINUX (new code): preferences and categories API. The preferences are a table (key, type, read, write): adding one = one row.
 #include "StdAfx.h"
 #include "api/Api.h"
 #include "Emule.h"
@@ -26,8 +26,8 @@ std::string S(const CString &s) { return std::string((LPCTSTR)s); }
 struct Pref
 {
 	const char *key, *type;				// type: bool | int | string
-	int64_t min, max;					// per gli interi
-	bool restart;						// vale solo dopo il riavvio del demone
+	int64_t min, max;					// for integers
+	bool restart;						// takes effect only after the daemon restarts
 	std::function<json()> get;
 	std::function<void(const json &)> set;
 };
@@ -82,21 +82,21 @@ json DirsJson()
 {
 	json t = json::array(), sh = json::array();
 	for (INT_PTR i = 0; i < thePrefs.TempDirs().GetCount(); ++i) t.push_back(S(thePrefs.TempDirs()[i]));
-	json missing = json::array();		// cartelle condivise che non ci sono (piu') sul disco: restano in elenco finche' non le togli
+	json missing = json::array();		// shared folders that are no longer on disk: they stay in the list until you remove them
 	for (POSITION p = thePrefs.SharedDirs().GetHeadPosition(); p;) {
 		std::string d = S(thePrefs.SharedDirs().GetNext(p)); std::error_code ec;
 		sh.push_back(d); if (!std::filesystem::is_directory(d, ec)) missing.push_back(d);
 	}
 	return {{"incoming", S(thePrefs.GetMuleDirectory(EMULE_INCOMINGDIR))}, {"temp", t}, {"shared", sh}, {"shared_missing", missing}};
 }
-// un percorso dal JSON: testo assoluto, senza ".."; ritorna la forma canonica con "/" finale
+// a path from the JSON: absolute text, without ".."; returns the canonical form with trailing "/"
 bool CleanDir(const json &v, CString &out, std::string &err)
 {
-	if (!v.is_string() || v.get<std::string>().empty()) { err = "serve un percorso (testo)"; return false; }
+	if (!v.is_string() || v.get<std::string>().empty()) { err = "a path (text) is required"; return false; }
 	std::string p = v.get<std::string>();
-	if (p[0] != '/') { err = "il percorso deve essere assoluto (inizia con /): " + p; return false; }
-	if (p.find('\0') != std::string::npos) { err = "percorso non valido"; return false; }
-	for (size_t i = 0; (i = p.find("..", i)) != std::string::npos; i += 2) if ((i == 0 || p[i - 1] == '/') && (i + 2 == p.size() || p[i + 2] == '/')) { err = "il percorso non puo' contenere \"..\": " + p; return false; }
+	if (p[0] != '/') { err = "the path must be absolute (start with /): " + p; return false; }
+	if (p.find('\0') != std::string::npos) { err = "invalid path"; return false; }
+	for (size_t i = 0; (i = p.find("..", i)) != std::string::npos; i += 2) if ((i == 0 || p[i - 1] == '/') && (i + 2 == p.size() || p[i + 2] == '/')) { err = "path cannot contain \"..\": " + p; return false; }
 	out = CString(std::filesystem::path(p).lexically_normal().string().c_str()); MakeFoldername(out); return true;
 }
 json CatJson(INT_PTR i)
@@ -110,23 +110,23 @@ bool CatId(const Request &r, INT_PTR &i, Response &err)
 {
 	const std::string &s = r.params.at("id");
 	char *end = nullptr; long v = std::strtol(s.c_str(), &end, 10);
-	if (s.empty() || *end || v < 0) { err = Response::Error(400, "id non valido"); return false; }
-	if (v >= thePrefs.GetCatCount()) { err = Response::Error(404, "categoria non trovata"); return false; }
+	if (s.empty() || *end || v < 0) { err = Response::Error(400, "invalid id"); return false; }
+	if (v >= thePrefs.GetCatCount()) { err = Response::Error(404, "category not found"); return false; }
 	i = v; return true;
 }
 // campi comuni a POST e PATCH; errore = messaggio
 std::string ApplyCat(Category_Struct *c, const json &b)
 {
-	if (b.contains("title")) { if (!b["title"].is_string() || b["title"].get<std::string>().empty()) return "title: testo non vuoto"; c->strTitle = b["title"].get<std::string>().c_str(); }
-	if (b.contains("comment")) { if (!b["comment"].is_string()) return "comment: testo"; c->strComment = b["comment"].get<std::string>().c_str(); }
-	if (b.contains("incoming_path")) { if (!b["incoming_path"].is_string()) return "incoming_path: testo"; c->strIncomingPath = b["incoming_path"].get<std::string>().c_str(); }
-	if (b.contains("priority")) { if (!b["priority"].is_number_integer() || b["priority"] < 0 || b["priority"] > 5) return "priority: 0..5 (0 bassa, 1 normale, 2 alta, 3 massima, 4 molto bassa, 5 automatica)"; c->prio = b["priority"].get<UINT>(); }
-	if (b.contains("auto_cat")) { if (!b["auto_cat"].is_string()) return "auto_cat: testo"; c->autocat = b["auto_cat"].get<std::string>().c_str(); }
-	if (b.contains("regexp")) { if (!b["regexp"].is_string()) return "regexp: testo"; c->regexp = b["regexp"].get<std::string>().c_str(); }
-	if (b.contains("color")) { if (!b["color"].is_number_integer()) return "color: intero (-1 = predefinito)"; c->color = (COLORREF)b["color"].get<int64_t>(); }
+	if (b.contains("title")) { if (!b["title"].is_string() || b["title"].get<std::string>().empty()) return "title: non-empty text"; c->strTitle = b["title"].get<std::string>().c_str(); }
+	if (b.contains("comment")) { if (!b["comment"].is_string()) return "comment: text"; c->strComment = b["comment"].get<std::string>().c_str(); }
+	if (b.contains("incoming_path")) { if (!b["incoming_path"].is_string()) return "incoming_path: text"; c->strIncomingPath = b["incoming_path"].get<std::string>().c_str(); }
+	if (b.contains("priority")) { if (!b["priority"].is_number_integer() || b["priority"] < 0 || b["priority"] > 5) return "priority: 0..5 (0 low, 1 normal, 2 high, 3 highest, 4 very low, 5 automatic)"; c->prio = b["priority"].get<UINT>(); }
+	if (b.contains("auto_cat")) { if (!b["auto_cat"].is_string()) return "auto_cat: text"; c->autocat = b["auto_cat"].get<std::string>().c_str(); }
+	if (b.contains("regexp")) { if (!b["regexp"].is_string()) return "regexp: text"; c->regexp = b["regexp"].get<std::string>().c_str(); }
+	if (b.contains("color")) { if (!b["color"].is_number_integer()) return "color: integer (-1 = default)"; c->color = (COLORREF)b["color"].get<int64_t>(); }
 	return std::string();
 }
-// Si puo' mettere in ascolto su questa porta (TCP) o aprirla (UDP)? Prova davvero, poi chiude. Serve al Wizard web per avvisare, senza bloccare, se una porta e' occupata.
+// Can it listen on this port (TCP) or open it (UDP)? Really tries, then closes. Used by the web Wizard to warn, without blocking, if a port is busy.
 bool PortUsable(bool tcp, int port)
 {
 	int fd = ::socket(AF_INET, (tcp ? SOCK_STREAM : SOCK_DGRAM) | SOCK_CLOEXEC, 0);
@@ -142,7 +142,7 @@ json PortState(const Request &r, const char *key, bool tcp, int own)
 	auto it = r.query.find(key); if (it == r.query.end()) return nullptr;
 	int p = std::atoi(it->second.c_str());
 	if (p < 1 || p > 65535) return {{"port", p}, {"valid", false}, {"free", false}, {"own", false}};
-	const bool mine = p == own;		// la porta che il demone ha gia' in uso e' sua: non e' un conflitto
+	const bool mine = p == own;		// the port the daemon already uses is its own: not a conflict
 	return {{"port", p}, {"valid", true}, {"own", mine}, {"free", mine || PortUsable(tcp, p)}};
 }
 
@@ -153,36 +153,36 @@ void RegisterPrefsRoutes(HttpServer &srv, const DaemonHooks &hooks)
 	srv.Route("GET", "/api/v1/preferences", [](const Request &) { return Ok(AllPrefs()); });
 	srv.Route("PATCH", "/api/v1/preferences", [hooks](const Request &r) {
 		json b = json::parse(r.body, nullptr, false);
-		if (b.is_discarded() || !b.is_object() || b.empty()) return Response::Error(400, "serve un oggetto JSON con le preferenze da cambiare");
-		// prima si controlla tutto: o si applica tutto o niente
+		if (b.is_discarded() || !b.is_object() || b.empty()) return Response::Error(400, "a JSON object is required with the preferences to change");
+		// everything is checked first: either all is applied or nothing
 		std::vector<std::pair<const Pref *, const json *>> todo; json restart = json::array();
 		for (auto &[k, v] : b.items()) {
 			const Pref *found = nullptr; for (auto &p : Prefs()) if (k == p.key) found = &p;
-			if (!found) return Response::Error(422, "preferenza sconosciuta: " + k);
+			if (!found) return Response::Error(422, "unknown preference: " + k);
 			std::string t = found->type;
-			if (t == "bool" ? !v.is_boolean() : t == "int" ? !v.is_number_integer() : !v.is_string()) return Response::Error(422, k + ": tipo non valido (" + t + ")");
-			if (t == "int" && (v.get<int64_t>() < found->min || v.get<int64_t>() > found->max)) return Response::Error(422, k + ": fuori dai limiti (" + std::to_string(found->min) + ".." + std::to_string(found->max) + ")");
-			if (t == "string" && v.get<std::string>().empty()) return Response::Error(422, k + ": non puo' essere vuoto");
+			if (t == "bool" ? !v.is_boolean() : t == "int" ? !v.is_number_integer() : !v.is_string()) return Response::Error(422, k + ": invalid type (" + t + ")");
+			if (t == "int" && (v.get<int64_t>() < found->min || v.get<int64_t>() > found->max)) return Response::Error(422, k + ": out of range (" + std::to_string(found->min) + ".." + std::to_string(found->max) + ")");
+			if (t == "string" && v.get<std::string>().empty()) return Response::Error(422, k + ": cannot be empty");
 			todo.push_back({found, &v});
 		}
 		std::string changed; for (auto &[p, v] : todo) { p->set(*v); if (p->restart) restart.push_back(p->key); changed += std::string(changed.empty() ? "" : ", ") + p->key; }
 		Audit("preferences changed: " + changed);
-		if (b.contains("upnp_enabled") && hooks.upnp_apply) hooks.upnp_apply(thePrefs.IsUPnPEnabled());		// UPnP si accende e si spegne subito, senza riavvio
-		// con identita' o porte temporanee Save() scriverebbe l'hash utente temporaneo nel profilo: in quel caso si cambia solo la memoria
+		if (b.contains("upnp_enabled") && hooks.upnp_apply) hooks.upnp_apply(thePrefs.IsUPnPEnabled());		// UPnP turns on and off at once, without restart
+		// with temporary identity or ports Save() would write the temporary user hash to the profile: in that case only memory is changed
 		bool saved = hooks.save_prefs && hooks.save_prefs();
 		return Ok({{"preferences", AllPrefs()}, {"saved", saved}, {"restart_required", restart}});
 	});
 
-	// GET /api/v1/ports/check?tcp=P&udp=Q: dice se le porte sono libere (o sono quelle che il demone usa gia'); non cambia niente
+	// GET /api/v1/ports/check?tcp=P&udp=Q: says whether the ports are free (or are those the daemon already uses); changes nothing
 	srv.Route("GET", "/api/v1/ports/check", [](const Request &r) {
 		json j = json::object();
 		if (json t = PortState(r, "tcp", true, thePrefs.GetPort()); !t.is_null()) j["tcp"] = t;
 		if (json u = PortState(r, "udp", false, thePrefs.GetUDPPort()); !u.is_null()) j["udp"] = u;
 		return Ok(j);
 	});
-	// GET /api/v1/ports/test-url?lang=ID: l'indirizzo del test delle porte di emule-project.net, come TriggerPortTest di eMule (OtherFunctions.cpp). Il demone NON lo apre:
-	// lo apre il browser dell'utente, su un suo clic. Il sito prova a collegarsi alle porte IN USO adesso (TCP e UDP) e il demone risponde (OP_PORTTEST). Con l'offuscamento
-	// acceso nell'indirizzo c'e' anche l'hash utente (serve al sito per l'offuscamento della prova). lang e' l'identificatore di lingua di Windows (1040 italiano, 1033 inglese).
+	// GET /api/v1/ports/test-url?lang=ID: the address of the emule-project.net port test, like eMule's TriggerPortTest (OtherFunctions.cpp). The daemon does NOT open it:
+	// the user's browser opens it, on their click. The site tries to connect to the ports IN USE right now (TCP and UDP) and the daemon answers (OP_PORTTEST). With obfuscation
+	// on, the address also contains the user hash (the site needs it for the test's obfuscation). lang is the Windows language identifier (1040 Italian, 1033 English).
 	srv.Route("GET", "/api/v1/ports/test-url", [](const Request &r) {
 		int lang = 1033; auto it = r.query.find("lang"); if (it != r.query.end()) { int v = std::atoi(it->second.c_str()); if (v >= 1 && v <= 65535) lang = v; }
 		const bool obf = thePrefs.IsCryptLayerPreferred();
@@ -190,48 +190,48 @@ void RegisterPrefsRoutes(HttpServer &srv, const DaemonHooks &hooks)
 		url += obf ? "&obf=1&clienthash=" + S(md4str(thePrefs.GetUserHash())) : "&obf=0";
 		return Ok({{"url", url}, {"tcp", thePrefs.GetPort()}, {"udp", thePrefs.GetUDPPort()}, {"obfuscation", obf}});
 	});
-	// POST /api/v1/system/restart: il demone si spegne in modo pulito (salva tutto) e riparte da solo, stesso processo e stessi argomenti. Serve per le porte nuove.
+	// POST /api/v1/system/restart: the daemon shuts down cleanly (saves everything) and restarts by itself, same process and same arguments. Needed for new ports.
 	srv.Route("POST", "/api/v1/system/restart", [hooks](const Request &) {
-		if (!hooks.restart) return Response::Error(501, "il riavvio non e' disponibile in questa modalita'");
+		if (!hooks.restart) return Response::Error(501, "restart is not available in this mode");
 		hooks.restart();
 		return Ok({{"restarting", true}});
 	});
 	srv.Route("GET", "/api/v1/directories", [](const Request &) { return Ok(DirsJson()); });
 	srv.Route("PUT", "/api/v1/directories", [hooks](const Request &r) {
 		json b = json::parse(r.body, nullptr, false);
-		if (b.is_discarded() || !b.is_object() || b.empty()) return Response::Error(400, "serve un oggetto JSON con incoming, temp e/o shared");
-		for (auto &[k, v] : b.items()) { (void)v; if (k != "incoming" && k != "temp" && k != "shared") return Response::Error(422, "campo sconosciuto: " + k + " (validi: incoming, temp, shared)"); }
+		if (b.is_discarded() || !b.is_object() || b.empty()) return Response::Error(400, "a JSON object is required with incoming, temp and/or shared");
+		for (auto &[k, v] : b.items()) { (void)v; if (k != "incoming" && k != "temp" && k != "shared") return Response::Error(422, "unknown field: " + k + " (valid: incoming, temp, shared)"); }
 		namespace fs = std::filesystem;
 		std::string err; std::error_code ec;
-		auto writable = [&](const CString &d, const char *what) {		// la crea se manca; deve essere scrivibile
+		auto writable = [&](const CString &d, const char *what) {		// creates it if missing; must be writable
 			fs::create_directories(fs::path((LPCTSTR)d), ec);
-			if (ec || !fs::is_directory(fs::path((LPCTSTR)d), ec) || access((LPCTSTR)d, W_OK | X_OK) != 0) { err = std::string(what) + " non e' una cartella scrivibile: " + (LPCTSTR)d; return false; }
+			if (ec || !fs::is_directory(fs::path((LPCTSTR)d), ec) || access((LPCTSTR)d, W_OK | X_OK) != 0) { err = std::string(what) + " is not a writable folder: " + (LPCTSTR)d; return false; }
 			return true;
 		};
 		CString incoming = thePrefs.GetMuleDirectory(EMULE_INCOMINGDIR); std::vector<CString> temp, shared;
 		for (INT_PTR i = 0; i < thePrefs.TempDirs().GetCount(); ++i) temp.push_back(thePrefs.TempDirs()[i]);
 		for (POSITION p = thePrefs.SharedDirs().GetHeadPosition(); p;) shared.push_back(thePrefs.SharedDirs().GetNext(p));
-		if (b.contains("incoming")) { if (!CleanDir(b["incoming"], incoming, err) || !writable(incoming, "la cartella dei file completati")) return Response::Error(422, err); }
+		if (b.contains("incoming")) { if (!CleanDir(b["incoming"], incoming, err) || !writable(incoming, "the folder for completed files")) return Response::Error(422, err); }
 		if (b.contains("temp")) {
-			if (!b["temp"].is_array() || b["temp"].empty()) return Response::Error(422, "temp: elenco con almeno una cartella");
+			if (!b["temp"].is_array() || b["temp"].empty()) return Response::Error(422, "temp: list with at least one folder");
 			temp.clear();
-			for (auto &v : b["temp"]) { CString d; if (!CleanDir(v, d, err) || !writable(d, "la cartella temporanea")) return Response::Error(422, err); for (auto &x : temp) if (x == d) return Response::Error(422, std::string("cartella temporanea ripetuta: ") + (LPCTSTR)d); temp.push_back(d); }
+			for (auto &v : b["temp"]) { CString d; if (!CleanDir(v, d, err) || !writable(d, "the folder for temporary files")) return Response::Error(422, err); for (auto &x : temp) if (x == d) return Response::Error(422, std::string("folder listed twice among temporary folders: ") + (LPCTSTR)d); temp.push_back(d); }
 		}
 		if (b.contains("shared")) {
-			if (!b["shared"].is_array()) return Response::Error(422, "shared: elenco di cartelle (anche vuoto)");
+			if (!b["shared"].is_array()) return Response::Error(422, "shared: list of folders (may be empty)");
 			shared.clear();
 			for (auto &v : b["shared"]) {
 				CString d; if (!CleanDir(v, d, err)) return Response::Error(422, err);
-				if (!fs::is_directory(fs::path((LPCTSTR)d), ec) || access((LPCTSTR)d, R_OK | X_OK) != 0) return Response::Error(422, std::string("la cartella condivisa non esiste o non e' leggibile: ") + (LPCTSTR)d);
-				for (auto &x : shared) if (x == d) return Response::Error(422, std::string("cartella condivisa ripetuta: ") + (LPCTSTR)d);
+				if (!fs::is_directory(fs::path((LPCTSTR)d), ec) || access((LPCTSTR)d, R_OK | X_OK) != 0) return Response::Error(422, std::string("the folder does not exist or is not readable (shared list): ") + (LPCTSTR)d);
+				for (auto &x : shared) if (x == d) return Response::Error(422, std::string("folder listed twice among shared folders: ") + (LPCTSTR)d);
 				shared.push_back(d);
 			}
 		}
-		// regole di eMule: la cartella dei completati e' condivisa da sola, la temporanea non si condivide, e non possono coincidere
-		for (auto &t : temp) if (t == incoming) return Response::Error(422, "la cartella temporanea e quella dei file completati devono essere diverse");
+		// eMule rules: the completed folder is shared by itself, the temporary one is not shared, and they cannot coincide
+		for (auto &t : temp) if (t == incoming) return Response::Error(422, "the folder for temporary files and the folder for completed files must be different");
 		for (auto &d : shared) {
-			if (d == incoming) return Response::Error(422, std::string("la cartella dei file completati e' gia' condivisa da sola: ") + (LPCTSTR)d);
-			for (auto &t : temp) if (t == d) return Response::Error(422, std::string("la cartella temporanea non si puo' condividere: ") + (LPCTSTR)d);
+			if (d == incoming) return Response::Error(422, std::string("the folder for completed files is already shared on its own: ") + (LPCTSTR)d);
+			for (auto &t : temp) if (t == d) return Response::Error(422, std::string("the folder for temporary files cannot be shared: ") + (LPCTSTR)d);
 		}
 		bool sharedChanged = b.contains("shared");
 		if (b.contains("incoming")) thePrefs.SetIncomingDir(incoming);
@@ -245,8 +245,8 @@ void RegisterPrefsRoutes(HttpServer &srv, const DaemonHooks &hooks)
 	srv.Route("GET", "/api/v1/categories", [](const Request &) { json a = json::array(); for (INT_PTR i = 0; i < thePrefs.GetCatCount(); ++i) a.push_back(CatJson(i)); return Ok(a); });
 	srv.Route("POST", "/api/v1/categories", [](const Request &r) {
 		json b = json::parse(r.body, nullptr, false);
-		if (b.is_discarded() || !b.is_object()) return Response::Error(400, "serve un oggetto JSON nel corpo");
-		if (!b.contains("title")) return Response::Error(422, "serve \"title\"");
+		if (b.is_discarded() || !b.is_object()) return Response::Error(400, "a JSON object is required in the body");
+		if (!b.contains("title")) return Response::Error(422, "\"title\" is required");
 		auto c = std::make_unique<Category_Struct>();
 		c->prio = PR_NORMAL; c->color = (COLORREF)-1; c->filter = 0; c->filterNeg = false; c->care4all = false; c->ac_regexpeval = false; c->downloadInAlphabeticalOrder = false;
 		std::string err = ApplyCat(c.get(), b); if (!err.empty()) return Response::Error(422, err);
@@ -257,16 +257,16 @@ void RegisterPrefsRoutes(HttpServer &srv, const DaemonHooks &hooks)
 	srv.Route("PATCH", "/api/v1/categories/:id", [](const Request &r) {
 		Response e; INT_PTR i; if (!CatId(r, i, e)) return e;
 		json b = json::parse(r.body, nullptr, false);
-		if (b.is_discarded() || !b.is_object()) return Response::Error(400, "serve un oggetto JSON nel corpo");
-		if (i == 0 && (b.contains("title") || b.contains("incoming_path"))) return Response::Error(422, "la categoria 0 (tutte) non cambia nome ne' cartella");
+		if (b.is_discarded() || !b.is_object()) return Response::Error(400, "a JSON object is required in the body");
+		if (i == 0 && (b.contains("title") || b.contains("incoming_path"))) return Response::Error(422, "category 0 (all) cannot change name or folder");
 		std::string err = ApplyCat(thePrefs.GetCategory(i), b); if (!err.empty()) return Response::Error(422, err);
 		thePrefs.SaveCats(); return Ok(CatJson(i));
 	});
 	srv.Route("DELETE", "/api/v1/categories/:id", [](const Request &r) {
 		Response e; INT_PTR i; if (!CatId(r, i, e)) return e;
-		if (i == 0) return Response::Error(422, "la categoria 0 (tutte) non si cancella");
+		if (i == 0) return Response::Error(422, "category 0 (all) cannot be deleted");
 		json j = CatJson(i);
-		theApp.downloadqueue->ResetCatParts((UINT)i);		// i download di quella categoria tornano a "tutte"; gli indici successivi scalano
+		theApp.downloadqueue->ResetCatParts((UINT)i);		// downloads of that category go back to "all"; subsequent indexes shift
 		thePrefs.RemoveCat(i); thePrefs.SaveCats(); return Ok(j);
 	});
 }

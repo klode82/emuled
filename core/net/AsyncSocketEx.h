@@ -1,17 +1,17 @@
-// LINUX (codice nuovo, stessa interfaccia pubblica di srchybrid/AsyncSocketEx.h): socket non bloccante a eventi.
+// LINUX (new code, same public interface as srchybrid/AsyncSocketEx.h): non-blocking event-driven socket.
 //
-// Windows consegna gli eventi con WSAAsyncSelect e una finestra nascosta per thread; qui li consegna un EventLoop su epoll.
-// La semantica che eMule si aspetta e' quella di WSAAsyncSelect, riprodotta cosi':
-//  - FD_READ: una notifica per volta. Dopo OnReceive non ne arrivano altre finche' l'applicazione non chiama Receive()
-//    (che riarma la lettura: se resta altro da leggere, la notifica arriva di nuovo). Cosi' eMule puo' RIMANDARE la lettura per
-//    limitare la banda in download senza che il ciclo giri a vuoto.
-//  - FD_WRITE: alla connessione completata, e dopo un Send() che ha risposto WSAEWOULDBLOCK, quando si puo' scrivere di nuovo.
-//  - FD_ACCEPT: una notifica per volta, riarmata da Accept().
-//  - FD_CONNECT: a connessione completata o fallita (codice d'errore). FD_CLOSE: alla chiusura del peer, DOPO che i dati
-//    ancora da leggere sono stati letti.
-//  - TriggerEvent(): accoda un evento logico (anche FD_FORCEREAD) senza che il kernel c'entri.
-//  - Close() dentro una callback, o delete this, e' sicuro: nessun evento arriva piu' a un socket chiuso.
-// Non portati per ora: il sistema a strati (proxy), che arriva con il proxy SOCKS/HTTP (Bench, Fase 3).
+// Windows delivers events with WSAAsyncSelect and a hidden window per thread; here an EventLoop on epoll delivers them.
+// The semantics eMule expects are those of WSAAsyncSelect, reproduced like this:
+//  - FD_READ: one notification at a time. After OnReceive no more arrive until the application calls Receive()
+//      (which re-arms reading: if more is left to read, the notification arrives again). So eMule can DELAY reading to
+//      limit download bandwidth without the loop spinning idle.
+//  - FD_WRITE: when the connection completes, and after a Send() that answered WSAEWOULDBLOCK, when writing is possible again.
+//  - FD_ACCEPT: one notification at a time, re-armed by Accept().
+//  - FD_CONNECT: when the connection completes or fails (error code). FD_CLOSE: when the peer closes, AFTER the data
+//      still to be read has been read.
+//  - TriggerEvent(): queues a logical event (also FD_FORCEREAD) without the kernel being involved.
+//  - Close() inside a callback, or delete this, is safe: no event arrives any more to a closed socket.
+// Not ported for now: the layered system (proxy), which arrives with the SOCKS/HTTP proxy (Bench, Phase 3).
 #pragma once
 #include "StdAfx.h"
 #include "win_net.h"
@@ -34,7 +34,7 @@ enum AsyncSocketExState : uint8
 	attached
 };
 
-// --- Sistema a strati (proxy): SOLO la parte dell'interfaccia che le classi derivate usano. Il vero sistema arriva con il task Proxy SOCKS e HTTP. ---
+// --- Layered system (proxy): ONLY the part of the interface that derived classes use. The real system arrives with the SOCKS and HTTP Proxy task. ---
 class CAsyncSocketExLayer;
 struct t_callbackMsg
 {
@@ -58,7 +58,7 @@ public:
 	CAsyncSocketEx(const CAsyncSocketEx &) = delete;
 	CAsyncSocketEx &operator=(const CAsyncSocketEx &) = delete;
 
-	// Crea il socket. Il ciclo di eventi e' quello del thread corrente (EventLoop::Current()).
+	// Creates the socket. The event loop is that of the current thread (EventLoop::Current()).
 	bool Create(UINT nSocketPort = 0, int nSocketType = SOCK_STREAM, long lEvent = FD_DEFAULT, const CString &sSocketAddress = CString(), ADDRESS_FAMILY nFamily = AF_INET, bool reusable = false);
 
 	BOOL Attach(SOCKET hSocket, long lEvent = FD_DEFAULT);
@@ -79,8 +79,8 @@ public:
 	bool Bind(UINT nSocketPort, const CString &sSocketAddress = CString());
 	BOOL Bind(const LPSOCKADDR lpSockAddr, int nSockAddrLen);
 	virtual void Close();
-	// Come l'originale: ritorna false con WSAEWOULDBLOCK quando la connessione e' in corso (indirizzo numerico) o in attesa
-	// della risoluzione del nome; il risultato arriva con OnConnect(). true solo se la connessione e' gia' completa.
+	// As the original: returns false with WSAEWOULDBLOCK when the connection is in progress (numeric address) or waiting
+	// for name resolution; the result arrives with OnConnect(). true only if the connection is already complete.
 	virtual bool Connect(const CString &sHostAddress, UINT nHostPort);
 	virtual BOOL Connect(const LPSOCKADDR lpSockAddr, int nSockAddrLen);
 	BOOL IOCtl(long lCommand, DWORD *lpArgument);
@@ -94,7 +94,7 @@ public:
 	virtual void OnConnect(int nErrorCode);
 	virtual void OnReceive(int nErrorCode);
 	virtual void OnSend(int nErrorCode);
-	// Il nome e' stato risolto. Ritornando false si annulla la connessione.
+	// The name was resolved. Returning false cancels the connection.
 	virtual bool OnHostNameResolved(const SOCKADDR_IN *pSockAddr);
 
 	SOCKET GetSocketHandle() const { return fd_; }
@@ -102,15 +102,15 @@ public:
 	AsyncSocketExState GetState() const { return state_; }
 	bool IsLayerAttached() const { return false; }
 	virtual void RemoveAllLayers() {}
-	BOOL AddLayer(CAsyncSocketExLayer *) { WSASetLastError(EOPNOTSUPP); return FALSE; }		// strati (proxy) non ancora portati
+	BOOL AddLayer(CAsyncSocketExLayer *) { WSASetLastError(EOPNOTSUPP); return FALSE; }		// layers (proxy) not ported yet
 	virtual int OnLayerCallback(std::vector<t_callbackMsg> &) { return 0; }
 
 protected:
 	void SetState(AsyncSocketExState s) { state_ = s; }
-	void ArmRead() { read_armed_ = true; UpdateInterest(); }		// come il riarmo di FD_READ fatto da recv()
-	void ArmWrite() { write_armed_ = true; UpdateInterest(); }	// FD_WRITE al prossimo momento scrivibile (solo dal thread del ciclo)
+	void ArmRead() { read_armed_ = true; UpdateInterest(); }		// like the FD_READ re-arm done by recv()
+	void ArmWrite() { write_armed_ = true; UpdateInterest(); }	// FD_WRITE at the next writable moment (only from the loop thread)
 	bool InLoopThread() const { return loop_ && loop_->InLoopThread(); }
-	void PostArmWrite();										// come ArmWrite, ma da un altro thread
+	void PostArmWrite();										// like ArmWrite, but from another thread
 
 private:
 	void OnIo(uint32_t epoll_events) override;
@@ -120,7 +120,7 @@ private:
 	void FinishConnect(int err);
 	void HandlePeerClose(int err);
 	bool BeginConnect(const sockaddr *sa, socklen_t len);
-	// Esegue f(this) nel ciclo, solo se questo socket (stessa registrazione) esiste ancora.
+	// Runs f(this) in the loop, only if this socket (same registration) still exists.
 	template<class F> void PostIfAlive(F f);
 
 	SOCKET fd_ = INVALID_SOCKET;
@@ -131,12 +131,12 @@ private:
 	long lEvent_ = 0;
 	AsyncSocketExState state_ = notsock;
 	bool read_armed_ = true, write_armed_ = false, close_notified_ = false;
-	bool hold_ = false;									// connessione in preparazione (risoluzione del nome o esito immediato): nessun evento epoll finche' non e' pronta
-	std::vector<sockaddr_storage> pending_addrs_;		// indirizzi ancora da provare dopo una risoluzione di nome
-	uint64_t resolve_token_ = 0;						// invalida le risoluzioni in volo dopo Close()
+	bool hold_ = false;									// connection being prepared (name resolution or immediate outcome): no epoll event until it is ready
+	std::vector<sockaddr_storage> pending_addrs_;		// addresses still to try after a name resolution
+	uint64_t resolve_token_ = 0;						// invalidates in-flight resolutions after Close()
 };
 
-// CAsyncSocket di MFC: gli stessi socket piu' i datagrammi (usato da ClientUDPSocket e UDPSocket).
+// MFC CAsyncSocket: the same sockets plus datagrams (used by ClientUDPSocket and UDPSocket).
 class CAsyncSocket : public CAsyncSocketEx
 {
 public:

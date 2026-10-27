@@ -12,7 +12,7 @@
 #include <strings.h>
 
 
-#define	ECHO					((void)0)		/* LINUX: l'azione predefinita di flex (stampare i caratteri non riconosciuti) non fa nulla */
+#define	ECHO					((void)0)		/* LINUX: the default flex action (printing unrecognized characters) does nothing */
 #define	YY_INPUT				ReadLexBuff
 #define	YY_FATAL_ERROR			FatalLexError
 
@@ -160,14 +160,14 @@ number			{num1}|{num2}
 	// pattern with a separate token. It would be even wrong! "ed2k::<hash>" is to be handled
 	// as any other string term. It even can get combined with other search terms and operators
 	// within one search tree.
-					// LINUX: CED2KLink (448 righe, dipende da wininet per i link con sorgenti) non e' ancora portato. Per la ricerca basta
-					// l'hash: ed2k://|file|nome|dimensione|hash|/  ->  "ed2k::HASH". Stessi controlli di CED2KFileLink sul formato di dimensione e hash.
+					// LINUX: CED2KLink (448 lines, depends on wininet for links with sources) is not ported yet. For the search it is enough
+					// the hash: ed2k://|file|name|size|hash|/  ->  "ed2k::HASH". Same checks as CED2KFileLink on the size and hash format.
 					CString strError;
 					{
 						std::string link(yytext);
 						std::vector<std::string> f; size_t pos = 0;
 						while (true) { size_t e = link.find('|', pos); f.push_back(link.substr(pos, e == std::string::npos ? e : e - pos)); if (e == std::string::npos) break; pos = e + 1; }
-						// f: "ed2k://", "file", nome, dimensione, hash, "/"
+						// f: "ed2k://", "file", name, size, hash, "/"
 						if (f.size() >= 5 && f[1] == "file" && f[4].size() == 32) {
 							uchar hash[16]; bool ok = true;
 							for (int i = 0; i < 16 && ok; ++i) { char hx[3] = { f[4][i * 2], f[4][i * 2 + 1], 0 }; char *end; hash[i] = (uchar)strtoul(hx, &end, 16); ok = *end == 0; }
@@ -412,7 +412,7 @@ number			{num1}|{num2}
 							}
 						}
 #ifndef _UNICODE
-						else if ((unsigned char)c >= 0x80 && false /* LINUX: niente codepage a doppio byte, i testi sono UTF-8 */){
+						else if ((unsigned char)c >= 0x80 && false /* LINUX: no double-byte codepages, texts are UTF-8 */){
 							psz[i++] = (unsigned char)c;
 							if (i >= l){
 								char *pszNew = (char*)realloc(psz, l += 128);

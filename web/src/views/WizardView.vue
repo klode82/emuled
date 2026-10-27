@@ -1,4 +1,4 @@
-<!-- Wizard di primo avvio (Bench 873): nome sulla rete, porte, offuscamento, limiti, cartelle. Compare dopo la creazione del primo account, a schermo intero, e sparisce quando si finisce. -->
+<!-- First-start Wizard (Bench 873): network name, ports, obfuscation, limits, folders. Shown after the first account is created, full screen, and disappears when finished. -->
 <script setup lang="ts">
 import logo from '@/assets/emuled_logo_transparent.png'
 import { computed, onMounted, ref } from 'vue'
@@ -13,8 +13,8 @@ import FolderPicker from '@/components/FolderPicker.vue'
 
 const { t } = useI18n()
 const session = useSession(), setup = useSetup()
-const candidates = ref<string[]>([])		// cartelle del computer che sembrano un eMule (anche nascoste, come ~/.emuled.old)
-const importAvailable = ref(false)		// primo avvio e niente ancora importato: si offre di portare il profilo di un eMule esistente (Bench 875)
+const candidates = ref<string[]>([])		// computer folders that look like an eMule (even hidden, like ~/.emuled.old)
+const importAvailable = ref(false)		// first start and nothing imported yet: offer to bring over the profile of an existing eMule (Bench 875)
 const STEPS = computed(() => (importAvailable.value ? ['welcome', 'import', 'nick', 'ports', 'obfuscation', 'limits', 'folders', 'done'] : ['welcome', 'nick', 'ports', 'obfuscation', 'limits', 'folders', 'done']) as string[])
 const step = ref(0)
 const loading = ref(true), saving = ref(false), error = ref('')
@@ -24,7 +24,7 @@ const down = ref(0), up = ref(0), downUnit = ref<'kB' | 'MB'>('kB'), upUnit = re
 const incoming = ref(''), temp = ref('')
 const ports = ref<PortsCheck | null>(null), checking = ref(false)
 const restart = ref<string[]>([])
-const pickFor = ref<'incoming' | 'temp' | 'src' | number | null>(null)		// number = indice della regola dei percorsi Windows
+const pickFor = ref<'incoming' | 'temp' | 'src' | number | null>(null)		// number = index of the Windows paths rule
 function useCandidate(path: string) { src.value = path; scan.value = null; void look() }
 function picked(path: string) {
   if (pickFor.value === 'incoming') incoming.value = path; else if (pickFor.value === 'temp') temp.value = path
@@ -33,7 +33,7 @@ function picked(path: string) {
 }
 const pickStart = computed(() => (pickFor.value === 'incoming' ? incoming.value : pickFor.value === 'temp' ? temp.value : pickFor.value === 'src' ? src.value : typeof pickFor.value === 'number' ? rules.value[pickFor.value]?.linux : ''))
 
-// importazione di un profilo eMule esistente
+// import of an existing eMule profile
 const importYes = ref(false), src = ref(''), scan = ref<ImportScan | null>(null), rules = ref<ImportRule[]>([]), scanning = ref(false), importing = ref(false)
 async function look() {
   if (!src.value.trim().startsWith('/')) return
@@ -49,7 +49,7 @@ async function runImport() {
     const api = session.getApi()
     await api.importRun(src.value.trim(), rules.value)
     const t0 = Date.now()
-    await new Promise((r) => setTimeout(r, 2500))		// il demone si riavvia dopo meno di un secondo
+    await new Promise((r) => setTimeout(r, 2500))		// the daemon restarts in under a second
     for (;;) {
       try { if ((await api.importStatus()).imported) { location.reload(); return } } catch { /* sta ripartendo */ }
       if (Date.now() - t0 > 90000) { error.value = t('wizard.import.timeout'); break }
@@ -62,7 +62,7 @@ async function runImport() {
 onMounted(async () => {
   try {
     const api = session.getApi()
-    try { const st = await api.importStatus(); importAvailable.value = st.available; candidates.value = st.candidates ?? [] } catch { importAvailable.value = false }		// un demone senza questa funzione: niente passo
+    try { const st = await api.importStatus(); importAvailable.value = st.available; candidates.value = st.candidates ?? [] } catch { importAvailable.value = false }		// a daemon without this feature: no step
     const [p, d] = await Promise.all([api.preferences(), api.directories()])
     nick.value = String(p.nick ?? ''); tcp.value = Number(p.tcp_port ?? 55662); udp.value = Number(p.udp_port ?? 55672); upnp.value = !!p.upnp_enabled
     obfuscation.value = p.crypt_supported !== false
@@ -93,7 +93,7 @@ const toneOf = (s: string) => (s === 'busy' || s === 'invalid' ? 'text-bad' : 't
 
 async function next() {
   error.value = ''
-  if (name.value === 'ports' && !ports.value) await checkPorts()		// l'avviso non blocca: serve solo a far sapere
+  if (name.value === 'ports' && !ports.value) await checkPorts()		// the warning does not block: it only informs
   if (name.value === 'folders') { await save(); return }
   if (name.value === 'import' && importYes.value) { await runImport(); return }
   step.value = Math.min(step.value + 1, last.value)
@@ -118,7 +118,7 @@ async function finish() {
   saving.value = true
   try { await setup.finish() } catch (e) { error.value = errText(e) } finally { saving.value = false }
 }
-async function finishAndRestart() {		// le porte nuove valgono solo dopo il riavvio: si chiude il Wizard (cosi' non riparte) e si riavvia
+async function finishAndRestart() {		// the new ports apply only after restart: close the Wizard (so it does not restart) and restart
   saving.value = true; error.value = ''
   try { await setup.finish() } catch (e) { error.value = errText(e); saving.value = false; return }
   error.value = await session.restartDaemon()
@@ -145,7 +145,7 @@ const speedText = (v: number, u: string) => (kbps(v, u as 'kB' | 'MB') === 0 ? t
           <p class="text-sm leading-relaxed text-mute">{{ t('wizard.welcomeText') }}</p>
         </div>
 
-        <!-- 1b. importazione di un eMule esistente (solo se offerta) -->
+        <!-- 1b. import of an existing eMule (only if offered) -->
         <div v-else-if="name === 'import'" class="flex flex-col gap-3">
           <h2 class="text-base font-semibold">{{ t('wizard.import.title') }}</h2>
           <p class="text-sm leading-relaxed text-mute">{{ t('wizard.import.text') }}</p>

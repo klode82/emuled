@@ -1,4 +1,4 @@
-// LINUX (codice nuovo): vedi SharedIndex.h
+// LINUX (new code): see SharedIndex.h
 #include "StdAfx.h"
 #include "known/SharedIndex.h"
 #include <cerrno>
@@ -20,7 +20,7 @@ bool SharedIndex::Open(std::string &err)
 {
 	std::string e;
 	if (known_.Load(cfg_.known_met, e)) return true;
-	if (e == "assente") return true;		// profilo nuovo: elenco vuoto
+	if (e == "absent") return true;		// new profile: empty list
 	err = "known.met: " + e;
 	return false;
 }
@@ -32,11 +32,11 @@ ScanResult SharedIndex::Rescan()
 	ScanResult sr = ScanShared(cfg_.share, known_);
 	std::map<std::string, Hash16> now;
 	for (auto &c : sr.known) { const KnownFile *k = known_.Find(c.name, c.mtime, c.size); if (k) now[c.path] = k->hash; }
-	shared_ = std::move(now);									// i file spariti escono dall'elenco condiviso, non da known.met
+	shared_ = std::move(now);									// files that disappeared leave the shared list, not known.met
 	for (auto &c : sr.to_hash) {
 		uint64_t st = Stamp(c.mtime, c.size);
 		auto it = queued_.find(c.path);
-		if (it != queued_.end() && it->second == st) continue;	// gia' in coda con la stessa versione del file
+		if (it != queued_.end() && it->second == st) continue;	// already queued with the same file version
 		queued_[c.path] = st;
 		pool_->Add({c.path, c.size, c.mtime});
 	}
@@ -51,11 +51,11 @@ size_t SharedIndex::Poll()
 		queued_.erase(b.job.path);
 		if (b.res.cancelled) continue;
 		if (!b.res.ok) { ++stats_.failed; errors_.push_back(b.job.path + ": " + b.res.error); continue; }
-		// il file deve essere ancora quello messo in coda (stessa dimensione e data), altrimenti lo riprende il prossimo Rescan
+		// the file must still be the one queued (same size and date), otherwise the next Rescan picks it up
 		struct stat st;
 		if (::stat(b.job.path.c_str(), &st) != 0 || (uint64_t)st.st_size != b.job.size || (uint32_t)st.st_mtime != b.job.mtime || b.res.size != b.job.size) { ++stats_.changed_while_hashing; continue; }
 		size_t sl = b.job.path.rfind('/'); std::string name = sl == std::string::npos ? b.job.path : b.job.path.substr(sl + 1);
-		if (known_.FindByHash(b.res.hash)) { ++stats_.duplicates; duplicates_.push_back(b.job.path); continue; }	// stesso contenuto gia' noto: come SafeAddKFile, si tiene il primo
+		if (known_.FindByHash(b.res.hash)) { ++stats_.duplicates; duplicates_.push_back(b.job.path); continue; }	// same content already known: as SafeAddKFile, the first is kept
 		known_.Add(MakeKnownFile(name, b.job.size, b.job.mtime, b.res.hash, b.res.part_hashes, (uint32_t)time(nullptr)));
 		shared_[b.job.path] = b.res.hash; dirty_ = true; ++stats_.hashed;
 	}

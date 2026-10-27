@@ -104,7 +104,7 @@ CUDPSocket::~CUDPSocket()
 		delete[] p->packet;
 		delete p;
 	}
-	*alive_ = false;			// LINUX: le risoluzioni in corso non devono piu' toccare questo oggetto
+	*alive_ = false;			// LINUX: pending resolutions must no longer touch this object
 
 	while (!m_aDNSReqs.IsEmpty())
 		delete m_aDNSReqs.RemoveHead();
@@ -534,8 +534,8 @@ void CUDPSocket::ProcessPacketError(UINT size, UINT opcode, uint32 nIP, uint16 n
 
 void CUDPSocket::DnsLookupDone(SServerDNSRequest *pDNSReq, uint32 nIP)
 {
-	// LINUX: nell'originale la risoluzione era WSAAsyncGetHostByName con una finestra nascosta; ora un thread (EventLoop::ResolveAsync) e questa funzione,
-	// chiamata nel thread del ciclo. La richiesta puo' essere gia' stata cancellata dalla pulizia delle richieste vecchie (2 minuti): in quel caso si ignora.
+	// LINUX: in the original the resolution was WSAAsyncGetHostByName with a hidden window; now a thread (EventLoop::ResolveAsync) and this function,
+	// called in the loop thread. The request may already have been cancelled by the cleanup of old requests (2 minutes): in that case it is ignored.
 	{
 		bool bFound = false;
 		for (POSITION pos = m_aDNSReqs.GetHeadPosition(); pos != NULL;) {

@@ -35,13 +35,13 @@ export const usePrefs = defineStore('prefs', () => {
     } catch (e) { useToasts().error(errText(e)) } finally { saving.value = false }
   }
   async function loadDirs() { try { dirs.value = await api().directories() } catch (e) { useToasts().error(errText(e)) } }
-  // ritorna l'errore del demone (un messaggio) oppure '' se ha funzionato: la schermata lo mostra accanto al campo
+  // returns the daemon error (a message) or '' on success: the screen shows it next to the field
   async function saveDirs(b: Partial<Directories>): Promise<string> {
     try { const r = await api().putDirectories(b); dirs.value = r.directories; dirsSaved.value = r.saved; useToasts().ok(t(r.saved ? 'dirs.saved' : 'dirs.appliedNotSaved')); return '' } catch (e) { return errText(e) }
   }
   async function loadCategories() { try { categories.value = await api().categories() } catch (e) { useToasts().error(errText(e)) } }
   async function addCategory(c: Partial<Category>) { await createCategory(c) }
-  // ritornano l'id della categoria (null se non riuscito): servono per spostarci subito i file scelti
+  // return the category id (null on failure): used to move the chosen files into it right away
   async function createCategory(c: Partial<Category>): Promise<number | null> { try { const r = await api().addCategory(c); await loadCategories(); useToasts().ok(t('prefs.categoryCreated')); return r.id } catch (e) { useToasts().error(errText(e)); return null } }
   async function editCategory(id: number, c: Partial<Category>): Promise<number | null> { try { await api().patchCategory(id, c); await loadCategories(); useToasts().ok(t('prefs.categorySaved')); return id } catch (e) { useToasts().error(errText(e)); return null } }
   async function removeCategory(id: number) { try { await api().removeCategory(id); await loadCategories(); useToasts().ok(t('prefs.categoryDeleted')) } catch (e) { useToasts().error(errText(e)) } }

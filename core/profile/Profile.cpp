@@ -1,4 +1,4 @@
-// LINUX (codice nuovo): vedi Profile.h
+// LINUX (new code): see Profile.h
 #include "StdAfx.h"
 #include "profile/Profile.h"
 #include "StringConversion.h"
@@ -26,10 +26,10 @@ std::string ResolveProfileDir(const std::string &explicit_dir)
 std::unique_ptr<ProfileLock> ProfileLock::Acquire(const std::string &dir, std::string &err)
 {
 	int fd = ::open((dir + "/emuled.lock").c_str(), O_RDWR | O_CREAT | O_CLOEXEC, 0644);
-	if (fd < 0) { err = "impossibile creare il file di lock in '" + dir + "': " + strerror(errno); return nullptr; }
+	if (fd < 0) { err = "cannot create the lock file in '" + dir + "': " + strerror(errno); return nullptr; }
 	if (::flock(fd, LOCK_EX | LOCK_NB) < 0) {
 		char b[32] = {}; ssize_t n = ::pread(fd, b, sizeof b - 1, 0); ::close(fd);
-		err = "profilo '" + dir + "' gia' in uso" + (n > 0 ? std::string(" dal processo ") + b : "");
+		err = "profile '" + dir + "' already in use" + (n > 0 ? std::string(" by process ") + b : "");
 		while (!err.empty() && (err.back() == '\n' || err.back() == ' ')) err.pop_back();
 		return nullptr;
 	}
@@ -98,11 +98,11 @@ std::string ResolveCaseInsensitive(const std::string &p, bool *found, bool *ambi
 DaemonConfig DaemonConfig::Load(const std::string &dir, std::string &warn)
 {
 	DaemonConfig c; IniFile ini; std::string err;
-	if (!IniFile::Load(dir + "/emuled.conf", ini, err)) { if (err != "assente") warn = "emuled.conf: " + err; return c; }
+	if (!IniFile::Load(dir + "/emuled.conf", ini, err)) { if (err != "absent") warn = "emuled.conf: " + err; return c; }
 	c.legacy_codepage = ini.Get("ed2k", "legacy_codepage", c.legacy_codepage);
 	auto split = [](const std::string &v) { std::vector<std::string> o; for (size_t p = 0; p <= v.size();) { size_t e = v.find(';', p); if (e == std::string::npos) e = v.size(); std::string t = v.substr(p, e - p); size_t a = t.find_first_not_of(" \t"), b = t.find_last_not_of(" \t"); if (a != std::string::npos) o.push_back(t.substr(a, b - a + 1)); p = e + 1; } return o; };
 	c.share_ignore = split(ini.Get("share", "ignore")); c.share_ignore_add = split(ini.Get("share", "ignore_add"));
-	// le chiavi della sezione [pathmap] sono i prefissi Windows
+	// the keys of the [pathmap] section are the Windows prefixes
 	std::string b = ini.Bytes();
 	DecodedText d = DecodeText(b); bool in = false;
 	for (auto &l : d.lines) {

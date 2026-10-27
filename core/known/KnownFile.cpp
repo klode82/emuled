@@ -1,4 +1,4 @@
-// LINUX (codice nuovo): vedi KnownFile.h
+// LINUX (new code): see KnownFile.h
 #include "StdAfx.h"
 #include "known/KnownFile.h"
 #include "met/SafeMet.h"
@@ -30,7 +30,7 @@ void KnownFileList::Index(size_t i)
 {
 	const KnownFile &f = files_[i];
 	by_name_size_.emplace(Key(f.name, f.size), i);
-	by_hash_.emplace(f.hash, i);		// duplicati: vince il primo, come SafeAddKFile
+	by_hash_.emplace(f.hash, i);		// duplicates: the first wins, as SafeAddKFile
 }
 
 KnownFile MakeKnownFile(const std::string &name, uint64_t size, uint32_t date, const Hash16 &hash, std::vector<Hash16> parts, uint32_t last_shared)
@@ -72,7 +72,7 @@ bool KnownFileList::LoadBytes(const std::string &bytes, std::string &err)
 		uint32_t nt = r.u32();
 		for (uint32_t j = 0; j < nt; ++j) {
 			KnownFile::StoredTag st;
-			if (!met::ReadTag(r, st.tag, why)) { err = why; return false; }		// non puo' succedere dopo la validazione
+			if (!met::ReadTag(r, st.tag, why)) { err = why; return false; }		// cannot happen after validation
 			st.raw.assign(bytes, st.tag.off, st.tag.len);
 			if (st.tag.name.empty()) {
 				if (st.tag.id == FT_FILENAME && st.tag.isStr && f.name.empty()) f.name = DecodeTagString(st.tag.str);
@@ -89,11 +89,11 @@ bool KnownFileList::LoadBytes(const std::string &bytes, std::string &err)
 bool KnownFileList::Load(const std::string &path, std::string &err)
 {
 	FILE *fp = fopen(path.c_str(), "rb");
-	if (!fp) { err = errno == ENOENT ? "assente" : strerror(errno); return false; }
+	if (!fp) { err = errno == ENOENT ? "absent" : strerror(errno); return false; }
 	std::string b; char buf[1 << 16]; size_t k;
 	while ((k = fread(buf, 1, sizeof buf, fp)) > 0) b.append(buf, k);
 	bool bad = ferror(fp); fclose(fp);
-	if (bad) { err = "errore di lettura"; return false; }
+	if (bad) { err = "read error"; return false; }
 	return LoadBytes(b, err);
 }
 

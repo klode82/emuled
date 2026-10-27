@@ -1,4 +1,4 @@
-// LINUX (codice nuovo): vedi SourceWatchdog.h
+// LINUX (new code): see SourceWatchdog.h
 #include "net/SourceWatchdog.h"
 #include <set>
 
@@ -10,7 +10,7 @@ SourceWatchdog::Action SourceWatchdog::Tick(double now, const std::vector<File> 
 	for (auto &f : files) {
 		seen.insert(f.hash);
 		State &s = st_[f.hash];
-		if (!f.active || f.sources > 0) { s = State{}; continue; }		// ha fonti (o non deve scaricare): riparte da capo
+		if (!f.active || f.sources > 0) { s = State{}; continue; }		// has sources (or must not download): starts over
 		if (s.zeroSince < 0) { s.zeroSince = now; continue; }
 		if (now - s.zeroSince >= p_.reconnect_after_s) longZero = true;
 		if (now - s.zeroSince >= p_.reask_after_s && (s.lastReask < 0 || now - s.lastReask >= p_.reask_after_s)) { a.reask.push_back(f.hash); s.lastReask = now; }

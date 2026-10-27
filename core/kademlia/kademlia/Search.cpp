@@ -1515,7 +1515,7 @@ void CSearch::SetSearchTermData(uint32 uSearchTermDataSize, LPBYTE pucSearchTerm
 
 CString CSearch::GetTypeName(uint32 uType)
 {
-	// LINUX: nomi in inglese (compaiono nel registro e nell'API); le traduzioni stanno nell'interfaccia web
+	// LINUX: English names (they appear in the log and in the API); translations live in the web interface
 	switch (uType) {
 	case CSearch::FILE:
 		return _T("Search Sources");

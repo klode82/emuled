@@ -1,5 +1,5 @@
-// Funzioni Win32 sui file, ridotte a POSIX. Un HANDLE e' un descrittore di file (fd) convertito in puntatore; INVALID_HANDLE_VALUE e' -1.
-// Servono ai file portati di eMule che leggono date, forzano la scrittura su disco o copiano file.
+// Win32 file functions, reduced to POSIX. A HANDLE is a file descriptor (fd) converted to a pointer; INVALID_HANDLE_VALUE is -1.
+// Needed by the ported eMule files that read dates, force writes to disk or copy files.
 #pragma once
 #include "win_types.h"
 #include <sys/stat.h>
@@ -8,7 +8,7 @@
 #include <unistd.h>
 
 typedef long long __time64_t;
-struct FILETIME { DWORD dwLowDateTime, dwHighDateTime; };		// intervalli di 100 ns dal 1/1/1601
+struct FILETIME { DWORD dwLowDateTime, dwHighDateTime; };		// 100 ns intervals since 1/1/1601
 #define INVALID_FILE_ATTRIBUTES ((DWORD)-1)
 #define INVALID_FILE_SIZE ((DWORD)-1)
 #define FILE_ATTRIBUTE_NORMAL 0x80
@@ -43,7 +43,7 @@ inline BOOL GetFileTime(HANDLE h, FILETIME *pCreate, FILETIME *pAccess, FILETIME
 	struct stat st;
 	if (::fstat(HandleToFd(h), &st) != 0)
 		return FALSE;
-	if (pCreate) *pCreate = UnixTimeToFileTime(st.st_ctim.tv_sec, st.st_ctim.tv_nsec);	// Linux non conserva la data di creazione: si usa quella di cambio
+	if (pCreate) *pCreate = UnixTimeToFileTime(st.st_ctim.tv_sec, st.st_ctim.tv_nsec);	// Linux does not keep the creation date: the change date is used
 	if (pAccess) *pAccess = UnixTimeToFileTime(st.st_atim.tv_sec, st.st_atim.tv_nsec);
 	if (pWrite) *pWrite = UnixTimeToFileTime(st.st_mtim.tv_sec, st.st_mtim.tv_nsec);
 	return TRUE;
@@ -53,10 +53,10 @@ inline BOOL SetFileTime(HANDLE h, const FILETIME *pCreate, const FILETIME *pAcce
 	struct timespec ts[2] = {{0, UTIME_OMIT}, {0, UTIME_OMIT}};
 	if (pAccess) { __time64_t t = FileTimeToUnixTime(*pAccess); ts[0] = {(time_t)t, 0}; }
 	if (pWrite) { __time64_t t = FileTimeToUnixTime(*pWrite); ts[1] = {(time_t)t, 0}; }
-	(void)pCreate;	// la data di creazione non esiste su Linux
+	(void)pCreate;	// the creation date does not exist on Linux
 	return ::futimens(HandleToFd(h), ts) == 0;
 }
-inline BOOL DeviceIoControl(HANDLE, DWORD, void*, DWORD, void*, DWORD, DWORD*, void*) { return TRUE; }	// FSCTL_SET_SPARSE: i file Linux sono gia' sparsi
+inline BOOL DeviceIoControl(HANDLE, DWORD, void*, DWORD, void*, DWORD, DWORD*, void*) { return TRUE; }	// FSCTL_SET_SPARSE: Linux files are already sparse
 inline DWORD GetFileAttributes(LPCTSTR p)
 {
 	struct stat st;
@@ -64,7 +64,7 @@ inline DWORD GetFileAttributes(LPCTSTR p)
 		return INVALID_FILE_ATTRIBUTES;
 	return S_ISDIR(st.st_mode) ? FILE_ATTRIBUTE_DIRECTORY : FILE_ATTRIBUTE_NORMAL;
 }
-inline BOOL SetFileAttributes(LPCTSTR, DWORD) { return TRUE; }		// gli attributi di Windows (nascosto, sola lettura...) non esistono: nessun effetto
+inline BOOL SetFileAttributes(LPCTSTR, DWORD) { return TRUE; }		// Windows attributes (hidden, read-only...) do not exist: no effect
 inline BOOL FlushFileBuffers(HANDLE h) { return ::fsync(HandleToFd(h)) == 0; }
 inline BOOL CopyFile(LPCTSTR src, LPCTSTR dst, BOOL bFailIfExists)
 {
@@ -88,13 +88,13 @@ inline BOOL CopyFile(LPCTSTR src, LPCTSTR dst, BOOL bFailIfExists)
 	return ok;
 }
 
-// struct _stat64 / statUTC: stat con le date in UTC (su Linux st_mtime e' gia' UTC)
+// struct _stat64 / statUTC: stat with dates in UTC (on Linux st_mtime is already UTC)
 struct _stat64 : public stat {};
 inline int statUTC(HANDLE h, _stat64 &st) { return ::fstat(HandleToFd(h), &st); }
 inline int statUTC(LPCTSTR path, _stat64 &st) { return ::stat(path, &st); }
 inline int _fileno(FILE *f) { return ::fileno(f); }
 inline HANDLE _get_osfhandle(int fd) { return FdToHandle(fd); }
-inline char *_itoa(int v, char *buf, int radix)		// come MSVC: nessun limite di dimensione, il chiamante sa quanto serve
+inline char *_itoa(int v, char *buf, int radix)		// as in MSVC: no size limit, the caller knows how much is needed
 {
 	char tmp[40]; int n = 0; unsigned u = (v < 0 && radix == 10) ? 0u - (unsigned)v : (unsigned)v;
 	do { int d = (int)(u % (unsigned)radix); tmp[n++] = (char)(d < 10 ? '0' + d : 'a' + d - 10); u /= (unsigned)radix; } while (u);
@@ -103,7 +103,7 @@ inline char *_itoa(int v, char *buf, int radix)		// come MSVC: nessun limite di 
 	*o = 0; return buf;
 }
 
-// MoveFileWithProgress: rename; se i due percorsi stanno su dischi diversi (EXDEV) copia con avanzamento, forza su disco e toglie l'originale
+// MoveFileWithProgress: rename; if the two paths are on different disks (EXDEV) copy with progress, flush to disk and remove the original
 #include <cerrno>
 union LARGE_INTEGER { struct { DWORD LowPart; LONG HighPart; }; long long QuadPart; };
 #define CALLBACK
@@ -153,4 +153,4 @@ inline BOOL MoveFileWithProgress(LPCTSTR src, LPCTSTR dst, LPPROGRESS_ROUTINE ro
 }
 inline long long _filelengthi64(int fd) { struct stat st; return ::fstat(fd, &st) == 0 ? (long long)st.st_size : -1; }
 inline BOOL DeleteObject(void*) { return TRUE; }
-inline BOOL PathIsUNC(LPCTSTR) { return TRUE; }		// su Linux nessuna lettera di disco: ogni percorso e' "senza unita"
+inline BOOL PathIsUNC(LPCTSTR) { return TRUE; }		// on Linux there are no drive letters: every path is "without a drive"

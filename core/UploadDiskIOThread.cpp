@@ -84,7 +84,7 @@ void CUploadDiskIOThread::EndThread()
 
 UINT CUploadDiskIOThread::RunInternal()
 {
-	// LINUX: la porta di completamento nasce nel costruttore (cosi' EndThread/WakeUpCall non la trovano mai vuota)
+	// LINUX: the completion port is created in the constructor (so EndThread/WakeUpCall never find it empty)
 
 	DWORD dwRead = 0;
 	ULONG_PTR completionKey = 0;
@@ -181,7 +181,7 @@ void CUploadDiskIOThread::StartCreateNextBlockPackage(UploadingToClient_Struct *
 
 	// now also get a lock on the Block lists
 	CSingleLock lockBlockLists(&pUploadClientStruct->m_csBlockListsLock, TRUE);
-	if (pUploadClientStruct->m_BlockRequests_queue.IsEmpty())	// LINUX: il controllo e' fatto con il blocco preso (nell'originale era prima: una corsa innocua ma reale)
+	if (pUploadClientStruct->m_BlockRequests_queue.IsEmpty())	// LINUX: the check is done with the lock held (in the original it came first: a harmless but real race)
 		return;
 	// See if we can do an early return.
 	// There may be no new blocks to load from disk and add to buffer, or buffer may be large enough already.

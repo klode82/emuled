@@ -1,8 +1,8 @@
-// Prova nel browser vero contro un demone ACCESO e OFFLINE (meglio una copia del profilo: aggiunge e cancella download, cambia il nome utente, crea categorie).
+// Real-browser test against a RUNNING, OFFLINE daemon (better a profile copy: it adds and deletes downloads, changes the username, creates categories).
 //   emuled --run --fake-profile --profile COPIA --offline --api-port 18765 --templates-dir dist/templates &
-//   EMULED_URL=http://127.0.0.1:18765/t/console/ EMULED_TOKEN_FILE=COPIA/emuled.token npm run e2e     (l'indirizzo del template da provare; l'API e' sempre alla radice)
-// Serve un profilo con qualche server (es. copia di server.met): le prove sui server lo richiedono.
-// Variabili: EMULED_URL, EMULED_TOKEN | EMULED_TOKEN_FILE, CHROME (predefinito /usr/bin/google-chrome), E2E_SHOTS (cartella dove salvare le schermate)
+//   EMULED_URL=http://127.0.0.1:18765/t/console/ EMULED_TOKEN_FILE=COPIA/emuled.token npm run e2e     (the address of the template to test; the API is always at the root)
+// Needs a profile with some servers (e.g. a copy of server.met): the server tests require it.
+// Variables: EMULED_URL, EMULED_TOKEN | EMULED_TOKEN_FILE, CHROME (default /usr/bin/google-chrome), E2E_SHOTS (folder where screenshots are saved)
 import puppeteer from 'puppeteer-core'
 import fs from 'node:fs'
 
@@ -34,7 +34,7 @@ await p.waitForSelector('aside[aria-label=Sezioni]', { timeout: 8000 }); await w
 ok((await text()).includes('Trasferimenti'), 'accesso con il token')
 await shot('transfers')
 
-// blocchi e fonti nel dettaglio: un download da 20 000 000 byte ha 3 blocchi
+// blocks and sources in the detail: a 20 000 000 byte download has 3 blocks
 const api = (m, path, body) => fetch(new URL('/api/v1' + path, base).href, { method: m, headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined })
 const bhash = uniq(32), bname = 'blocchi-' + uniq(4) + '.bin'
 ok((await api('POST', '/downloads', { hash: bhash, name: bname, size: 20000000 })).status === 201, 'download da 20 MB aggiunto via API'); await wait(1500)
@@ -67,7 +67,7 @@ ok(await p.evaluate((n) => { const d = document.querySelector('dialog[open]'); r
 await p.evaluate(() => [...document.querySelectorAll('dialog[open] button')].find((x) => x.innerText.trim() === 'Annulla download').click()); await wait(1000)
 ok(!(await text()).includes(name), 'download annullato e tolto dalla lista')
 
-// ricerca con risultati finti (richieste intercettate: niente rete): nome su due righe, ordinamento delle colonne
+// search with fake results (requests intercepted: no network): name on two lines, column sorting
 await p.setRequestInterception(true)
 const fakeResults = [
   { hash: 'A'.repeat(32), name: 'Un nome di file molto lungo che deve avere spazio per andare a capo su due righe senza essere tagliato subito - parte seconda del titolo.pdf', type: 'Doc', size: 7743600, sources: 12, complete_sources: 3, answers: 2 },
@@ -96,7 +96,7 @@ await sortBy('Dimensione'); await wait(200); ok((await firstNames()).join() === 
 ok(await p.evaluate(() => document.querySelector('th[aria-sort="descending"]') !== null), 'ricerca: aria-sort sulla colonna ordinata')
 ok(await p.evaluate(() => parseFloat(getComputedStyle(document.querySelector('tbody td:nth-child(2) p')).fontSize) === 12), 'ricerca: testi a 12 px')
 ok(await p.evaluate(() => [...document.querySelectorAll('[role=tab]')].some((x) => x.innerText.includes('prova'))), 'ricerca: la ricerca resta come scheda')
-// scelta multipla: due risultati scelti, un solo clic li scarica (i download veri partono sul demone offline di prova)
+// multiple choice: two results chosen, a single click downloads them (real downloads start on the offline test daemon)
 {
   const boxes = await p.$$('tbody tr td:first-child input[type=checkbox]'); ok(boxes.length === 3, 'ricerca: una casella per ogni risultato')
   await boxes[0].click(); await boxes[1].click(); await wait(200)
@@ -106,7 +106,7 @@ ok(await p.evaluate(() => [...document.querySelectorAll('[role=tab]')].some((x) 
 }
 p.removeAllListeners('request'); await p.setRequestInterception(false)
 
-// transfers: menu "Opzioni categorie": crea una categoria da li' e ci sposta il file scelto
+// transfers: "Category options" menu: creates a category from there and moves the chosen file into it
 {
   const api = (m, path, body) => p.evaluate(async (m, path, body, t) => (await fetch('/api/v1' + path, { method: m, headers: { Authorization: 'Bearer ' + t, 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined })).json().catch(() => ({})), m, path, body, token)
   await p.goto(base + '#/transfers'); await wait(1200)
@@ -124,7 +124,7 @@ p.removeAllListeners('request'); await p.setRequestInterception(false)
 }
 
 
-// server: ordinamento per nome e per utenti
+// servers: sorting by name and by users
 await p.goto(base + '#/servers'); await wait(1200)
 const srvNames = async () => p.$$eval('tbody tr td:first-child p:first-child', (a) => a.map((x) => x.textContent.trim().toLowerCase()))
 await p.evaluate(() => [...document.querySelectorAll('thead button')].find((b) => /^nome$/i.test(b.innerText.trim())).click()); await wait(200)
@@ -137,7 +137,7 @@ await p.goto(base + '#/search'); await wait(500)
 await p.type('input[placeholder^="Cosa cerchi"]', 'ubuntu'); await p.keyboard.press('Enter'); await wait(800)
 ok(/non connesso|Non sei collegato/i.test(await text()), 'ricerca senza server: messaggio'); await shot('search')
 
-// preferenze: salvataggio, avviso di identita' temporanea
+// preferences: saving, temporary identity warning
 await p.goto(base + '#/prefs'); await wait(800)
 const nick = 'N' + Date.now()
 await p.$eval('#p-nick', (e, v) => { e.value = v; e.dispatchEvent(new Event('input')) }, nick); await wait(300); await shot('prefs')
@@ -145,7 +145,7 @@ await (await btn('Salva')).click(); await wait(800)
 const pr = await (await fetch(new URL('/api/v1/preferences', base).href, { headers: { Authorization: 'Bearer ' + token } })).json()
 ok(pr.nick === nick, 'preferenza salvata nel demone')
 
-// server: aggiungi, cambia priorita', togli
+// servers: add, change priority, remove
 await p.goto(base + '#/servers'); await wait(800)
 const srvName = 'ProvaE2E' + Date.now() % 10000, srvAddr = '203.0.113.' + (100 + Date.now() % 100) + ':4661'
 await (await btn('Aggiungi server')).click(); await wait(300)
@@ -158,7 +158,7 @@ await p.evaluate((n) => [...document.querySelectorAll('tbody tr')].find((x) => x
 await p.evaluate(() => [...document.querySelectorAll('dialog[open] button')].find((x) => x.innerText.trim() === 'Togli').click()); await wait(1000)
 ok(!(await text()).includes(srvName), 'server tolto')
 
-// cartelle: errore del demone mostrato, poi cambio valido
+// folders: daemon error shown, then a valid change
 await p.goto(base + '#/prefs'); await wait(800)
 const tmpDir = '/tmp/e2e-arrivo-' + Date.now()
 await p.$eval('#dirs input', (e, v) => { e.value = v; e.dispatchEvent(new Event('input')) }, 'relativo/dir'); await wait(200)
@@ -171,7 +171,7 @@ ok((await (await api('GET', '/directories')).json()).incoming === tmpDir + '/', 
 await (await btn('Nuova')).click(); await wait(300); await p.type('form input[required]', 'Cat' + Date.now()); await (await btn('Salva categoria')).click(); await wait(800)
 ok((await text()).includes('Categoria creata'), 'categoria creata')
 
-// pagina rimasta aperta dopo un aggiornamento: il file della schermata Kad non esiste piu' (404) -> la pagina si ricarica da sola e la schermata si apre
+// page left open after an update: the Kad screen file no longer exists (404) -> the page reloads by itself and the screen opens
 {
   await p.goto(base + '#/transfers'); await p.reload({ waitUntil: 'networkidle0' }); await wait(600)
   await p.setRequestInterception(true); let blocked = 0
@@ -181,9 +181,9 @@ ok((await text()).includes('Categoria creata'), 'categoria creata')
   p.removeAllListeners('request'); await p.setRequestInterception(false)
 }
 
-// registro: la riga d'avvio, le azioni fatte (aggiunta e annullo del download), filtro, comparsa in diretta, svuotamento
+// log: the startup line, the actions done (adding and cancelling the download), filter, live appearance, clearing
 await p.goto(base + '#/log'); await wait(1200)
-await shot('log')	// (la riga d'avvio e' verificata dal test C++ daemon_api: qui il demone puo' essere stato usato gia' da un'altra prova)
+await shot('log')	// (the startup line is verified by the C++ daemon_api test: here the daemon may already have been used by another test)
 ok(/download added: /.test(await text()) && /download cancelled/.test(await text()), "registro: le azioni fatte dall'interfaccia")
 await p.type('input[type=search]', 'download added'); await wait(300)
 ok(/download added/.test(await text()) && !/download cancelled/.test(await text()), 'registro: filtro per testo')
@@ -195,7 +195,7 @@ await p.evaluate(() => document.querySelector('button[aria-label="Svuota il regi
 await p.evaluate(() => [...document.querySelectorAll('dialog[open] button')].find((x) => x.innerText.trim() === 'Svuota il registro').click()); await wait(1000)
 ok(/registro è vuoto/i.test(await text()), 'registro svuotato')
 
-// nessun doppio scroll: la pagina non scorre mai da sola, con tante righe di avviso nel registro e la finestra bassa
+// no double scroll: the page never scrolls by itself, with many warning lines in the log and a short window
 await p.setViewport({ width: 1280, height: 600 })
 await p.setRequestInterception(true)
 const manyWarnings = Array.from({ length: 120 }, (_, i) => ({ id: i + 1, time: 1700000000000 + i * 1000, level: i % 3 === 0 ? 'error' : 'warning', source: i % 5 === 0 ? 'server' : 'general', text: 'Riga di prova ' + i + ' con un testo abbastanza lungo da occupare spazio nella lista del registro' }))
@@ -224,7 +224,7 @@ for (const n of ['servers', 'shared', 'kad', 'stats']) { await p.goto(base + '#/
 await p.setViewport({ width: 390, height: 780, isMobile: true }); await p.goto(base + '#/transfers'); await wait(1200); await shot('phone')
 await (await btn('Altro')).click(); await wait(300); ok((await text()).includes('Statistiche'), 'telefono: menu Altro'); await shot('phone_more')
 
-const bad = errs.filter((e) => !/status of (401|404|409|422)/.test(e))   // errori attesi: token sbagliato, file di schermata bloccato di proposito, doppioni, percorso rifiutato
+const bad = errs.filter((e) => !/status of (401|404|409|422)/.test(e))   // expected errors: wrong token, screen file deliberately blocked, duplicates, rejected path
 ok(bad.length === 0, 'nessun errore in console' + (bad.length ? ': ' + bad.join(' | ') : ''))
 await b.close()
 console.log(fails.length ? `FALLITI ${fails.length}` : 'TUTTO OK'); process.exit(fails.length ? 1 : 0)

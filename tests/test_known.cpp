@@ -1,4 +1,4 @@
-// KnownFileList, hash ed2k a parti, HashPool, SharedScanner. Hash di riferimento: Crypto++ diretto, logica indipendente.
+// KnownFileList, part-wise ed2k hash, HashPool, SharedScanner. Reference hashes: Crypto++ directly, independent logic.
 #include "StdAfx.h"
 #include "known/SharedScanner.h"
 #include "known/Hasher.h"
@@ -23,31 +23,31 @@ static void setm(const std::string &p, long t) { struct timespec ts[2] = {{t, 0}
 
 static Hash16 md4(const uint8_t *d, size_t n) { CryptoPP::Weak::MD4 m; m.Update(d, n); Hash16 h; m.Final(h.data()); return h; }
 
-// riferimento: tutto in memoria, parti calcolate a parte
+// reference: everything in memory, parts computed separately
 static HashResult Reference(const std::string &data)
 {
 	HashResult r; r.ok = true; r.size = data.size();
 	const size_t P = 9728000;
 	std::vector<Hash16> parts;
-	size_t n = data.size() / P + 1;						// "size / PARTSIZE + 1" parti, l'ultima puo' essere vuota
+	size_t n = data.size() / P + 1;						// "size / PARTSIZE + 1" parts, the last may be empty
 	for (size_t i = 0; i < n; ++i) { size_t off = i * P, len = off >= data.size() ? 0 : std::min(P, data.size() - off); parts.push_back(md4((const uint8_t*)data.data() + off, len)); }
-	if (data.size() < P) { r.hash = parts[0]; return r; }			// un solo hash = hash del file, nessun hash di parte
+	if (data.size() < P) { r.hash = parts[0]; return r; }			// a single hash = file hash, no part hash
 	std::string cat; for (auto &h : parts) cat.append((const char*)h.data(), 16);
 	r.hash = md4((const uint8_t*)cat.data(), cat.size()); r.part_hashes = parts; return r;
 }
 
 int main(int argc, char **argv)
 {
-	// 1. modello dati su file sintetico
+	// 1. data model on a synthetic file
 	{
 		std::string raw = KnownMet(); KnownFileList l; std::string err;
 		CHECK(l.LoadBytes(raw, err) && l.size() == 2 && l.header() == MET_HEADER_I64TAGS);
-		CHECK(l.Serialize() == raw);									// riscrittura identica al byte
+		CHECK(l.Serialize() == raw);									// byte-identical rewrite
 		CHECK(l.files()[0].name == "f0" && l.files()[0].size == 1234);
 		CHECK(l.Find("f1", 1700000000u, 1234) && !l.Find("f1", 1700000001u, 1234) && !l.Find("F1", 1700000000u, 1234) && !l.Find("f1", 1700000000u, 99));
 		CHECK(l.FindByHash(l.files()[1].hash) == &l.files()[1]);
 		KnownFileList bad; CHECK(!bad.LoadBytes(raw.substr(0, raw.size() - 3), err) && !err.empty());
-		CHECK(!l.Add(l.files()[0]));									// stesso hash
+		CHECK(!l.Add(l.files()[0]));									// same hash
 		Hash16 h{}; h[0] = 9;
 		CHECK(l.Add(MakeKnownFile("caf\xC3\xA9.mkv", 5000000000ull, 1700000005u, h, {}, 1700000006u)));
 		Hash16 h2{}; h2[0] = 10;
@@ -55,13 +55,13 @@ int main(int argc, char **argv)
 		std::string out = l.Serialize(); KnownFileList l2;
 		CHECK(l2.LoadBytes(out, err) && l2.size() == 4 && l2.Serialize() == out);
 		CHECK(l2.files()[2].name == "caf\xC3\xA9.mkv" && l2.files()[2].size == 5000000000ull && l2.files()[3].size == 700);
-		CHECK(l2.files()[2].FindTag(FT_FILENAME)->raw.find("\xEF\xBB\xBF") != std::string::npos);		// non ASCII: BOM
-		CHECK(l2.files()[3].FindTag(FT_FILENAME)->raw.find("\xEF\xBB\xBF") == std::string::npos);		// ASCII: niente BOM
+		CHECK(l2.files()[2].FindTag(FT_FILENAME)->raw.find("\xEF\xBB\xBF") != std::string::npos);		// non-ASCII: BOM
+		CHECK(l2.files()[3].FindTag(FT_FILENAME)->raw.find("\xEF\xBB\xBF") == std::string::npos);		// ASCII: no BOM
 		CHECK(l2.files()[2].FindTag(FT_FILESIZE)->tag.type == TAGTYPE_UINT64 && l2.files()[3].FindTag(FT_FILESIZE)->tag.type == TAGTYPE_UINT32);
 	}
 	std::string root = (fs::temp_directory_path() / ("emule_k_" + std::to_string(getpid()))).string();
 	fs::create_directories(root);
-	// 2. Save: SafeWriteMet con .bak
+	// 2. Save: SafeWriteMet with .bak
 	{
 		KnownFileList l; std::string err; l.LoadBytes(KnownMet(), err);
 		spit(root + "/known.met", KnownMet());
@@ -69,7 +69,7 @@ int main(int argc, char **argv)
 		CHECK(l.Save(root + "/known.met", err) && slurp(root + "/known.met.bak") == KnownMet());
 		KnownFileList l3; CHECK(l3.Load(root + "/known.met", err) && l3.size() == 3);
 	}
-	// 3. hash ed2k: confini delle parti, contro il riferimento indipendente
+	// 3. ed2k hash: part boundaries, against the independent reference
 	{
 		const size_t P = 9728000;
 		for (size_t sz : {(size_t)1, (size_t)1000, P - 1, P, P + 1, 2 * P, 2 * P + 5}) {
@@ -86,7 +86,7 @@ int main(int argc, char **argv)
 		HashResult c = HashFile(root + "/c.bin", &stop); CHECK(!c.ok && c.cancelled);
 		uint64_t seen = 0; HashFile(root + "/c.bin", nullptr, [&](uint64_t t) { seen = t; }); CHECK(seen >= 2000000);
 	}
-	// 4. pool: stessi risultati con 1 e con 4 thread; annullamento
+	// 4. pool: same results with 1 and 4 threads; cancellation
 	{
 		std::vector<std::string> paths, datas;
 		for (int i = 0; i < 12; ++i) { std::string d(200000 + i * 311111, 0); uint32_t x = i + 1; for (auto &c : d) { x = x * 1103515245u + 12345u; c = (char)(x >> 16); } datas.push_back(d); paths.push_back(root + "/p" + std::to_string(i)); spit(paths.back(), d); }
@@ -102,7 +102,7 @@ int main(int argc, char **argv)
 		HashPool pool(1, [&](const HashPool::Job &, HashResult &&) { ++done; });
 		for (int i = 0; i < 12; ++i) pool.Add({paths[i], 0, 0});
 		pool.Cancel(); CHECK(pool.pending() == 0 && done <= 12);
-		pool.Add({paths[0], 0, 0}); pool.Wait(); CHECK(done >= 1);		// dopo l'annullamento la coda funziona ancora
+		pool.Add({paths[0], 0, 0}); pool.Wait(); CHECK(done >= 1);		// after cancellation the queue still works
 	}
 	// 5. scanner
 	{
@@ -115,20 +115,20 @@ int main(int argc, char **argv)
 		spit(root + "/altro/z.bin", "zz");
 		KnownFileList kl; Hash16 h{};
 		h[0] = 1; kl.Add(MakeKnownFile("a.mkv", 4, 1700000000, h, {}, 1));
-		h[0] = 2; kl.Add(MakeKnownFile("b.mkv", 6, 1700000000, h, {}, 1));		// data diversa: da ricalcolare
+		h[0] = 2; kl.Add(MakeKnownFile("b.mkv", 6, 1700000000, h, {}, 1));		// different date: to be recomputed
 		ShareOptions o; o.dirs = {d, d + "/", root + "/altro", root + "/manca"};
 		ScanResult r = ScanShared(o, kl);
 		auto names = [](const std::vector<Candidate> &v) { std::vector<std::string> n; for (auto &c : v) n.push_back(c.name); std::sort(n.begin(), n.end()); return n; };
 		CHECK(names(r.known) == std::vector<std::string>{"a.mkv"});
 		CHECK(names(r.to_hash) == (std::vector<std::string>{"b.mkv", "link.txt", "target.txt", "z.bin"}));
-		CHECK(r.ignored == 5 && r.zero_size == 1 && r.subdirs == 1 && r.not_regular == 1);	// zone, .part, .nascosto, thumbs, .part.met | vuoto | sub | link rotto
+		CHECK(r.ignored == 5 && r.zero_size == 1 && r.subdirs == 1 && r.not_regular == 1);	// zones, .part, .hidden, thumbs, .part.met | empty | sub | broken link
 		CHECK(r.missing_dirs.size() == 1 && r.known_bytes == 4 && r.to_hash_bytes == 6 + 2 + 2 + 2);
-		ShareOptions o2 = o; o2.ignore = {}; ScanResult r2 = ScanShared(o2, kl);			// senza esclusioni il residuo Windows verrebbe condiviso
+		ShareOptions o2 = o; o2.ignore = {}; ScanResult r2 = ScanShared(o2, kl);			// without exclusions the Windows leftover would be shared
 		CHECK(r2.ignored == 0 && r2.to_hash.size() > r.to_hash.size());
 	}
 	fs::remove_all(root);
 
-	// 6. SOLA LETTURA sul profilo reale: argv[1] = cartella config. Round trip del known.met vero.
+	// 6. READ-ONLY on the real profile: argv[1] = config folder. Round trip of the real known.met.
 	if (argc > 1 && fs::exists(std::string(argv[1]) + "/known.met")) {
 		std::string path = std::string(argv[1]) + "/known.met", orig = slurp(path), err;
 		KnownFileList l; CHECK(l.Load(path, err));
@@ -138,7 +138,7 @@ int main(int argc, char **argv)
 		CHECK(l.FindByHash(f.hash) && l.Find(f.name, f.date, f.size) != nullptr);
 		size_t big = 0; for (auto &k : l.files()) big += k.part_hashes.size();
 		std::printf("  hash di parte totali: %zu\n", big);
-		// Regola ed2k su TUTTI i record reali (come fa eMule al caricamento: CalculateMD4HashByHashSet e conteggio teorico)
+		// ed2k rule on ALL real records (as eMule does at load: CalculateMD4HashByHashSet and theoretical count)
 		const uint64_t P = 9728000; size_t with_parts = 0, multiples = 0, bad_count = 0, bad_hash = 0, bad_empty = 0, small_with_parts = 0;
 		Hash16 empty = md4(nullptr, 0);
 		for (auto &k : l.files()) {
@@ -149,12 +149,12 @@ int main(int argc, char **argv)
 			if (k.size < P) ++small_with_parts;
 			std::string cat; for (auto &h : k.part_hashes) cat.append((const char*)h.data(), 16);
 			if (md4((const uint8_t*)cat.data(), cat.size()) != k.hash) ++bad_hash;
-			if (k.size % P == 0) { ++multiples; if (k.part_hashes.back() != empty) ++bad_empty; }	// dimensione multipla esatta: ultima parte = MD4 del vuoto
+			if (k.size % P == 0) { ++multiples; if (k.part_hashes.back() != empty) ++bad_empty; }	// exact multiple size: last part = MD4 of empty
 		}
 		std::printf("  record con hash di parte: %zu; dimensione multipla esatta di PARTSIZE: %zu\n  conteggio errato: %zu, hash del file != MD4(parti): %zu, ultima parte non vuota nei multipli: %zu\n", with_parts, multiples, bad_count, bad_hash, bad_empty);
 		CHECK(bad_count == 0 && bad_hash == 0 && bad_empty == 0 && with_parts > 100);
 	}
-	// 7. clients.met come dati: sintetico e reale
+	// 7. clients.met as data: synthetic and real
 	{
 		std::string raw = ClientsMet(3), err; ClientCreditsFile c;
 		CHECK(c.LoadBytes(raw, err) && c.records().size() == 3 && c.version() == CREDITFILE_VERSION && c.Serialize() == raw);

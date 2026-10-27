@@ -1,8 +1,8 @@
-# Un template minimo: mostra lo stato del demone e l'elenco dei download. Vedi docs/TEMPLATES.md.
+# A minimal template: shows the daemon status and the list of downloads. See docs/TEMPLATES.md.
 id: ciao
-name: Ciao mondo
+name: Hello world
 version: 1.0.0
-description: Il template d'esempio piu' piccolo possibile, senza strumenti di costruzione: una sola pagina.
+description: The smallest possible example template, with no build tools: a single page.
 author: emuled
 license: MIT
 api: 1

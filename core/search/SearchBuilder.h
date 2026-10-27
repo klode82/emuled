@@ -1,4 +1,4 @@
-// LINUX: parametri e costruzione della richiesta di ricerca (OP_SEARCHREQUEST / ricerca Kad). Origine: SearchParams.h e SearchResultsWnd.cpp.
+// LINUX: parameters and construction of the search request (OP_SEARCHREQUEST / Kad search). Origin: SearchParams.h and SearchResultsWnd.cpp.
 #pragma once
 #include "StdAfx.h"
 #include "SafeFile.h"
@@ -8,8 +8,8 @@
 enum ESearchType : uint8
 {
 	SearchTypeAutomatic = 0,
-	SearchTypeEd2kServer,		// il solo server a cui si e' connessi
-	SearchTypeEd2kGlobal,		// tutti i server della lista (UDP)
+	SearchTypeEd2kServer,		// only the server we are connected to
+	SearchTypeEd2kGlobal,		// all servers in the list (UDP)
 	SearchTypeKademlia,
 	SearchTypeContentDB
 };
@@ -21,12 +21,12 @@ struct SSearchParams
 	SSearchParams() : ullMinSize(), ullMaxSize(), dwSearchID(_UI32_MAX), uAvailability(), uComplete(), uiMinBitrate(), uiMinLength(), eType(SearchTypeEd2kServer), bClientSharedFiles(), bMatchKeywords() {}
 
 	CString strSearchTitle;
-	CString strExpression;			// il testo digitato (con virgolette, OR, NOT, @size>10m, ...)
-	CStringW strKeyword;			// Kad: la parola chiave con cui si interroga la rete
+	CString strExpression;			// the typed text (with quotes, OR, NOT, @size>10m, ...)
+	CStringW strKeyword;			// Kad: the keyword used to query the network
 	CString strBooleanExpr;
-	CString strFileType;			// "Audio", "Video", "Image", "Doc", "Pro", "Arc", "Iso" o vuoto
+	CString strFileType;			// "Audio", "Video", "Image", "Doc", "Pro", "Arc", "Iso" or empty
 	CString strMinSize, strMaxSize;
-	CString strExtension;			// filtro estensione (senza punto)
+	CString strExtension;			// extension filter (without the dot)
 	CString strCodec, strTitle, strAlbum, strArtist;
 	CString strSpecialTitle;
 	uint64 ullMinSize, ullMaxSize;
@@ -40,9 +40,9 @@ struct SSearchParams
 	bool bMatchKeywords;
 };
 
-// Errore di sintesi o di espressione: il messaggio e' quello del parser (in inglese).
+// Syntax or expression error: the message is the parser's (in English).
 struct SearchParseError : std::runtime_error { using std::runtime_error::runtime_error; };
 
-// Scrive in `data` l'albero di ricerca (senza intestazione di pacchetto). Lancia SearchParseError. Con eType Kademlia puo' riorganizzare strKeyword.
-// bTargetSupports64Bit: il server/nodo accetta dimensioni a 64 bit; *pbPacketUsing64Bit dice se il pacchetto le usa davvero.
+// Writes the search tree into `data` (without the packet header). Throws SearchParseError. With eType Kademlia it may reorder strKeyword.
+// bTargetSupports64Bit: the server/node accepts 64-bit sizes; *pbPacketUsing64Bit tells whether the packet really uses them.
 bool GetSearchPacket(CSafeMemFile &data, SSearchParams *pParams, bool bTargetSupports64Bit, bool *pbPacketUsing64Bit);

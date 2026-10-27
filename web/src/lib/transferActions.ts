@@ -1,4 +1,4 @@
-// Azioni sui download comuni ai modelli B, C e D (il modello A ha le sue, con la selezione multipla).
+// Download actions common to models B, C and D (model A has its own, with multiple selection).
 import { useI18n } from 'vue-i18n'
 import { useDownloads } from '@/stores/downloads'
 import { useUi } from '@/stores/ui'
@@ -9,7 +9,7 @@ import type { Download } from '@/types'
 export function useTransferActions() {
   const { t } = useI18n()
   const dl = useDownloads(), ui = useUi()
-  // annulla: per i completati basta toglierli dalla lista (non cancella il file), per gli altri si chiede conferma perche' il .part viene cancellato
+  // cancel: for completed ones just remove them from the list (does not delete the file), for the others ask for confirmation because the .part is deleted
   async function cancel(items: Download[]) {
     if (!items.length) return
     const hashes = items.map((d) => d.hash)

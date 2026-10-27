@@ -1,4 +1,4 @@
-// STUB (sostituisce srchybrid/LastCommonRouteFinder.h): l'"UploadSpeedSense" di eMule. Qui ritorna il limite impostato (default: nessuno).
+// STUB (replaces srchybrid/LastCommonRouteFinder.h): eMule's "UploadSpeedSense". Here it returns the configured limit (default: none).
 #pragma once
 #include "StdAfx.h"
 #include "Opcodes.h"
@@ -22,11 +22,11 @@ struct CurrentParamStruct
 class CLastCommonRouteFinder
 {
 public:
-	bool AcceptNewClient() const { return true; }					// UploadSpeedSense non porta il veto a nessun slot
-	bool SetPrefs(const CurrentParamStruct &) { return false; }		// false = l'interfaccia non deve ridisegnare la barra di stato
+	bool AcceptNewClient() const { return true; }					// UploadSpeedSense vetoes no slot
+	bool SetPrefs(const CurrentParamStruct &) { return false; }		// false = the interface must not redraw the status bar
 	uint32 GetUpload() const { return upload_; }
 	void SetUpload(uint32 v) { upload_ = v; }
-	template<class T> bool AddHostsToCheck(T &) { return false; }			// traceroute verso i server per l'UploadSpeedSense: non portato
+	template<class T> bool AddHostsToCheck(T &) { return false; }			// traceroute to the servers for UploadSpeedSense: not ported
 private:
 	std::atomic<uint32> upload_{UNLIMITED};
 };

@@ -18,7 +18,7 @@
 #include <timeapi.h>
 #include "emule.h"
 #include "UploadBandwidthThrottler.h"
-// LINUX: tolto #include "EMSocket.h": il file cita CEMSocket solo in un commento.
+// LINUX: removed #include "EMSocket.h": the file mentions CEMSocket only in a comment.
 #include "opcodes.h"
 #include "LastCommonRouteFinder.h"
 #include "OtherFunctions.h"
@@ -463,8 +463,8 @@ UINT UploadBandwidthThrottler::RunInternal()
 			if (nCanSend == 0) {
 				if (theApp.uploadqueue->GetUploadQueueLength() > 0 && theApp.m_pUploadDiskIOThread)
 					theApp.m_pUploadDiskIOThread->WakeUpCall();
-				// LINUX: niente da inviare: il ciclo non deve girare ogni millisecondo (CPU sprecata); l'evento lo sveglia subito quando arriva un dato
-				// (viene azzerato prima di guardare le code, quindi un dato arrivato nel frattempo non si perde)
+				// LINUX: nothing to send: the loop must not spin every millisecond (wasted CPU); the event wakes it immediately when data arrives
+				// (it is reset before looking at the queues, so data arriving in the meantime is not lost)
 				::WaitForSingleObject(m_eventDataAvailable, max(dwSleep, (DWORD)100));
 			} else if (nCanSend <= nBusy)
 				::WaitForSingleObject(m_eventSocketAvailable, dwSleep);

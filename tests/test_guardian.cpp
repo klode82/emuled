@@ -1,4 +1,4 @@
-// Guardiano dei .part.met: stati, backup per hash, transizioni notificate una volta sola, persistenza, ripristino.
+// Guardian of the .part.met files: states, per-hash backup, transitions notified only once, persistence, restore.
 #include "StdAfx.h"
 #include "guardian/Guardian.h"
 #include "met_builders.h"
@@ -15,7 +15,7 @@ static void spit(const std::string &p, const std::string &d) { FILE *f = fopen(p
 static std::string slurp(const std::string &p) { std::string o; FILE *f = fopen(p.c_str(), "rb"); if (!f) return "<assente>"; char b[4096]; size_t k; while ((k = fread(b, 1, sizeof b, f)) > 0) o.append(b, k); fclose(f); return o; }
 static void setm(const std::string &p, time_t t) { struct timespec ts[2] = {{t, 0}, {t, 0}}; utimensat(AT_FDCWD, p.c_str(), ts, 0); }
 
-// part.met con hash scelto (byte ripetuti) e gap finali: piu' "missing_end" e' alto, piu' mancano
+// part.met with chosen hash (repeated bytes) and trailing gaps: the higher "missing_end" is, the more is missing
 static std::string Part(uint8_t hashbyte, uint32_t gap_end, const std::string &name = "film.mkv")
 {
 	std::string s; P8(s, PARTFILE_VERSION); P32(s, 1700000000u); s.append(16, (char)hashbyte); P16(s, 0); P32(s, 5);
@@ -36,101 +36,101 @@ int main()
 	const time_t T0 = 1800000000; auto old = [&](const std::string &p) { setm(p, T0 - 1000); };
 	std::string err;
 
-	std::string good1 = Part(0xA1, 40000), good1b = Part(0xA1, 20000);		// stesso download, il secondo e' piu' avanzato (meno gap)
+	std::string good1 = Part(0xA1, 40000), good1b = Part(0xA1, 20000);		// same download, the second is more advanced (fewer gaps)
 	{
 		Guardian g(o); CHECK(g.Load(err));
 		spit(tmp + "/001.part.met", good1); old(tmp + "/001.part.met");
 		auto ev = g.Scan(T0);
 		CHECK(Names(ev) == "001:NEW>OK " && g.active().at("001").backup && g.active().at("001").hash == HashHex(0xA1));
 		CHECK(slurp(bk + "/" + HashHex(0xA1) + ".met") == good1);
-		CHECK(g.Scan(T0 + 1).empty());										// nessuna transizione: nessun evento
+		CHECK(g.Scan(T0 + 1).empty());										// no transition: no event
 
-		// avanzamento: il backup viene sovrascritto
+		// progress: the backup is overwritten
 		spit(tmp + "/001.part.met", good1b); old(tmp + "/001.part.met");
 		CHECK(g.Scan(T0 + 2).empty() && slurp(bk + "/" + HashHex(0xA1) + ".met") == good1b);
-		// regressione (piu' gap): il backup piu' avanzato NON viene peggiorato
+		// regression (more gaps): the more advanced backup is NOT worsened
 		spit(tmp + "/001.part.met", good1); old(tmp + "/001.part.met");
 		CHECK(g.Scan(T0 + 3).empty() && slurp(bk + "/" + HashHex(0xA1) + ".met") == good1b);
 
-		// danno: file troncato e vecchio -> DAMAGED, evento una volta sola
+		// damage: truncated and old file -> DAMAGED, event only once
 		spit(tmp + "/001.part.met", good1.substr(0, 30)); old(tmp + "/001.part.met");
 		ev = g.Scan(T0 + 4); CHECK(Names(ev) == "001:OK>DAMAGED " && ev[0].detail.find("backup disponibile") != std::string::npos);
 		CHECK(g.Scan(T0 + 5).empty() && g.Scan(T0 + 6).empty());
 		CHECK(g.Save(err));
 	}
-	// riavvio: lo stato persiste e il DAMAGED non si notifica di nuovo
+	// restart: the state persists and DAMAGED is not notified again
 	{
 		Guardian g(o); CHECK(g.Load(err) && g.active().size() == 1 && g.active().at("001").state == State::Damaged);
 		CHECK(g.Scan(T0 + 10).empty());
-		// ripristino: prova a farlo con eMule "attivo" (file toccato da poco) -> rifiuta
+		// restore: try it with eMule "active" (file touched recently) -> refuses
 		setm(tmp + "/001.part.met", T0 + 10);
-		auto r = g.Restore("001", false, T0 + 10); CHECK(!r.ok && r.error.find("eMule e' attivo") != std::string::npos);
-		CHECK(slurp(tmp + "/001.part.met") == good1.substr(0, 30));		// niente toccato
+		auto r = g.Restore("001", false, T0 + 10); CHECK(!r.ok && r.error.find("another eMule running") != std::string::npos);
+		CHECK(slurp(tmp + "/001.part.met") == good1.substr(0, 30));		// nothing touched
 		old(tmp + "/001.part.met");
-		// il .bak di eMule e' una copia sana PIU' avanzata del backup per hash: vince, e non viene cancellato
+		// eMule's .bak is a healthy copy MORE advanced than the per-hash backup: it wins, and is not deleted
 		std::string better = Part(0xA1, 10000 + 29000); (void)better;
-		spit(tmp + "/001.part.met.bak", Part(0xA1, 10001 + 0));			// quasi tutto scaricato: gap di 1 byte
+		spit(tmp + "/001.part.met.bak", Part(0xA1, 10001 + 0));			// almost everything downloaded: gap of 1 byte
 		r = g.Restore("001", false, T0 + 15); CHECK(r.ok && r.from == tmp + "/001.part.met.bak");
 		CHECK(slurp(tmp + "/001.part.met") == Part(0xA1, 10001) && slurp(tmp + "/001.part.met.corrupt") == good1.substr(0, 30) && fs::exists(tmp + "/001.part.met.bak"));
 		auto ev = g.Scan(T0 + 20); CHECK(Names(ev) == "001:DAMAGED>OK ");
-		// restore di uno slot non DAMAGED o inesistente
+		// restore of a non-DAMAGED or nonexistent slot
 		CHECK(!g.Restore("001", false, T0 + 20).ok && !g.Restore("999", false, T0 + 20).ok);
-		// il .bak ha un altro hash: non si usa; resta il backup per hash
+		// the .bak has another hash: not used; the per-hash backup stays
 		spit(tmp + "/001.part.met", good1.substr(0, 30)); old(tmp + "/001.part.met"); spit(tmp + "/001.part.met.bak", Part(0xEE, 20000));
 		g.Scan(T0 + 30); r = g.Restore("001", false, T0 + 31); CHECK(r.ok && r.from == bk + "/" + HashHex(0xA1) + ".met");
 		g.Scan(T0 + 40); CHECK(g.active().at("001").state == State::Ok);
 		CHECK(g.Save(err));
 	}
-	// pending: file non sano ma toccato da pochi secondi non e' un danno; poi si stabilizza
+	// pending: an unhealthy file touched a few seconds ago is not damage; then it settles
 	{
 		Guardian g(o); g.Load(err);
 		spit(tmp + "/002.part.met", Part(0xB2, 40000).substr(0, 20)); setm(tmp + "/002.part.met", T0 + 100);
 		auto ev = g.Scan(T0 + 103); CHECK(Names(ev) == "002:NEW>PENDING " && g.active().at("002").hash.empty());
 		CHECK(g.Scan(T0 + 105).empty());
-		ev = g.Scan(T0 + 200); CHECK(Names(ev) == "002:PENDING>DAMAGED " && ev[0].detail.find("nessun backup") != std::string::npos);	// mai letto sano: nessun backup
+		ev = g.Scan(T0 + 200); CHECK(Names(ev) == "002:PENDING>DAMAGED " && ev[0].detail.find("nessun backup") != std::string::npos);	// never read healthy: no backup
 		CHECK(!g.Restore("002", true, T0 + 201).ok);
-		// eMule finisce di scrivere: il file diventa sano e si salva
+		// eMule finishes writing: the file becomes healthy and is saved
 		spit(tmp + "/002.part.met", Part(0xB2, 40000)); old(tmp + "/002.part.met");
 		ev = g.Scan(T0 + 300); CHECK(Names(ev) == "002:DAMAGED>OK " && fs::exists(bk + "/" + HashHex(0xB2) + ".met"));
 		CHECK(g.Save(err));
 	}
-	// una data nel futuro non e' "file assente": 10 minuti avanti = non ci si fida della data, il file danneggiato resta tale
+	// a date in the future is not "file absent": 10 minutes ahead = the date is not trusted, the damaged file stays so
 	{
 		Guardian g(o); g.Load(err);
 		spit(tmp + "/004.part.met", Part(0xE5, 40000)); old(tmp + "/004.part.met"); g.Scan(T0 + 301);
 		spit(tmp + "/004.part.met", Part(0xE5, 40000).substr(0, 25)); setm(tmp + "/004.part.met", T0 + 301 + 600);
 		auto ev = g.Scan(T0 + 302); CHECK(Names(ev) == "004:OK>DAMAGED ");
-		setm(tmp + "/004.part.met", T0 + 302 + 100);							// 100 s avanti: scarto di orologio credibile, appena toccato
-		g.Scan(T0 + 303); CHECK(g.active().at("004").state == State::Damaged);	// resta DAMAGED: lo stato non torna indietro a Pending
-		auto r = g.Restore("004", false, T0 + 303); CHECK(!r.ok && r.error.find("eMule e' attivo") != std::string::npos);		// il futuro vicino vale "attivo"
+		setm(tmp + "/004.part.met", T0 + 302 + 100);							// 100 s ahead: credible clock skew, just touched
+		g.Scan(T0 + 303); CHECK(g.active().at("004").state == State::Damaged);	// stays DAMAGED: the state does not go back to Pending
+		auto r = g.Restore("004", false, T0 + 303); CHECK(!r.ok && r.error.find("another eMule running") != std::string::npos);		// the near future counts as "active"
 		old(tmp + "/004.part.met"); r = g.Restore("004", false, T0 + 303); CHECK(r.ok); g.Scan(T0 + 304);
 		fs::remove(tmp + "/004.part.met"); fs::remove(tmp + "/004.part.met.bak"); fs::remove(tmp + "/004.part.met.corrupt");
 		g.Scan(T0 + 305); CHECK(g.Save(err));
 	}
-	// slot rimpiazzato da un altro download: il vecchio si archivia, i due backup coesistono
+	// slot replaced by another download: the old one is archived, the two backups coexist
 	{
 		Guardian g(o); g.Load(err);
 		spit(tmp + "/002.part.met", Part(0xC3, 40000, "altro.avi")); old(tmp + "/002.part.met");
 		auto ev = g.Scan(T0 + 400); CHECK(Names(ev) == "002:OK>REPLACED 002:NEW>OK ");
-		CHECK(g.archive().size() == 2 && g.archive()[1].hash == HashHex(0xB2) && g.archive()[1].state == State::Replaced && g.active().at("002").hash == HashHex(0xC3));	// [0] e' lo slot 004 rimosso prima
+		CHECK(g.archive().size() == 2 && g.archive()[1].hash == HashHex(0xB2) && g.archive()[1].state == State::Replaced && g.active().at("002").hash == HashHex(0xC3));	// [0] is slot 004 removed earlier
 		CHECK(fs::exists(bk + "/" + HashHex(0xB2) + ".met") && fs::exists(bk + "/" + HashHex(0xC3) + ".met"));
-		// slot sparito (download completato): archiviato, il backup resta
+		// vanished slot (download completed): archived, the backup stays
 		fs::remove(tmp + "/002.part.met"); fs::remove(tmp + "/002.part.met.bak");
 		ev = g.Scan(T0 + 500); CHECK(Names(ev) == "002:OK>REMOVED " && g.archive().size() == 3 && fs::exists(bk + "/" + HashHex(0xC3) + ".met"));
 		CHECK(g.Save(err));
 	}
-	// formato non gestito: ne' danneggiato ne' salvato
+	// unhandled format: neither damaged nor saved
 	{
 		Guardian g(o); g.Load(err);
 		std::string e1 = Part(0xD4, 40000); e1[0] = (char)PARTFILE_SPLITTEDVERSION; spit(tmp + "/003.part.met", e1); old(tmp + "/003.part.met");
 		auto ev = g.Scan(T0 + 600); CHECK(Names(ev) == "003:NEW>UNSUPPORTED " && !fs::exists(bk + "/" + HashHex(0xD4) + ".met"));
 		CHECK(g.Save(err));
 	}
-	// il file di stato sopravvive e i backup non sono mai stati cancellati
+	// the state file survives and the backups were never deleted
 	{
 		Guardian g(o); CHECK(g.Load(err) && g.archive().size() == 3 && g.active().count("001") && g.active().count("003"));
 		int n = 0; for (auto &e : fs::directory_iterator(bk)) if (e.path().extension() == ".met") ++n;
-		CHECK(n == 4);			// A1, B2, C3, E5: nessun backup e' mai stato cancellato
+		CHECK(n == 4);			// A1, B2, C3, E5: no backup was ever deleted
 	}
 	fs::remove_all(root);
 	std::printf(fails ? "FALLITO (%d)\n" : "OK\n", fails);

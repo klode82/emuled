@@ -1,4 +1,4 @@
-// LINUX (codice nuovo): API dei file condivisi, degli upload e di Kad. Girano nel thread del ciclo di eventi.
+// LINUX (new code): API of shared files, uploads and Kad. They run in the event loop thread.
 #include "StdAfx.h"
 #include "api/Api.h"
 #include "Emule.h"
@@ -52,10 +52,10 @@ void RegisterTransferRoutes(HttpServer &srv, const DaemonHooks &hooks)
 	});
 	srv.Route("POST", "/api/v1/shared/reload", [](const Request &) { theApp.sharedfiles->Reload(); return Ok({{"count", (int64_t)theApp.sharedfiles->GetCount()}, {"hashing", (int64_t)theApp.sharedfiles->GetHashingCount()}}, 202); });
 	srv.Route("POST", "/api/v1/shared/:hash/priority", [](const Request &r) {
-		uchar h[16]; if (r.params.at("hash").size() != 32 || !strmd4(CString(r.params.at("hash").c_str()), h)) return Response::Error(400, "hash non valido (32 caratteri esadecimali)");
-		CKnownFile *f = theApp.sharedfiles->GetFileByID(h); if (!f) return Response::Error(404, "file non condiviso");
+		uchar h[16]; if (r.params.at("hash").size() != 32 || !strmd4(CString(r.params.at("hash").c_str()), h)) return Response::Error(400, "invalid hash (32 hexadecimal characters)");
+		CKnownFile *f = theApp.sharedfiles->GetFileByID(h); if (!f) return Response::Error(404, "file not shared");
 		json b = json::parse(r.body, nullptr, false);
-		if (b.is_discarded() || !b.is_object()) return Response::Error(400, "serve un oggetto JSON nel corpo");
+		if (b.is_discarded() || !b.is_object()) return Response::Error(400, "a JSON object is required in the body");
 		std::string p = b.value("priority", std::string());
 		if (p == "auto") { f->SetAutoUpPriority(true); f->UpdateAutoUpPriority(); }
 		else {
@@ -74,13 +74,13 @@ void RegisterTransferRoutes(HttpServer &srv, const DaemonHooks &hooks)
 
 	// ---- Kad
 	srv.Route("POST", "/api/v1/kad/connect", [hooks](const Request &) {
-		if (!hooks.kad_start) return Response::Error(409, "Kad non disponibile (demone avviato con --no-kad o --offline)");
-		if (!Kademlia::CKademlia::IsRunning() && !hooks.kad_start()) return Response::Error(409, "Kad non partita (porta UDP o nodes.dat)");
+		if (!hooks.kad_start) return Response::Error(409, "Kad not available (daemon started with --no-kad or --offline)");
+		if (!Kademlia::CKademlia::IsRunning() && !hooks.kad_start()) return Response::Error(409, "Kad did not start (UDP port or nodes.dat)");
 		Audit("Kad connect requested");
 		return Ok({{"running", Kademlia::CKademlia::IsRunning()}}, 202);
 	});
 	srv.Route("POST", "/api/v1/kad/recheck-firewall", [](const Request &) {
-		if (!Kademlia::CKademlia::IsRunning()) return Response::Error(409, "Kad non e' acceso");
+		if (!Kademlia::CKademlia::IsRunning()) return Response::Error(409, "Kad is not on");
 		Audit("Kad firewall recheck requested");
 		Kademlia::CKademlia::RecheckFirewalled(); return Ok({{"rechecking", true}}, 202);
 	});

@@ -1,4 +1,4 @@
-// Forma delle risposte dell'API di emuled (docs/openapi.json). Aggiornare insieme.
+// Shape of the emuled API responses (docs/openapi.json). Update together.
 export type Priority = 'auto' | 'very_low' | 'low' | 'normal' | 'high' | 'release'
 export type DownloadStatus =
   | 'ready' | 'empty' | 'waiting_for_hash' | 'hashing' | 'error' | 'insufficient_disk_space' | 'unknown' | 'paused' | 'completing' | 'complete'
@@ -7,9 +7,9 @@ export interface Download {
   hash: string; name: string; size: number; completed: number; percent: number
   status: DownloadStatus; stopped: boolean; sources: number; sources_transferring: number
   sources_other_files: number; best_queue_rank: number
-  file_op?: 'none' | 'hashing' | 'copying' | 'uncompressing' | 'import_parts'; file_op_percent?: number   // operazione sul file in corso (barra verde)
+  file_op?: 'none' | 'hashing' | 'copying' | 'uncompressing' | 'import_parts'; file_op_percent?: number   // file operation in progress (green bar)
   speed: number; priority: Priority; category: number; part_file: string
-  completed_at?: number; path?: string   // solo per i completati
+  completed_at?: number; path?: string   // completed downloads only
 }
 export interface Server {
   name: string; description: string; address: string; ip: string; port: number
@@ -80,7 +80,7 @@ export interface PrefsPatchResult { preferences: Preferences; saved: boolean; re
 export interface LogLine { id: number; time: number; level: 'debug' | 'info' | 'warning' | 'error'; source: 'general' | 'server' | 'api'; text: string }
 export interface LogPage { lines: LogLine[]; last_id: number; truncated: boolean }
 
-// eventi del WebSocket /api/v1/events
+// WebSocket events /api/v1/events
 export type ServerEvent =
   | { type: 'stats'; data: Transfers }
   | { type: 'server.state'; data: Ed2kState }
@@ -94,7 +94,7 @@ export type SourceState =
   | 'downloading' | 'on_queue' | 'connected' | 'connecting' | 'waiting_callback' | 'waiting_callback_kad' | 'requesting_hashset' | 'no_needed_parts'
   | 'too_many_connections' | 'low_to_low_id' | 'banned' | 'error' | 'remote_queue_full' | 'none'
 export interface Source {
-  other_file?: string   // fonte A4AF: il download per cui e' usata adesso
+  other_file?: string   // A4AF source: the download it is used for right now
   name: string; software: string; ip: string; port: number; low_id: boolean; state: SourceState; from: 'server' | 'kad' | 'source_exchange' | 'passive' | 'link' | 'unknown'
   queue_rank: number; speed: number; session_downloaded: number; available_parts: number; part_count: number
 }
@@ -106,7 +106,7 @@ export interface PortCheck { port: number; valid: boolean; free: boolean; own: b
 export interface PortsCheck { tcp?: PortCheck; udp?: PortCheck }
 export interface Directories { incoming: string; temp: string[]; shared: string[]; shared_missing?: string[] }
 
-// Importazione di un profilo eMule esistente (Bench 875)
+// Import of an existing eMule profile (Bench 875)
 export interface ImportRule { win: string; linux: string }
 export interface ImportScan {
   files: { name: string; size: number }[]; total_bytes: number; nick: string

@@ -58,7 +58,7 @@ void CServerConnect::TryAnotherConnectionRequest()
 					LogWarning(LOG_STATUSBAR, GetResString(IDS_OUTOFSERVERS));
 					AddLogLine(false, GetResString(IDS_RECONNECT), CS_RETRYCONNECTTIME);
 					m_uStartAutoConnectPos = 0; // default: start at 0
-					// LINUX: il timer di finestra (SetTimer) diventa un timer del ciclo degli eventi
+					// LINUX: the window timer (SetTimer) becomes an event-loop timer
 					m_idRetryTimer = (UINT_PTR)emule::net::EventLoop::Current()->AddTimer(SEC2MS(CS_RETRYCONNECTTIME), [] { CServerConnect::RetryConnectTimer(); });
 				}
 			}
@@ -525,7 +525,7 @@ void CServerConnect::DestroySocket(CServerSocket *pSock)
 	POSITION pos = m_lstOpenSockets.Find(pSock);
 	if (pos != NULL)
 		m_lstOpenSockets.RemoveAt(pos);
-	if (pSock->GetSocketHandle() != INVALID_SOCKET) { // LINUX: nell'originale m_SocketData.hSocket
+	if (pSock->GetSocketHandle() != INVALID_SOCKET) { // LINUX: in the original m_SocketData.hSocket
 		pSock->AsyncSelect(FD_CLOSE);
 		pSock->ShutDown(CAsyncSocket::both);
 		pSock->Close();
@@ -601,7 +601,7 @@ bool CServerConnect::IsLowID() const
 // true if the IP is one of a server which we currently try to connect to
 bool CServerConnect::AwaitingTestFromIP(uint32 dwIP) const
 {
-	if (awaiting && awaiting(dwIP))		// LINUX: gancio per i test (test_crypto) che simulano un test di connessione del server
+	if (awaiting && awaiting(dwIP))		// LINUX: hook for tests (test_crypto) that simulate a server connection test
 		return true;
 	for (const CServerSocketMap::CPair *pair = connectionattempts.PGetFirstAssoc(); pair != NULL; pair = connectionattempts.PGetNextAssoc(pair))
 		if (pair->value && pair->value->cur_server && pair->value->cur_server->GetIP() == dwIP && pair->value->GetConnectionState() == CS_WAITFORLOGIN)

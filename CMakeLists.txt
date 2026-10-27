@@ -14,14 +14,14 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE RelWithDebInfo)
 endif()
 
-# Sanitizer: cmake -DEMULE_SANITIZE=address,undefined (oppure thread)
+# Sanitizer: cmake -DEMULE_SANITIZE=address,undefined (or thread)
 set(EMULE_SANITIZE "" CACHE STRING "valori per -fsanitize=")
 if(EMULE_SANITIZE)
   add_compile_options(-fsanitize=${EMULE_SANITIZE} -fno-omit-frame-pointer)
   add_link_options(-fsanitize=${EMULE_SANITIZE})
 endif()
 
-# Include di eMule con maiuscole diverse e backslash: i symlink in compat/ci si rigenerano a ogni configurazione.
+# eMule includes with different case and backslashes: the symlinks in compat/ci are regenerated at every configuration.
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 execute_process(COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tools/fix_case.py RESULT_VARIABLE FIXCASE_RC)
 if(NOT FIXCASE_RC EQUAL 0)
@@ -33,13 +33,13 @@ pkg_search_module(CRYPTOPP REQUIRED IMPORTED_TARGET libcrypto++ libcryptopp)		# 
 pkg_check_modules(CURL REQUIRED IMPORTED_TARGET libcurl)
 find_package(ZLIB REQUIRED)
 
-# Il codice di eMule è scritto per MSVC. Le deroghe sono qui, in un posto solo.
+# The eMule code is written for MSVC. The workarounds are here, in one place only.
 add_compile_options(-Wall -Wno-unknown-pragmas -Wno-reorder -Wno-sign-compare -Wno-parentheses -Wno-misleading-indentation -Wno-write-strings -Wno-int-to-pointer-cast)
 
-# Libreria del core. I sorgenti si aggiungono man mano che vengono portati (Bench, fasi 1-5).
+# Core library. Sources are added as they get ported (Bench, phases 1-5).
 find_package(BISON REQUIRED)
 find_package(FLEX REQUIRED)
-# Il parser delle ricerche si genera dai sorgenti originali (Parser.y, Scanner.l) con i flex/bison del sistema.
+# The search parser is generated from the original sources (Parser.y, Scanner.l) with the system flex/bison.
 set(GEN_DIR ${CMAKE_BINARY_DIR}/gen)
 file(MAKE_DIRECTORY ${GEN_DIR})
 BISON_TARGET(SearchParser core/search/Parser.y ${GEN_DIR}/Parser.cpp DEFINES_FILE ${GEN_DIR}/parser.hpp)
@@ -186,23 +186,23 @@ add_library(emulecore STATIC
   core/profile/ProfileCheck.cpp
 )
 target_include_directories(emulecore PUBLIC compat compat/ci core ${CMAKE_BINARY_DIR}/gen)
-# i template di serie si cercano dove li installa `cmake --install` (<prefisso>/share/emuled/templates; /usr/share/... con -DCMAKE_INSTALL_PREFIX=/usr)
+# built-in templates are looked up where `cmake --install` puts them (<prefix>/share/emuled/templates; /usr/share/... with -DCMAKE_INSTALL_PREFIX=/usr)
 include(GNUInstallDirs)
 target_compile_definitions(emulecore PRIVATE EMULED_SYSTEM_TEMPLATES="${CMAKE_INSTALL_FULL_DATADIR}/emuled/templates")
-# la descrizione OpenAPI dell'API entra nel binario (servita a /api/v1/openapi.json)
+# the API's OpenAPI description goes into the binary (served at /api/v1/openapi.json)
 add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/gen/openapi_json.h
   COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/gen
   COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tools/embed.py ${CMAKE_SOURCE_DIR}/docs/openapi.json ${CMAKE_BINARY_DIR}/gen/openapi_json.h kOpenApiJson
   DEPENDS ${CMAKE_SOURCE_DIR}/docs/openapi.json ${CMAKE_SOURCE_DIR}/tools/embed.py)
 target_sources(emulecore PRIVATE ${CMAKE_BINARY_DIR}/gen/openapi_json.h)
-# miniupnpc.h include miniupnpc_declspec.h dalla propria cartella: con il symlink in compat/ci serve nel percorso di ricerca.
+# miniupnpc.h includes miniupnpc_declspec.h from its own folder: with the symlink in compat/ci it must be on the search path.
 find_path(MINIUPNPC_INCLUDE_DIR miniupnpc.h PATH_SUFFIXES miniupnpc)
 if(MINIUPNPC_INCLUDE_DIR)
   target_include_directories(emulecore SYSTEM PUBLIC ${MINIUPNPC_INCLUDE_DIR})
 endif()
 find_package(Threads REQUIRED)
-# Per un .deb unico che si installa su piu' distribuzioni (Ubuntu 24.04, Debian 13): la miniupnpc cambia versione di libreria tra una e l'altra
-# (libminiupnpc17 / 18), quindi la si incorpora nel binario. Gli altri pacchetti hanno lo stesso nome su entrambe.
+# For a single .deb installable on several distributions (Ubuntu 24.04, Debian 13): miniupnpc changes library version between them
+# (libminiupnpc17 / 18), so it is embedded in the binary. The other packages have the same name on both.
 option(EMULED_STATIC_MINIUPNPC "incorpora miniupnpc nel binario (pacchetto .deb unico)" OFF)
 if(EMULED_STATIC_MINIUPNPC)
   find_library(MINIUPNPC_LIB NAMES libminiupnpc.a REQUIRED)
@@ -218,7 +218,7 @@ add_test(NAME hash COMMAND test_hash)
 
 add_executable(test_ed2k_file tests/test_ed2k_file.cpp)
 target_link_libraries(test_ed2k_file emulecore)
-# File reale con hash calcolato da eMule Windows. Saltato se il file non c'e'.
+# Real file with a hash computed by eMule Windows. Skipped if the file is missing.
 add_test(NAME ed2k_file_carletto COMMAND test_ed2k_file
   "/home/steveholmes/eMule/Incoming/CARLETTO/S01/Carletto il Principe dei Mostri - S01E001 - Diventiamo amici - Carletto cambia casa.mkv"
   335EB15C3BB9A53EDEF5B1FCC441CFA1)
@@ -233,7 +233,7 @@ add_test(NAME met COMMAND test_met)
 
 add_executable(test_met_real tests/test_met_real.cpp)
 target_link_libraries(test_met_real emulecore)
-# Profilo reale dell'utente, SOLA LETTURA. Saltato se la cartella manca.
+# The user's real profile, READ-ONLY. Skipped if the folder is missing.
 add_test(NAME met_profilo_reale COMMAND test_met_real /home/steveholmes/eMule/config /home/steveholmes/eMule/Temp /home/steveholmes/eMule/Backup)
 
 add_executable(test_profile tests/test_profile.cpp)
@@ -242,7 +242,7 @@ add_test(NAME profile COMMAND test_profile /home/steveholmes/eMule/config)
 
 add_executable(emuled daemon/emuled.cpp)
 target_link_libraries(emuled emulecore)
-# Controllo del profilo reale in SOLA LETTURA: deve finire con 0 (tutto sano).
+# Check of the real profile, READ-ONLY: must end with 0 (all healthy).
 add_test(NAME emuled_check_profilo_reale COMMAND emuled --profile /home/steveholmes/eMule/config --pathmap "Y:\\eMule=/home/steveholmes/eMule" --check-profile)
 set_tests_properties(emuled_check_profilo_reale PROPERTIES SKIP_REGULAR_EXPRESSION "non trovato")
 
@@ -257,7 +257,7 @@ add_test(NAME known COMMAND test_known /home/steveholmes/eMule/config)
 
 add_executable(test_known_real tests/test_known_real.cpp)
 target_link_libraries(test_known_real emulecore)
-# Ricalcolo degli hash di file reali (SOLA LETTURA, fino a 3 GB) e confronto con known.met di eMule Windows.
+# Recomputes the hashes of real files (READ-ONLY, up to 3 GB) and compares them with eMule Windows' known.met.
 add_test(NAME known_hash_reali COMMAND test_known_real /home/steveholmes/eMule/config 3000000000 /home/steveholmes/eMule/Incoming /home/steveholmes/eMule/Incoming/CARLETTO)
 set_tests_properties(known_hash_reali PROPERTIES SKIP_REGULAR_EXPRESSION "^SKIP")
 
@@ -401,7 +401,7 @@ add_executable(test_eventlog tests/test_eventlog.cpp)
 target_link_libraries(test_eventlog emulecore)
 add_test(NAME eventlog COMMAND test_eventlog)
 
-# prove sul profilo reale di eMule Windows (copia in /home/steveholmes/eMule): sola lettura, si saltano se la cartella manca
+# tests on the real eMule Windows profile (copy in /home/steveholmes/eMule): read-only, skipped if the folder is missing
 add_test(NAME real_profile COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tests/real_profile.sh $<TARGET_FILE:emuled>)
 set_tests_properties(real_profile PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 300)
 
@@ -409,7 +409,7 @@ add_executable(test_indexed_load tests/test_indexed_load.cpp)
 target_link_libraries(test_indexed_load emulecore)
 add_test(NAME indexed_load COMMAND test_indexed_load)
 
-# ---- installazione (Bench 849; il pacchetto vero e' il task 615): il demone e i template di serie, che si costruiscono con `npm run build` in web/
+# ---- installation (Bench 849; the real package is task 615): the daemon and the built-in templates, built with `npm run build` in web/
 install(TARGETS emuled RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 if(EXISTS ${CMAKE_SOURCE_DIR}/web/dist/templates)
   install(DIRECTORY ${CMAKE_SOURCE_DIR}/web/dist/templates/ DESTINATION ${CMAKE_INSTALL_DATADIR}/emuled/templates)
@@ -419,7 +419,7 @@ endif()
 install(FILES packaging/emuled-pkg.service DESTINATION lib/systemd/user RENAME emuled.service)
 install(FILES README.md NOTICE.md LICENSE docs/MANUAL.md docs/TEMPLATES.md DESTINATION share/doc/emuled)
 
-# ---- pacchetti (task 615): `cmake -S . -B build -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build --target emuled && cpack --config build/CPackConfig.cmake -G DEB` (oppure -G RPM, serve rpmbuild)
+# ---- packages (task 615): `cmake -S . -B build -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build --target emuled && cpack --config build/CPackConfig.cmake -G DEB` (or -G RPM, needs rpmbuild)
 set(CPACK_PACKAGE_NAME emuled)
 set(CPACK_STRIP_FILES ON)
 set(CPACK_PACKAGE_VERSION ${EMULED_VERSION})

@@ -138,7 +138,7 @@ CED2KFileLink::CED2KFileLink(LPCTSTR pszName, LPCTSTR pszSize, LPCTSTR pszHash
 			{
 				const CString &strURL(strParam.Mid(iPos + 1));
 				if (!strURL.IsEmpty()) {
-					// LINUX: l'originale usa InternetCrackUrl (WinInet): qui si estrae il nome dell'host da "schema://[utente@]host[:porta]/..."
+					// LINUX: the original uses InternetCrackUrl (WinInet): here the host name is extracted from "scheme://[user@]host[:port]/..."
 					CString strHost;
 					int iScheme = strURL.Find(_T("://"));
 					if (iScheme > 0) {

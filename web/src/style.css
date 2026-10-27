@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Colori e caratteri stanno in ogni template (templates/<id>/tokens.css e main.ts): qui solo cio' che vale per tutti. */
+/* Colours and fonts live in each template (templates/<id>/tokens.css and main.ts): here only what applies to all. */
 
 @layer base {
   *:focus-visible { @apply outline outline-2 outline-offset-2 outline-accent; }

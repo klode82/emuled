@@ -1,5 +1,5 @@
-// STUB (sostituisce srchybrid/Emule.h): l'oggetto applicazione globale "theApp" con SOLO i membri che i file portati usano.
-// E' il germe dell'applicazione vera (Fase 6): ogni puntatore sara' sostituito dall'oggetto reale quando verra' portato.
+// STUB (replaces srchybrid/Emule.h): the global application object "theApp" with ONLY the members the ported files use.
+// It is the seed of the real application (Phase 6): each pointer will be replaced by the real object once ported.
 #pragma once
 #define DEFAULT_NICK thePrefs.GetHomepageBaseURL()
 #define TBN_IMPORTANTEVENT 0
@@ -7,7 +7,7 @@
 #define TBN_DOWNLOADFINISHED 0
 #define TBN_NEWCHATMSG 0
 #define TBN_LOG 0
-#define TBN_NEWVERSION 0			// tipo di notifica desktop (TaskbarNotifier): non portato
+#define TBN_NEWVERSION 0			// desktop notification type (TaskbarNotifier): not ported
 #include "StdAfx.h"
 #include <cstdarg>
 #include <mutex>
@@ -25,28 +25,28 @@ class CClientUDPSocket;
 class CUploadQueue; class CClientList; class CDownloadQueue; class CKnownFileList; class CSharedFileList; class CClientCreditsList; class CListenSocket;
 class CFriendList; class CUploadDiskIOThread; class CPartFileWriteThread;
 
-// STUB: finestre dell'interfaccia grafica che i file di Kademlia notificano. Nel daemon non esistono: ogni chiamata e' un no-op,
-// e diventera' un evento IUiEvents quando si costruira' l'API (Fase 6).
+// STUB: GUI windows that the Kademlia files notify. They do not exist in the daemon: every call is a no-op,
+// and will become an IUiEvents event when the API is built (Phase 6).
 struct CKadWndStub
 {
 	CKadSearchListStub searchListObj; CKadSearchListStub *searchList = &searchListObj;
 	template<class T> void ContactRef(T *) {}
 	template<class T> void ContactRem(T *) {}
-	template<class T> bool ContactAdd(T *) { return false; }		// false = nessun riferimento nella lista grafica
+	template<class T> bool ContactAdd(T *) { return false; }		// false = no reference in the graphical list
 	void UpdateSearchGraph(const void *) {}
 	void StartUpdateContacts() {}
 	void StopUpdateContacts() {}
 	void SetBootstrapListMode() {}
 };
-// lista server della finestra grafica: nel daemon non esiste, ogni chiamata e' un no-op (diventeranno eventi dell'API in Fase 6)
-class CServerListCtrl		// STUB della lista server grafica (ServerListCtrl.cpp): ogni chiamata e' un no-op
+// server list of the GUI window: does not exist in the daemon, every call is a no-op (they will become API events in Phase 6)
+class CServerListCtrl		// STUB of the graphical server list (ServerListCtrl.cpp): every call is a no-op
 {
 public:
 	void DeleteAllItems() {}
 	void Hide() {}
 	void Visible() {}
 	void SetRedraw(bool) {}
-	// Come nell'originale (ServerListCtrl.cpp) queste due funzioni agiscono sulla vera lista dei server; qui manca solo la parte grafica.
+	// As in the original (ServerListCtrl.cpp) these two functions act on the real server list; here only the graphical part is missing.
 	bool AddServer(const class CServer *pServer, bool bAddToList = false, bool bRandom = false);
 	void RemoveServer(const class CServer *pServer);
 	template<class T> void RefreshServer(T *) {}
@@ -63,7 +63,7 @@ struct CServerWndStub
 struct CEmuleDlgStub
 {
 	CServerWndStub serverWndObj; CServerWndStub *serverwnd = &serverWndObj;
-	// Messaggi del server (benvenuto, avvisi): nella finestra grafica sono una lista a parte; nel daemon vanno nel registro (poi un evento dell'API, Fase 6)
+	// Server messages (welcome, warnings): in the GUI they are a separate list; in the daemon they go to the Log (later an API event, Phase 6)
 	void AddServerMessageLine(UINT /*flags*/, LPCTSTR fmt, ...) { char b[2048]; va_list ap; va_start(ap, fmt); vsnprintf(b, sizeof b, fmt, ap); va_end(ap); if (b[0]) AddLogLine(false, _T("[server] %s"), b); }
 	CKadWndStub kad; CKadWndStub *kademliawnd = &kad;
 	CSearchWndStub searchwndObj; CSearchWndStub *searchwnd = &searchwndObj;
@@ -73,8 +73,8 @@ struct CEmuleDlgStub
 	CStatisticsWndStub statObj; CStatisticsWndStub *statisticswnd = &statObj;
 	void *m_hWnd = nullptr;
 	void *activewnd = nullptr;
-	// Messaggi "da thread a thread principale" (hash finito, completamento file, ...): nell'originale PostMessage alla finestra principale.
-	// Qui si accodano e girano nel ciclo degli eventi (SetMainLoop) o con DrainMessages() nei test. Vedi EmuleDlgStub.cpp.
+	// "Thread to main thread" messages (hash done, file completed, ...): in the original PostMessage to the main window.
+	// Here they are queued and run in the event loop (SetMainLoop) or with DrainMessages() in tests. See EmuleDlgStub.cpp.
 	bool PostMessage(UINT msg, WPARAM wParam, LPARAM lParam);
 	void DrainMessages();
 	void SetMainLoop(emule::net::EventLoop *loop);
@@ -88,7 +88,7 @@ struct CEmuleDlgStub
 	void RefreshUPnP(bool = false) {}
 	template<class... A> void ShowNotifier(A...) {}
 };
-struct CIPFilterStub { bool IsFiltered(uint32) const { return false; } CString GetLastHit() const { return CString(); } };		// filtro IP: per ora non filtra
+struct CIPFilterStub { bool IsFiltered(uint32) const { return false; } CString GetLastHit() const { return CString(); } };		// IP filter: does not filter for now
 
 class CemuleApp
 {
@@ -106,8 +106,8 @@ public:
 	void UpdateReceivedBytes(uint32 bytesToAdd);
 	void SetTimeOnTransfer();
 
-	// Gli oggetti dell'applicazione. ServerConnect e ServerList esistono sempre (sono leggeri); gli oggetti della Fase 5 (client, code, file) li crea
-	// CreateObjects(), che chiama il daemon all'avvio e i test che ne hanno bisogno (nell'originale li crea CemuleApp::InitInstance).
+	// The application objects. ServerConnect and ServerList always exist (they are light); the Phase 5 objects (client, queues, files) are created by
+	// CreateObjects(), which the daemon calls at startup and the tests that need them (in the original CemuleApp::InitInstance creates them).
 	UploadBandwidthThrottler *uploadBandwidthThrottler = nullptr;
 	CLastCommonRouteFinder *lastCommonRouteFinder = &m_defRoute;
 	CServerConnect *serverconnect = &m_defServer;
@@ -117,35 +117,35 @@ public:
 	CPartFileWriteThread *m_pPartFileWriteThread = nullptr;
 	CClientList *clientlist = nullptr;
 	CClientCreditsList *clientcredits = nullptr;
-	CListenSocket *listensocket = nullptr;				// socket di ascolto TCP verso i peer
+	CListenSocket *listensocket = nullptr;				// TCP listening socket towards the peers
 	CFriendList *friendlist = nullptr;
 	CDownloadQueue *downloadqueue = nullptr;
 	CKnownFileList *knownfiles = nullptr;
 	CSharedFileList *sharedfiles = nullptr;
 	CSearchList *searchlist = &m_defSearch;
 	CEmuleDlgStub *emuledlg = &m_defDlg;
-	CClientUDPSocket *clientudp = nullptr;					// socket UDP dei client (lo crea chi avvia la rete)
+	CClientUDPSocket *clientudp = nullptr;					// UDP socket of the clients (created by whoever starts the network)
 	CIPFilterStub *ipfilter = &m_defFilter;
-	void CreateObjects();									// crea gli oggetti della Fase 5 (idempotente)
-	void DestroyObjects();									// li distrugge nell'ordine inverso (prima di chiudere il ciclo degli eventi)
+	void CreateObjects();									// creates the Phase 5 objects (idempotent)
+	void DestroyObjects();									// destroys them in reverse order (before closing the event loop)
 
-	bool IsConnected(bool bIgnoreEd2K = false, bool bIgnoreKad = false) const;		// connessi a un server ed2k e/o a Kad (come CemuleApp::IsConnected)
-	bool IsFirewalled();									// firewalled = ne' ID alto su un server ed2k ne' Kad aperto
-	bool CanDoCallback(class CUpDownClient *client);		// si puo' chiedere a un server/Kad di far richiamare un peer dietro firewall
-	uint32 GetID();											// il nostro ID: IP (Kad aperto), ID del server ed2k, o 0/1
-	uint32 GetPublicIP() const;								// IP pubblico noto (0 = sconosciuto); se Kad ne conosce uno lo usa
+	bool IsConnected(bool bIgnoreEd2K = false, bool bIgnoreKad = false) const;		// connected to an ed2k server and/or Kad (like CemuleApp::IsConnected)
+	bool IsFirewalled();									// firewalled = neither high ID on an ed2k server nor Kad open
+	bool CanDoCallback(class CUpDownClient *client);		// a server/Kad can be asked to make a peer behind a firewall call back
+	uint32 GetID();											// our ID: IP (Kad open), ed2k server ID, or 0/1
+	uint32 GetPublicIP() const;								// known public IP (0 = unknown); if Kad knows one it uses it
 	void SetPublicIP(uint32 v);
 	bool IsClosing() const { return closing_; }
 	void SetClosing(bool v) { closing_ = v; }
 	bool IsRunning() const { return !closing_; }
-	CCriticalSection hashing_mut;									// serializza gli hash di file condivisi (nell'originale: CSyncObject/CCriticalSection)
-	void ResetStandByIdleTimer() {}							// Windows: impedisce lo standby durante i trasferimenti; sul server Linux non serve
+	CCriticalSection hashing_mut;									// serializes hashing of shared files (in the original: CSyncObject/CCriticalSection)
+	void ResetStandByIdleTimer() {}							// Windows: prevents standby during transfers; not needed on the Linux server
 	void QueueDebugLogLine(bool addtostatusbar, LPCTSTR line, ...);
 	void QueueDebugLogLineEx(UINT flags, LPCTSTR line, ...);
 	void QueueLogLine(bool addtostatusbar, LPCTSTR line, ...);
 	void AddDebugLogLine(bool addtostatusbar, LPCTSTR line, ...);
 	void AddDebugLogLine(EDebugLogPriority priority, bool addtostatusbar, LPCTSTR line, ...);
-	void HandleLogQueue() {}								// nell'originale svuota la coda dei messaggi nella finestra del registro: qui il registro e' diretto
+	void HandleLogQueue() {}								// in the original empties the message queue into the log window: here the log is direct
 	void HandleDebugLogQueue() {}
 private:
 	CLastCommonRouteFinder m_defRoute; CServerConnect m_defServer; CServerList m_defServers; CSearchList m_defSearch; CEmuleDlgStub m_defDlg; CIPFilterStub m_defFilter;

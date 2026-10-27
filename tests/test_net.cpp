@@ -1,4 +1,4 @@
-// EventLoop e CAsyncSocketEx su epoll: la semantica di WSAAsyncSelect che eMule si aspetta, su localhost.
+// EventLoop and CAsyncSocketEx on epoll: the WSAAsyncSelect semantics eMule expects, on localhost.
 #include "StdAfx.h"
 #include "net/AsyncSocketEx.h"
 #include <chrono>
@@ -11,7 +11,7 @@ using namespace emule::net;
 static int fails;
 #define CHECK(c) do { if (!(c)) { std::printf("FAIL %s:%d %s\n", __FILE__, __LINE__, #c); ++fails; } } while (0)
 
-// Socket di prova: ogni callback e' una std::function.
+// Test socket: every callback is a std::function.
 struct TS : CAsyncSocketEx
 {
 	std::function<void(int)> onAccept, onClose, onConnect, onReceive, onSend;
@@ -31,7 +31,7 @@ struct TU : CAsyncSocket
 };
 
 static double Now() { return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
-// Fa girare il ciclo finche' pred() o scade il tempo. Ritorna pred().
+// Runs the loop until pred() or the time runs out. Returns pred().
 static bool Pump(EventLoop &l, const std::function<bool()> &pred, double secs = 5.0)
 {
 	double end = Now() + secs;
@@ -65,7 +65,7 @@ static void Wire(Server &sv)
 
 int main()
 {
-	// 1. EventLoop: Post da un altro thread, timer, annullamento
+	// 1. EventLoop: Post from another thread, timer, cancellation
 	{
 		EventLoop loop; ScopedLoop sl(loop);
 		std::atomic<int> posted{0}; std::thread t([&] { for (int i = 0; i < 100; ++i) loop.Post([&] { ++posted; }); });
@@ -77,7 +77,7 @@ int main()
 		std::thread th([&] { std::this_thread::sleep_for(std::chrono::milliseconds(30)); loop.Stop(); }); loop.Run(); th.join();
 	}
 	int fd0 = OpenFds();
-	// 2. connessione TCP: OnAccept, OnConnect(0), OnSend dopo la connessione, Connect() ritorna false con WSAEWOULDBLOCK
+	// 2. TCP connection: OnAccept, OnConnect(0), OnSend after the connection, Connect() returns false with WSAEWOULDBLOCK
 	{
 		EventLoop loop; ScopedLoop sl(loop);
 		Server sv; Wire(sv); CHECK(sv.Start(loop)); UINT port = PortOf(sv.listener); CHECK(port != 0);
@@ -87,11 +87,11 @@ int main()
 		CHECK(cli.Create(0, SOCK_STREAM, FD_CONNECT | FD_WRITE | FD_READ | FD_CLOSE));
 		bool r = cli.Connect("127.0.0.1", port); CHECK(!r && CAsyncSocketEx::GetLastError() == WSAEWOULDBLOCK);
 		CHECK(Pump(loop, [&] { return connect_err == 0 && sends >= 1 && sv.conns.size() == 1; }));
-		CHECK(order.size() >= 2 && order[0] == "C" && order[1] == "S");		// FD_WRITE segue sempre FD_CONNECT
+		CHECK(order.size() >= 2 && order[0] == "C" && order[1] == "S");		// FD_WRITE always follows FD_CONNECT
 		CHECK(cli.GetState() == connected);
 		CString pa; UINT pp; CHECK(cli.GetPeerName(pa, pp) && pa == "127.0.0.1" && pp == port);
 	}
-	// 3. trasferimento grande: Send finisce in WSAEWOULDBLOCK, FD_WRITE ripartenza, il server riceve tutto
+	// 3. large transfer: Send ends in WSAEWOULDBLOCK, FD_WRITE restart, the server receives everything
 	{
 		EventLoop loop; ScopedLoop sl(loop);
 		Server sv; Wire(sv); CHECK(sv.Start(loop)); UINT port = PortOf(sv.listener);
@@ -107,7 +107,7 @@ int main()
 		CHECK(conn && would_block > 0 && onsend > 1 && sum_got == sum_sent);
 		std::printf("  24 MB: Send ha risposto WSAEWOULDBLOCK %d volte, OnSend %d volte, checksum uguale\n", would_block, onsend);
 	}
-	// 4. lettura RIMANDATA: nessuna tempesta di OnReceive; riarmo con Receive()
+	// 4. DEFERRED read: no OnReceive storm; re-arm with Receive()
 	{
 		EventLoop loop; ScopedLoop sl(loop);
 		Server sv; Wire(sv); sv.Start(loop); UINT port = PortOf(sv.listener);
@@ -118,14 +118,14 @@ int main()
 		cli.onSend = [&](int) { while (off < big.size()) { int n = cli.Send(big.data() + off, (int)(big.size() - off)); if (n <= 0) break; off += n; } };
 		cli.onSend(0);
 		CHECK(Pump(loop, [&] { return rcv >= 1; }));
-		Spin(loop, 0.3); CHECK(rcv == 1);									// il server non legge: NON deve ricevere altre notifiche
-		char b[100]; CHECK(srv_side->Receive(b, 100) == 100);				// legge poco: restano dati -> la notifica torna
+		Spin(loop, 0.3); CHECK(rcv == 1);									// the server does not read: must NOT receive more notifications
+		char b[100]; CHECK(srv_side->Receive(b, 100) == 100);				// reads little: data remains -> the notification returns
 		CHECK(Pump(loop, [&] { return rcv >= 2; }));
 		Spin(loop, 0.2); CHECK(rcv == 2);
-		// TriggerEvent(FD_FORCEREAD) consegna OnReceive anche senza dati nuovi, se FD_READ e' nella maschera
+		// TriggerEvent(FD_FORCEREAD) delivers OnReceive even without new data, if FD_READ is in the mask
 		srv_side->TriggerEvent(FD_FORCEREAD); CHECK(Pump(loop, [&] { return rcv >= 3; }));
 	}
-	// 5. chiusura del peer: prima i dati, poi OnClose; niente OnReceive per il solo EOF
+	// 5. peer close: data first, then OnClose; no OnReceive for EOF alone
 	{
 		EventLoop loop; ScopedLoop sl(loop);
 		Server sv; Wire(sv); sv.Start(loop); UINT port = PortOf(sv.listener);
@@ -139,7 +139,7 @@ int main()
 		cli.Send("abc", 3); cli.Close();
 		CHECK(Pump(loop, [&] { return closed; }));
 		CHECK(rx == "abc" && log == "RC" && close_err == 0);
-		// chiusura mentre il server RIMANDA la lettura: OnClose arriva solo dopo che i dati sono stati letti
+		// close while the server DEFERS reading: OnClose arrives only after the data has been read
 		Server sv2; Wire(sv2); sv2.Start(loop); UINT port2 = PortOf(sv2.listener);
 		std::string log2; TS *s2 = nullptr; bool closed2 = false;
 		sv2.onNew = [&](TS &c) { s2 = &c; c.onReceive = [&](int) { log2 += "R"; }; c.onClose = [&](int) { log2 += "C"; closed2 = true; }; };
@@ -147,21 +147,21 @@ int main()
 		CHECK(Pump(loop, [&] { return s2 && cli2.GetState() == connected; }));
 		cli2.Send("xyz", 3); cli2.Close();
 		CHECK(Pump(loop, [&] { return log2 == "R"; }));
-		Spin(loop, 0.2); CHECK(log2 == "R" && !closed2);						// i dati non sono stati letti: nessun OnClose
+		Spin(loop, 0.2); CHECK(log2 == "R" && !closed2);						// the data was not read: no OnClose
 		char b[8]; CHECK(s2->Receive(b, 8) == 3);
 		CHECK(Pump(loop, [&] { return closed2; })); CHECK(log2 == "RC");
 		CHECK(s2->Receive(b, 8) == 0);
 	}
-	// 6. connessione rifiutata: OnConnect(ECONNREFUSED); un socket che fallisce non torna a notificare
+	// 6. connection refused: OnConnect(ECONNREFUSED); a socket that fails does not notify again
 	{
 		EventLoop loop; ScopedLoop sl(loop);
-		UINT dead; { TS tmp; tmp.Create(0, SOCK_STREAM, 0, "127.0.0.1"); dead = PortOf(tmp); }		// porta libera appena rilasciata
+		UINT dead; { TS tmp; tmp.Create(0, SOCK_STREAM, 0, "127.0.0.1"); dead = PortOf(tmp); }		// port just released is free
 		TS cli; int err = -1, calls = 0; cli.onConnect = [&](int e) { err = e; ++calls; };
 		cli.Create(0, SOCK_STREAM, FD_CONNECT | FD_WRITE | FD_CLOSE | FD_READ); cli.Connect("127.0.0.1", dead);
 		CHECK(Pump(loop, [&] { return err != -1; })); CHECK(err == ECONNREFUSED);
 		Spin(loop, 0.15); CHECK(calls == 1);
 	}
-	// 7. nomi: risoluzione asincrona, OnHostNameResolved, annullamento, nome inesistente
+	// 7. names: async resolution, OnHostNameResolved, cancellation, nonexistent name
 	{
 		EventLoop loop; ScopedLoop sl(loop);
 		Server sv; Wire(sv); sv.Start(loop); UINT port = PortOf(sv.listener);
@@ -171,17 +171,17 @@ int main()
 		cli.Create(0, SOCK_STREAM, FD_CONNECT | FD_WRITE | FD_CLOSE);
 		bool r = cli.Connect("localhost", port); CHECK(!r && CAsyncSocketEx::GetLastError() == WSAEWOULDBLOCK);
 		CHECK(Pump(loop, [&] { return err != -1; })); CHECK(resolved && ip == 0x7F000001 && err == 0 && sv.conns.size() <= 1);
-		// OnHostNameResolved che ritorna false annulla la connessione
+		// OnHostNameResolved returning false cancels the connection
 		TS c2; bool res2 = false, conn2 = false; c2.onResolved = [&](const SOCKADDR_IN *) { res2 = true; return false; }; c2.onConnect = [&](int) { conn2 = true; };
 		c2.Create(0, SOCK_STREAM, FD_CONNECT); c2.Connect("localhost", port); Pump(loop, [&] { return res2; }); Spin(loop, 0.15); CHECK(res2 && !conn2);
-		// Close() prima della risposta: nessuna callback, nessun accesso a un socket chiuso
+		// Close() before the reply: no callback, no access to a closed socket
 		TS c3; bool any = false; c3.onConnect = [&](int) { any = true; }; c3.onResolved = [&](const SOCKADDR_IN *) { any = true; return true; };
 		c3.Create(0, SOCK_STREAM, FD_CONNECT); c3.Connect("localhost", port); c3.Close(); Spin(loop, 0.3); CHECK(!any);
-		// nome inesistente (TLD riservato .invalid)
+		// nonexistent name (reserved TLD .invalid)
 		TS c4; int e4 = -1; c4.onConnect = [&](int e) { e4 = e; }; c4.Create(0, SOCK_STREAM, FD_CONNECT);
 		c4.Connect("nome-che-non-esiste.invalid", 80); CHECK(Pump(loop, [&] { return e4 != -1; }, 15)); CHECK(e4 != 0);
 	}
-	// 8. UDP con CAsyncSocket: OnSend iniziale, SendTo / ReceiveFrom
+	// 8. UDP with CAsyncSocket: initial OnSend, SendTo / ReceiveFrom
 	{
 		EventLoop loop; ScopedLoop sl(loop);
 		TU a, b; int a_sends = 0, b_rcv = 0; std::string got; CString from; UINT fport = 0;
@@ -194,14 +194,14 @@ int main()
 		CHECK(Pump(loop, [&] { return b_rcv >= 5; }));
 		CHECK(got == "pacchetto0pacchetto1pacchetto2pacchetto3pacchetto4" && from == "127.0.0.1" && fport == ap);
 	}
-	// 9. distruzione dentro le callback: un socket cancellato da un altro dello stesso giro, e delete this in OnClose
+	// 9. destruction inside callbacks: a socket deleted by another in the same round, and delete this in OnClose
 	{
 		EventLoop loop; ScopedLoop sl(loop);
 		Server sv; Wire(sv); sv.Start(loop); UINT port = PortOf(sv.listener);
 		std::vector<std::unique_ptr<TS>> clients; int connected_n = 0;
 		for (int i = 0; i < 20; ++i) { auto c = std::make_unique<TS>(); c->onConnect = [&](int) { ++connected_n; }; c->Create(0, SOCK_STREAM, FD_CONNECT | FD_WRITE | FD_READ | FD_CLOSE); c->Connect("127.0.0.1", port); clients.push_back(std::move(c)); }
 		CHECK(Pump(loop, [&] { return connected_n == 20 && sv.conns.size() == 20; }));
-		// il primo che riceve distrugge TUTTI gli altri socket lato server (anche quelli con eventi gia' nel giro)
+		// the first one that receives destroys ALL the other server-side sockets (even those with events already in the round)
 		bool killed = false;
 		for (auto &c : sv.conns) c->onReceive = [&](int) { if (killed) return; killed = true; for (size_t i = 1; i < sv.conns.size(); ++i) sv.conns[i].reset(); };
 		for (auto &c : clients) c->Send("x", 1);
@@ -215,7 +215,7 @@ int main()
 		CHECK(Pump(loop, [&] { return gone; }));
 		Spin(loop, 0.1);
 	}
-	// 10. molte connessioni: nessuna perdita di descrittori, ognuna riceve la sua risposta
+	// 10. many connections: no descriptor leaks, each receives its own reply
 	{
 		EventLoop loop; ScopedLoop sl(loop); int base = OpenFds();
 		{

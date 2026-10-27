@@ -105,7 +105,7 @@ Packet::Packet(CSafeMemFile &datafile, uint8 protocol, uint8 ucOpcode)
 	completebuffer = new char[size + 10];
 	pBuffer = completebuffer + PACKET_HEADER_SIZE;
 	BYTE *tmp = datafile.Detach();
-	if (size)	// LINUX: con 0 byte di dati Detach() ritorna NULL e memcpy(.., NULL, 0) e' comportamento indefinito (UBSan)
+	if (size)	// LINUX: with 0 bytes of data Detach() returns NULL and memcpy(.., NULL, 0) is undefined behavior (UBSan)
 		memcpy(pBuffer, tmp, size);
 	free(tmp);
 }

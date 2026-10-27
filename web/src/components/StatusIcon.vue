@@ -1,4 +1,4 @@
-<!-- Stato di un download come icona piena e colorata (si nota subito anche da lontano); il testo e' nel suggerimento e per i lettori di schermo -->
+<!-- Download state as a solid colored icon (noticeable even from afar); the text is in the tooltip and for screen readers -->
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -9,7 +9,7 @@ import Icon from './Icon.vue'
 const { t } = useI18n()
 const props = defineProps<{ download: Download; size?: 'md' | 'lg' }>()
 const info = computed(() => statusInfo(props.download))
-// una forma e un colore per ogni stato (le classi sono scritte per intero: cosi' Tailwind le genera)
+// one shape and one color per state (classes are written in full so Tailwind generates them)
 const LOOK: Record<string, { icon: string; cls: string; spin?: boolean }> = {
   active: { icon: 'dl', cls: 'bg-accent text-onaccent' },
   waiting: { icon: 'hourglass', cls: 'bg-warn text-bg' },

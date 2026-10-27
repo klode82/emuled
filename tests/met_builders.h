@@ -1,10 +1,10 @@
-// Costruttori di file di prova (part.met, server.met, clients.met, known.met) condivisi dai test.
+// Builders of test files (part.met, server.met, clients.met, known.met) shared by the tests.
 #pragma once
 #include "StdAfx.h"
 #include "Opcodes.h"
 #include <string>
 
-// --- costruzione di file di prova ---
+// --- building test files ---
 inline void P8(std::string &s, uint8_t v) { s += (char)v; }
 inline void P16(std::string &s, uint16_t v) { s.append((const char*)&v, 2); }
 inline void P32(std::string &s, uint32_t v) { s.append((const char*)&v, 4); }
@@ -13,7 +13,7 @@ inline void TagStr(std::string &s, uint8_t id, const std::string &v) { P8(s, TAG
 inline void TagInt(std::string &s, uint8_t id, uint32_t v) { P8(s, TAGTYPE_UINT32 | 0x80); P8(s, id); P32(s, v); }
 inline void TagGap(std::string &s, uint8_t kind, int idx, uint32_t v) { P8(s, TAGTYPE_UINT32); std::string n(1, (char)kind); n += std::to_string(idx); P16(s, (uint16_t)n.size()); s += n; P32(s, v); }
 
-// part.met: tre gap, 20000 byte mancanti su 100000
+// part.met: three gaps, 20000 bytes missing out of 100000
 inline std::string PartMet(const std::string &name = "film.mkv", uint32_t missing_end = 40000, uint8_t hash_base = 0xA0)
 {
 	std::string s; P8(s, PARTFILE_VERSION); P32(s, 1700000000u);
@@ -49,7 +49,7 @@ inline std::string KnownMet()
 }
 
 
-// ---- altri formati ----
+// ---- other formats ----
 inline std::string NodesDat(int version, int n)
 {
 	std::string s;
@@ -58,7 +58,7 @@ inline std::string NodesDat(int version, int n)
 	for (int i = 0; i < n; ++i) {
 		for (int k = 0; k < 16; ++k) P8(s, (uint8_t)(i * 3 + k));
 		P32(s, 0x0A000001 + i); P16(s, 4672); P16(s, 4662);
-		P8(s, version >= 1 ? 8 : 1);					// versione del contatto (v1+) o tipo (v0)
+		P8(s, version >= 1 ? 8 : 1);					// contact version (v1+) or type (v0)
 		if (version >= 2) { P32(s, 0x11223344); P32(s, 0x0A000001); P8(s, 1); }
 	}
 	return s;

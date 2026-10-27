@@ -12,7 +12,7 @@ const { t } = useI18n()
 const core = useCore(), session = useSession(), toasts = useToasts(), prefs = usePrefs()
 onMounted(() => void core.refresh())
 const upnp = computed(() => core.status?.upnp)
-// ripopola Kad da un nodes.dat (indirizzo web) o chiedendo i primi contatti a un nodo
+// repopulate Kad from a nodes.dat (web address) or by asking a node for the first contacts
 const nodesUrl = ref(''), nodeAddr = ref(''), boot = ref(false)
 async function bootstrap(b: { url?: string; address?: string }) {
   boot.value = true

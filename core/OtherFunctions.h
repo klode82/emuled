@@ -1,18 +1,18 @@
-// LINUX: OtherFunctions.h originale (529 righe, ~100 funzioni, MFC e Win32 mescolati) DIVISO PER ARGOMENTO (Bench #619).
-// Questo file e' solo il punto d'ingresso: i file del core continuano a scrivere #include "OtherFunctions.h".
-// Ogni funzione si porta nel file del suo argomento, con in testa "Origine: OtherFunctions.cpp:riga". Si porta a richiesta.
+// LINUX: original OtherFunctions.h (529 lines, ~100 functions, MFC and Win32 mixed) SPLIT BY TOPIC (Bench #619).
+// This file is only the entry point: the core files keep writing #include "OtherFunctions.h".
+// Each function is ported to the file of its topic, with "Origin: OtherFunctions.cpp:line" at the top. Ported on request.
 //
-//   util/Hash.*      FATTO     hash e codifiche esadecimali: md4equ, md4cpy, md4str, strmd4, EncodeBase16, toHex
-//   util/Text.*      IN CORSO  (fatte: ROUND, maxi, mini, sgn, inSet, nstrdup) utilita' pure: maxi/mini/sgn, EncodeBase32/DecodeBase32/DecodeBase16, URLEncode/URLDecode,
+//   util/Hash.*      DONE      hashes and hex encodings: md4equ, md4cpy, md4str, strmd4, EncodeBase16, toHex
+//   util/Text.*      IN PROGRESS  (done: ROUND, maxi, mini, sgn, inSet, nstrdup) pure utilities: maxi/mini/sgn, EncodeBase32/DecodeBase32/DecodeBase16, URLEncode/URLDecode,
 //                              CastItoXBytes, CastItoIShort, CastSecondsToHM, GetNextString, StripInvalidFilenameChars,
 //                              LevenshteinDistance, ExtensionIs, CleanupFilename, ValidFilename
-//   util/Crypto.*    FATTO     RC4 (RC4CreateKey, RC4Crypt) per l'obfuscation del protocollo
-//   util/Net.*       FATTO     indirizzi IPv4 come testo: ipstr, ipstrA
-//   util/Paths.*     DA FARE   percorsi, riscritti per Linux ('/' al posto di '\\'): slosh, unslosh, canonical, EqualPaths,
+//   util/Crypto.*    DONE      RC4 (RC4CreateKey, RC4Crypt) for protocol obfuscation
+//   util/Net.*       DONE      IPv4 addresses as text: ipstr, ipstrA
+//   util/Paths.*     TO DO     paths, rewritten for Linux ('/' instead of '\\'): slosh, unslosh, canonical, EqualPaths,
 //                              makepathabs, RemoveFileExtension, HasSubdirectories, GetFreeTempSpace, GetShareName
-//   util/Errors.*    IN CORSO  (fatte: DbgSetThreadName, InitThreadLocale) messaggi d'errore senza FormatMessage di Windows: GetErrorMessage, CExceptionStr, DbgGetHexDump
-//   (nessun file)    NON SI PORTA  Shell*, BrowserOpen, SelectDir, DialogBrowseFile, appunti, icone, font, schede (solo UI);
-//                              GetResString/LocMessageBox (le traduzioni passano a file i18n della UI Web)
+//   util/Errors.*    IN PROGRESS  (done: DbgSetThreadName, InitThreadLocale) error messages without Windows FormatMessage: GetErrorMessage, CExceptionStr, DbgGetHexDump
+//   (no file)    NOT PORTED  Shell*, BrowserOpen, SelectDir, DialogBrowseFile, clipboard, icons, fonts, tabs (UI only);
+//                              GetResString/LocMessageBox (translations move to the Web UI i18n files)
 #pragma once
 #include "util/Hash.h"
 #include "util/Text.h"

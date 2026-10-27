@@ -1,7 +1,7 @@
-// Costruisce i template di serie: uno per cartella in templates/ (dist/templates/<id>/), ognuno indipendente (pagina, script, stili e il suo template.yaml).
+// Builds the built-in templates: one per folder in templates/ (dist/templates/<id>/), each independent (page, scripts, styles and its own template.yaml).
 //   node build-templates.mjs            tutti
-//   node build-templates.mjs dashboard  solo quello
-// Il kit comune (src/) viene incluso in ogni template al momento della costruzione: a runtime i template non condividono niente, parlano solo con l'API.
+//   node build-templates.mjs dashboard  only that one
+// The shared kit (src/) is included in each template at build time: at runtime templates share nothing, they only talk to the API.
 import { execFileSync } from 'node:child_process'
 import { copyFileSync, existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'

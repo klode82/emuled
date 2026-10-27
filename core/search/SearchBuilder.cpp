@@ -1,6 +1,6 @@
-// LINUX: costruzione del pacchetto di ricerca ed2k/Kad. Origine: srchybrid/SearchResultsWnd.cpp righe 588-1125 (DbgGet*, ParsedSearchExpression,
-// CSearchExprTarget, GetSearchPacket). Cambiato solo cio' che era legato alla finestra: gli errori sono eccezioni SearchParseError invece di finestre di
-// messaggio, i testi sono in inglese (SearchStrings.h). La logica e' identica, compresa l'ottimizzazione "solo parole in AND = una sola stringa".
+// LINUX: building the ed2k/Kad search packet. Origin: srchybrid/SearchResultsWnd.cpp lines 588-1125 (DbgGet*, ParsedSearchExpression,
+// CSearchExprTarget, GetSearchPacket). Changed only what was tied to the window: errors are SearchParseError exceptions instead of message
+// boxes, texts are in English (SearchStrings.h). The logic is identical, including the "AND-only words = a single string" optimization.
 #include "StdAfx.h"
 #include "Emule.h"
 #include "Log.h"
@@ -46,9 +46,9 @@ CString DbgGetSearchOperatorName(UINT uOperator)
 	return _aszEd2kOps[uOperator];
 }
 
-static CStringA s_strCurKadKeywordA;		// LINUX: parola chiave Kad "corrente" (la ricerca Kad la sceglie e puo' riorganizzarla)
+static CStringA s_strCurKadKeywordA;		// LINUX: "current" Kad keyword (the Kad search chooses it and may reorder it)
 static CSearchExpr s_SearchExpr;
-CStringArray g_astrParserErrors;			// errori del parser/scanner (Parser.y e Scanner.l li aggiungono)
+CStringArray g_astrParserErrors;			// parser/scanner errors (Parser.y and Scanner.l add them)
 
 static TCHAR s_chLastChar = 0;
 static CString s_strSearchTree;

@@ -1,4 +1,4 @@
-// LINUX (codice nuovo): vedi Registry.h
+// LINUX (new code): see Registry.h
 #include "templates/Registry.h"
 #include "StdAfx.h"
 #include "Log.h"
@@ -22,22 +22,22 @@ bool EnsureUserDir(const std::string &dir)
 	std::error_code ec;
 	if (fs::exists(dir, ec)) return false;
 	if (!fs::create_directories(dir, ec) || ec) return false;
-	std::ofstream f(fs::path(dir) / "LEGGIMI.txt");
-	f << "In questa cartella vanno i TUOI template d'interfaccia di emuled.\n\n"
-		 "Ogni template e' una cartella con un file template.yaml e una pagina d'ingresso (index.html di solito):\n"
-		 "  ~/.emuled/templates/il-mio-template/template.yaml\n"
-		 "  ~/.emuled/templates/il-mio-template/index.html\n\n"
-		 "Il nome della cartella deve essere uguale all'id scritto in template.yaml. I nomi console, dashboard, studio e mobile sono dei template di serie\n"
-		 "(che stanno in " EMULED_SYSTEM_TEMPLATES " e non si toccano): per partire da uno di essi, copia la cartella e dagli un altro nome.\n\n"
-		 "Dopo aver copiato un template: Preferenze > Aspetto > \"Rileggi le cartelle\" (oppure riavvia emuled). Se un template non compare, la stessa\n"
-		 "sezione dice perche'. Come si crea un template: docs/TEMPLATES.md, con un esempio completo in docs/examples/template-ciao/.\n\n"
-		 "Attenzione: un template e' un programma che gira nella pagina e puo' leggere il codice di accesso al demone. Usa solo template di cui ti fidi.\n";
+	std::ofstream f(fs::path(dir) / "README.txt");
+	f << "Put YOUR emuled interface templates in this folder.\n\n"
+		 "A template is a folder with a template.yaml file and an entry page (usually index.html):\n"
+		 "  ~/.emuled/templates/my-template/template.yaml\n"
+		 "  ~/.emuled/templates/my-template/index.html\n\n"
+		 "The folder name must be the same as the id written in template.yaml. The names console, dashboard, studio and mobile belong to the built-in templates\n"
+		 "(they live in " EMULED_SYSTEM_TEMPLATES " and must not be changed): to start from one of them, copy its folder and give it another name.\n\n"
+		 "After copying a template: Preferences > Look > \"Rescan folders\" (or restart emuled). If a template does not show up, the same\n"
+		 "section tells you why. How to build a template: docs/TEMPLATES.md, with a complete example in docs/examples/template-ciao/.\n\n"
+		 "Warning: a template is a program that runs in the page and can read the access code of the daemon. Only use templates you trust.\n";
 	return true;
 }
 
 bool IsReservedId(const std::string &id) { return id == "console" || id == "dashboard" || id == "studio" || id == "mobile"; }
 
-// il percorso (anche se non esiste ancora, senza seguire i collegamenti dell'ultimo pezzo) sta dentro `root`?
+// is the path (even if it does not yet exist, without following links of the last component) inside `root`?
 static bool Inside(const fs::path &root, const fs::path &p)
 {
 	std::error_code ec; fs::path c = fs::weakly_canonical(p, ec); if (ec) return false;
@@ -47,28 +47,28 @@ static bool Inside(const fs::path &root, const fs::path &p)
 static bool RegularInside(const fs::path &root, const std::string &rel)
 {
 	std::error_code ec; fs::path f = root / rel;
-	return fs::is_regular_file(f, ec) && Inside(root, f);		// is_regular_file segue i collegamenti: Inside controlla che non escano
+	return fs::is_regular_file(f, ec) && Inside(root, f);		// is_regular_file follows links: Inside checks that they do not escape
 }
 
 static const int kMaxDirsPerSource = 200;
-static const uintmax_t kMaxPreviewBytes = 2u << 20;		// l'anteprima si manda nell'elenco: niente file enormi
+static const uintmax_t kMaxPreviewBytes = 2u << 20;		// the preview is sent in the list: no huge files
 
 void Registry::Scan(const Dirs &dirs)
 {
 	entries_.clear();
-	std::set<std::string> taken;							// id gia' assegnati (da una sorgente piu' importante)
+	std::set<std::string> taken;							// ids already assigned (by a higher-priority source)
 	struct S { Source src; const std::string *dir; } order[] = {{Source::System, &dirs.system}, {Source::User, &dirs.user}, {Source::Extra, &dirs.extra}};
 	for (auto &s : order) {
 		if (s.dir->empty()) continue;
 		std::error_code ec;
-		if (!fs::is_directory(*s.dir, ec)) continue;				// la cartella non esiste: niente da fare (e' normale)
+		if (!fs::is_directory(*s.dir, ec)) continue;				// the folder does not exist: nothing to do (it is normal)
 		std::vector<fs::path> subs;
 		for (fs::directory_iterator it(*s.dir, ec), end; !ec && it != end; it.increment(ec)) {
 			const std::string name = it->path().filename().string();
 			if (name.empty() || name[0] == '.') continue;				// .git, .cache...
-			std::error_code e2; if (!fs::is_directory(it->path(), e2)) continue;		// i file sciolti non sono template (un collegamento a una cartella si'; i file dentro si controllano al servizio)
+			std::error_code e2; if (!fs::is_directory(it->path(), e2)) continue;		// loose files are not templates (a link to a folder is; the files inside are checked at serving time)
 			subs.push_back(it->path());
-			if ((int)subs.size() >= kMaxDirsPerSource) { LogWarning(_T("Template: troppe cartelle in %s, ne leggo %d"), s.dir->c_str(), kMaxDirsPerSource); break; }
+			if ((int)subs.size() >= kMaxDirsPerSource) { LogWarning(_T("Template: too many folders in %s, reading %d"), s.dir->c_str(), kMaxDirsPerSource); break; }
 		}
 		std::sort(subs.begin(), subs.end());
 		for (auto &p : subs) {
@@ -78,13 +78,13 @@ void Registry::Scan(const Dirs &dirs)
 			e.errors = m.errors;
 			if (m.ok) {
 				e.manifest = m.manifest; e.id = m.manifest.id;
-				if (e.id != e.dir_name) e.errors.push_back("il nome della cartella (" + e.dir_name + ") deve essere uguale all'id (" + e.id + ")");
-				else if (IsReservedId(e.id) && e.source == Source::User) e.errors.push_back("\"" + e.id + "\" e' un nome riservato ai template di serie: copia la cartella e dagli un altro nome");
-				else if (taken.count(e.id)) e.errors.push_back("esiste gia' un template con id \"" + e.id + "\" in una cartella piu' importante");
-				if (e.errors.empty() && !RegularInside(e.dir, e.manifest.entry)) e.errors.push_back("manca la pagina d'ingresso \"" + e.manifest.entry + "\" (o non e' un file dentro la cartella)");
+				if (e.id != e.dir_name) e.errors.push_back("the folder name (" + e.dir_name + ") must be the same as the id (" + e.id + ")");
+				else if (IsReservedId(e.id) && e.source == Source::User) e.errors.push_back("\"" + e.id + "\" is a name reserved for the built-in templates: copy the folder and give it another name");
+				else if (taken.count(e.id)) e.errors.push_back("a template with id \"" + e.id + "\" already exists in a higher-priority folder");
+				if (e.errors.empty() && !RegularInside(e.dir, e.manifest.entry)) e.errors.push_back("the entry page \"" + e.manifest.entry + "\" is missing (or is not a file inside the folder)");
 				if (e.errors.empty() && !e.manifest.preview.empty()) {
 					e.has_preview = RegularInside(e.dir, e.manifest.preview);
-					std::error_code e4; if (e.has_preview && fs::file_size(fs::path(e.dir) / e.manifest.preview, e4) > kMaxPreviewBytes) { e.has_preview = false; LogWarning(_T("Template \"%s\": l'anteprima supera i 2 MB e non si usa"), e.dir_name.c_str()); }
+					std::error_code e4; if (e.has_preview && fs::file_size(fs::path(e.dir) / e.manifest.preview, e4) > kMaxPreviewBytes) { e.has_preview = false; LogWarning(_T("Template \"%s\": the preview is over 2 MB and is not used"), e.dir_name.c_str()); }
 				}
 			}
 			e.valid = e.errors.empty();
@@ -96,9 +96,9 @@ void Registry::Scan(const Dirs &dirs)
 	for (auto &e : entries_) {
 		if (e.valid) { ++ok; continue; }
 		++bad; std::string why; for (auto &x : e.errors) why += (why.empty() ? "" : "; ") + x;
-		LogWarning(_T("Template \"%s\" (%s) non caricato: %s"), e.dir_name.c_str(), SourceName(e.source), why.c_str());
+		LogWarning(_T("Template \"%s\" (%s) not loaded: %s"), e.dir_name.c_str(), SourceName(e.source), why.c_str());
 	}
-	AddLogLine(false, _T("Template: %u caricati, %u non validi"), (unsigned)ok, (unsigned)bad);
+	AddLogLine(false, _T("Template: %u loaded, %u invalid"), (unsigned)ok, (unsigned)bad);
 }
 
 const Entry *Registry::Find(const std::string &id) const { for (auto &e : entries_) if (e.valid && e.id == id) return &e; return nullptr; }

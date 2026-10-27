@@ -51,13 +51,13 @@ public:
 	void	ConnectToAnyServer(INT_PTR startAt, bool prioSort = false, bool isAuto = true, bool bNoCrypt = false);
 	void	ConnectToServer(CServer *server, bool multiconnect = false, bool bNoCrypt = false);
 	void	StopConnectionTry();
-	static void RetryConnectTimer() noexcept;				// LINUX: scatta dal timer del ciclo degli eventi (nell'originale: SetTimer di finestra)
+	static void RetryConnectTimer() noexcept;				// LINUX: fires from the event loop timer (in the original: window SetTimer)
 
 	void	CheckForTimeout();
 	void	DestroySocket(CServerSocket *pSock);	// safe socket closure and destruction
 	bool	SendPacket(Packet *packet, CServerSocket *to = NULL);
 	bool	IsUDPSocketAvailable() const	{ return udpsocket != NULL; }
-	bool	RecreateUDPSocket();			// LINUX: (ri)crea il socket UDP verso i server con le preferenze correnti (il costruttore le legge quando theApp nasce, troppo presto)
+	bool	RecreateUDPSocket();			// LINUX: (re)creates the UDP socket towards the servers with the current preferences (the constructor reads them when theApp is born, too early)
 	bool	SendUDPPacket(Packet *packet, CServer *host, bool bDelPacket/* = false*/, uint16 nSpecialPort = 0, BYTE *pRawPacket = NULL, uint32 nLen = 0);
 	void	KeepConnectionAlive();
 	bool	Disconnect();
@@ -77,7 +77,7 @@ public:
 	bool	AwaitingTestFromIP(uint32 dwIP) const;
 	bool	IsConnectedObfuscated() const;
 
-	std::function<bool(uint32)> awaiting;					// LINUX: gancio per i test (test_crypto)
+	std::function<bool(uint32)> awaiting;					// LINUX: hook for tests (test_crypto)
 	uint32	m_clientid;
 	uint32	m_curuser;
 

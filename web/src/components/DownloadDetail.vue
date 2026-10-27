@@ -1,4 +1,4 @@
-<!-- Dettaglio di un download: avanzamento, mappa dei blocchi, fonti, categoria, priorita', hash e link ed2k, azioni. Un completato mostra dove e' il file. -->
+<!-- Download detail: progress, block map, sources, category, priority, hash and ed2k link, actions. A completed one shows where the file is. -->
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -25,7 +25,7 @@ const info = computed(() => (d.value ? statusInfo(d.value) : null))
 const paused = computed(() => info.value?.key === 'paused')
 const done = computed(() => info.value?.key === 'done')
 
-// blocchi e fonti: si rileggono ogni 3 secondi finche' il pannello e' aperto (l'API non li manda come eventi)
+// blocks and sources: re-read every 3 seconds while the panel is open (the API does not send them as events)
 const parts = ref<Parts | null>(null), sources = ref<Source[]>([]), det = ref<Details | null>(null), blocks = ref<Blocks | null>(null)
 const activeParts = computed(() => blocks.value?.active.map((a) => ({ part: a.part, receiving: a.receiving !== false })) ?? [])
 type TabKey = 'general' | 'progress' | 'sources' | 'names' | 'comments' | 'content' | 'ed2k'
@@ -34,7 +34,7 @@ const tab = ref<TabKey>('general')
 const tabs = computed<readonly TabKey[]>(() => (done.value ? TABS.filter((x) => x !== 'sources' && x !== 'progress' && x !== 'names' && x !== 'comments') : TABS))
 watch(tabs, (v) => { if (!v.includes(tab.value)) tab.value = 'general' })
 
-// scheda Contenuto: mediainfo legge il file (anche il .part, se c'e' l'intestazione); la lettura parte quando si apre la scheda
+// Content tab: mediainfo reads the file (even the .part, if the header is there); reading starts when the tab is opened
 const content = ref<Content | null>(null)
 let contentTimer: ReturnType<typeof setTimeout> | undefined
 async function loadContent() {
@@ -56,7 +56,7 @@ let timer: ReturnType<typeof setInterval> | undefined
 async function refresh() {
   if (!d.value || done.value) { parts.value = null; sources.value = []; det.value = null; blocks.value = null; return }
   const api = session.getApi()
-  // ogni dato si carica per conto suo: se una chiamata fallisce (il download e' appena sparito, o il demone e' una versione vecchia che non la conosce) gli altri si vedono lo stesso
+  // each piece of data loads on its own: if a call fails (the download just vanished, or the daemon is an old version that does not know it) the others still show
   const h = props.hash
   const [pa, so, de, bl] = await Promise.allSettled([api.parts(h), api.sources(h), api.details(h), api.blocks(h)])
   if (props.hash !== h) return
@@ -65,7 +65,7 @@ async function refresh() {
   if (de.status === 'fulfilled') det.value = de.value
   blocks.value = bl.status === 'fulfilled' ? bl.value : null
 }
-// schede Nome e Commenti: i dati si leggono solo mentre la scheda e' aperta
+// Name and Comments tabs: data is read only while the tab is open
 const names = ref<FileNames | null>(null), comments = ref<FileComments | null>(null)
 const newName = ref(''), nameTouched = ref(false), renaming = ref(false)
 const filterOpen = ref(false), filterText = ref(''), kadBusy = ref(false)
@@ -75,7 +75,7 @@ async function refreshExtra() {
   try {
     if (tab.value === 'names') { const r = await api.names(h); if (props.hash === h) { names.value = r; if (!nameTouched.value) newName.value = r.current } }
     else if (tab.value === 'comments') { const r = await api.comments(h); if (props.hash === h) comments.value = r }
-  } catch { /* il download puo' essere appena sparito */ }
+  } catch { /* the download may have just vanished */ }
 }
 watch(tab, () => void refreshExtra())
 const canRename = computed(() => !renaming.value && !!newName.value.trim() && newName.value.trim() !== d.value?.name)
@@ -100,7 +100,7 @@ onMounted(() => { void refresh(); timer = setInterval(() => { void refresh(); vo
 onUnmounted(() => clearInterval(timer))
 watch(() => props.hash, () => { parts.value = null; sources.value = []; det.value = null; blocks.value = null; void refresh() })
 
-// indirizzo ed2k con le opzioni di eMule: il proprio indirizzo come fonte (serve l'ID alto: l'ID e' l'indirizzo IP) e il tag HTML
+// ed2k link with eMule options: own address as a source (needs a high ID: the ID is the IP address) and the HTML tag
 const withSource = ref(false), asHtml = ref(false)
 const core = useCore()
 const myIp = computed(() => { const e = core.status?.ed2k; if (!e?.connected || !e.high_id || !e.id) return ''; const n = e.id >>> 0; return `${n & 255}.${(n >>> 8) & 255}.${(n >>> 16) & 255}.${n >>> 24}` })
@@ -117,7 +117,7 @@ async function copy() {
 const ago = (unix: number) => (unix > 0 ? t('detail.ago', { d: duration(Math.max(0, Date.now() / 1000 - unix)) }) : '')
 const dash = (unix: number) => (unix > 0 ? `${dateTime(unix)}  (${ago(unix)})` : t('detail.never'))
 const pct1 = (n: number) => `${n.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`
-// streaming: un link temporaneo (senza il token) che un player locale apre; si scarica una playlist .m3u che il sistema apre col player predefinito
+// streaming: a temporary link (without the token) that a local player opens; an .m3u playlist is downloaded and the system opens it with the default player
 async function streamUrl() { const r = await session.getApi().streamLink(props.hash); return { url: location.origin + r.path, name: r.name } }
 async function openPlayer() {
   try {

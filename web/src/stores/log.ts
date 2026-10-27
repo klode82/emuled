@@ -1,4 +1,4 @@
-// Registro degli eventi del demone: caricamento iniziale, aggiornamento in diretta (evento WebSocket "log") e riallineamento dopo una riconnessione
+// Daemon event log: initial load, live update (WebSocket "log" event) and realignment after a reconnection
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import type { LogLine, ServerEvent } from '@/types'
@@ -22,7 +22,7 @@ export const useLog = defineStore('log', () => {
   const api = () => useSession().getApi()
 
   function append(more: LogLine[]) {
-    const fresh = more.filter((l) => l.id > lastId.value)	// le righe gia' viste (evento e lettura insieme) non si ripetono
+    const fresh = more.filter((l) => l.id > lastId.value)	// lines already seen (event and read together) are not repeated
     if (!fresh.length) return
     lines.value.push(...fresh)
     if (lines.value.length > MAX) lines.value.splice(0, lines.value.length - MAX)
@@ -31,7 +31,7 @@ export const useLog = defineStore('log', () => {
   async function load() {
     try { const r = await api().log({ level: 'debug', limit: 1000 }); lines.value = r.lines; lastId.value = r.last_id; loaded.value = true } catch (e) { useToasts().error(errText(e)) }
   }
-  // dopo una riconnessione: solo le righe nuove; se il buffer del demone ne ha perse (o e' stato svuotato da un altro) si rilegge tutto
+  // after a reconnection: only the new lines; if the daemon buffer lost some (or was cleared by someone else) re-read everything
   async function sync() {
     if (!loaded.value) return
     try {

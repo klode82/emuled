@@ -71,7 +71,7 @@ CIndexed::CIndexed(LPCTSTR szConfDir)
 	m_mapNotes.InitHashTable(1031);
 	m_mapLoad.InitHashTable(1031);
 	m_mapSources.InitHashTable(1031);
-	// LINUX: la cartella dei file indice la passa chi crea l'indice (vuota = nessun file letto ne scritto)
+	// LINUX: the index files folder is passed by whoever creates the index (empty = no file read or written)
 	if (szConfDir && *szConfDir) {
 		const CString confdir(szConfDir);
 		m_sSourceFileName.Format(_T("%s") _T("src_index.dat"), (LPCTSTR)confdir);
@@ -90,8 +90,8 @@ void CIndexed::ReadFile()
 	pLoadDataThread->ResumeThread();
 }
 
-// LINUX: i file indice si scrivono su "nome.tmp" e si sostituiscono con una rinomina atomica (l'originale li troncava sul posto:
-// un arresto a meta' scrittura lasciava un file corrotto). Sono dati di cache della rete, quindi niente copia .bak.
+// LINUX: index files are written to "name.tmp" and replaced with an atomic rename (the original truncated them in place:
+// a stop halfway through writing left a corrupt file). They are network cache data, so no .bak copy.
 static void AtomicReplaceFile(const CString &path)
 {
 	const std::string tmp = std::string((LPCTSTR)path) + ".tmp";
@@ -221,8 +221,8 @@ CIndexed::~CIndexed()
 		// and then delete all loaded items without writing them to the files (as they are incomplete and unchanged)
 		m_bAbortLoading = true;
 		DebugLogWarning(_T("Kad stopping while still loading CIndexed data, waiting for abort"));
-		// LINUX: si aspetta il FLAG, non il mutex. Il thread alza m_bDataLoaded come ultima cosa dopo aver rilasciato il mutex (vedi CLoadDataThread::Run): aspettando solo
-		// il mutex il distruttore poteva entrare prima che il thread lo avesse preso (o fra il rilascio e il flag) e cancellare l'oggetto sotto i piedi del thread.
+		// LINUX: wait for the FLAG, not the mutex. The thread raises m_bDataLoaded as its last action after releasing the mutex (see CLoadDataThread::Run): waiting only for
+		// the mutex the destructor could get in before the thread had taken it (or between the release and the flag) and delete the object under the thread's feet.
 		while (!m_bDataLoaded)
 			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
@@ -946,7 +946,7 @@ int CIndexed::CLoadDataThread::Run()
 							++uTotalLoad;
 					}
 				}
-				fileLoad.Close();	// LINUX: dopo aver LETTO non si sostituisce nulla (qui c'era per errore AtomicReplaceFile: il .tmp non esiste e scriveva "Unable to replace Kad file")
+				fileLoad.Close();	// LINUX: after READING nothing is replaced (AtomicReplaceFile was here by mistake: the .tmp does not exist and it wrote "Unable to replace Kad file")
 			} else
 				DebugLogWarning(_T("Unable to load Kad file: %s"), (LPCTSTR)m_sLoadFileName);
 		}
@@ -1012,7 +1012,7 @@ int CIndexed::CLoadDataThread::Run()
 						}
 					}
 				}
-				fileKey.Close();	// LINUX: vedi sopra, nessuna sostituzione dopo la lettura
+				fileKey.Close();	// LINUX: see above, no replacement after reading
 			} else
 				DebugLogWarning(_T("Unable to load Kad file: %s"), (LPCTSTR)m_sKeyFileName);
 		}
@@ -1085,8 +1085,8 @@ int CIndexed::CLoadDataThread::Run()
 	else
 		AddDebugLogLine(false, _T("Terminating CIndexed::CLoadDataThread - finished loading data"));
 
-	// LINUX: il mutex si rilascia PRIMA di alzare il flag. Nell'originale il flag veniva alzato mentre sLock era ancora preso: il distruttore di CIndexed,
-	// vedendo il flag, cancellava l'oggetto (e il mutex) mentre il thread lo stava ancora rilasciando (race trovata da TSan).
+	// LINUX: the mutex is released BEFORE raising the flag. In the original the flag was raised while sLock was still held: the CIndexed destructor,
+	// seeing the flag, deleted the object (and the mutex) while the thread was still releasing it (race found by TSan).
 	sLock.Unlock();
 	m_pOwner->m_bDataLoaded = true;
 	return 0;

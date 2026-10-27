@@ -32,7 +32,7 @@ namespace Kademlia
 	class CUInt128;
 };
 
-// LINUX: nell'originale era una finestra nascosta con WSAAsyncGetHostByName; ora ogni nome si risolve con EventLoop::ResolveAsync
+// LINUX: in the original this was a hidden window with WSAAsyncGetHostByName; now every name is resolved with EventLoop::ResolveAsync
 class CSourceHostnameResolveWnd
 {
 public:
@@ -71,7 +71,7 @@ public:
 	void	DeleteAll();
 
 	INT_PTR	GetFileCount() const						{ return filelist.GetCount(); }
-	CPartFile* GetFileAt(INT_PTR i) const				{ POSITION p = filelist.FindIndex(i); return p ? filelist.GetAt(p) : NULL; }	// LINUX: per l'API (l'interfaccia grafica scorreva la lista)
+	CPartFile* GetFileAt(INT_PTR i) const				{ POSITION p = filelist.FindIndex(i); return p ? filelist.GetAt(p) : NULL; }	// LINUX: for the API (the GUI used to walk the list)
 	UINT	GetDownloadingFileCount() const;
 	UINT	GetPausedFileCount() const;
 
@@ -120,7 +120,7 @@ public:
 
 	// searching on local server
 	void	SendLocalSrcRequest(CPartFile *sender);
-	// LINUX: il server accetta un gruppo di richieste di fonti ogni 300 s (15 file x 20 s): fra quanti secondi parte la prossima richiesta in coda
+	// LINUX: the server accepts a group of source requests every 300 s (15 files x 20 s): seconds until the next queued request starts
 	UINT	GetSecondsToNextTCPSrcReq() const			{ const DWORD now = ::GetTickCount(); return m_dwNextTCPSrcReq > now ? (m_dwNextTCPSrcReq - now) / 1000 : 0; }
 	void	RemoveLocalServerRequest(CPartFile *pFile);
 	void	ResetLocalServerRequests();

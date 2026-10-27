@@ -1,21 +1,21 @@
-// LINUX (codice nuovo): contenuto di un file video/audio (scheda "Contenuto" di eMule) con il programma esterno `mediainfo`.
-// Si lancia senza shell (posix_spawn, il percorso e' un argomento), con un limite di tempo, e si legge il suo JSON. Funziona anche su un .part
-// incompleto: finche' c'e' l'intestazione del contenitore (per un mkv i primi byte) mediainfo descrive tutto il file.
+// LINUX (new code): content of a video/audio file ("Content" tab of eMule) via the external program `mediainfo`.
+// Launched without a shell (posix_spawn, the path is an argument), with a time limit, and its JSON is read. Also works on an incomplete
+// .part: as long as the container header is there (for mkv the first bytes) mediainfo describes the whole file.
 #pragma once
 #include <nlohmann/json.hpp>
 #include <string>
 
 namespace emule::media {
 
-// Il programma: `configured` se indicato (percorso o nome), altrimenti "mediainfo" cercato in PATH. Vuoto se non esiste/non e' eseguibile.
+// The program: `configured` if given (path or name), otherwise "mediainfo" searched in PATH. Empty if it does not exist/is not executable.
 std::string FindBinary(const std::string &configured);
-// Lancia `binary --Output=JSON path` e ritorna il risultato in forma compatta:
+// Runs `binary --Output=JSON path` and returns the result in compact form:
 //   {"state":"done","recognized":true,"general":{...},"video":[...],"audio":[...],"text":[...]}
-//   {"state":"done","recognized":false}                       mediainfo non riconosce il file (ancora troppo incompleto?)
+//   {"state":"done","recognized":false}                       mediainfo does not recognize the file (still too incomplete?)
 //   {"state":"failed","reason":"timeout|bad_output|spawn"}    e {"state":"unavailable","reason":"not_installed"}
-// Bloccante (fino a timeout_s): da chiamare in un thread.
+// Blocking (up to timeout_s): call it from a thread.
 nlohmann::json Probe(const std::string &binary, const std::string &path, int timeout_s = 10);
-// Dal JSON di mediainfo (--Output=JSON) alla forma compatta; separata per provarla senza lanciare niente.
+// From the mediainfo JSON (--Output=JSON) to the compact form; separate so it can be tested without launching anything.
 nlohmann::json Compact(const nlohmann::json &mediainfo);
 
 } // namespace emule::media

@@ -1,13 +1,13 @@
-// Ordinamento delle colonne di una tabella: clic sull'intestazione = ordine crescente, secondo clic = decrescente. Le colonne di testo partono dal crescente,
-// quelle numeriche dal decrescente (il piu' grande in alto). Senza colonna scelta (key = '') le righe restano nell'ordine che arriva dal demone.
+// Sorting of a table's columns: click on the header = ascending order, second click = descending. Text columns start ascending,
+// numeric ones descending (largest on top). With no column chosen (key = '') rows stay in the order they arrive from the daemon.
 import { computed, ref, watch, type Ref } from 'vue'
 
-export interface SortCol<T> { get: (row: T) => string | number; desc?: boolean }   // desc: la prima volta si ordina dal piu' grande
+export interface SortCol<T> { get: (row: T) => string | number; desc?: boolean }   // desc: the first time it sorts from the largest
 export interface Sorter { key: Ref<string>; dir: Ref<1 | -1>; toggle: (k: string) => void }
 
-// Con `persist` (nome della tabella) l'ordine scelto si ricorda in questo browser, anche dopo il riavvio.
+// With `persist` (table name) the chosen order is remembered in this browser, even after restart.
 export const loadSort = (persist: string): { key?: string; dir?: 1 | -1 } => { try { return JSON.parse(localStorage.getItem('emule.sort.' + persist) ?? '{}') } catch { return {} } }
-export const saveSort = (persist: string, key: string, dir: 1 | -1) => { try { localStorage.setItem('emule.sort.' + persist, JSON.stringify({ key, dir })) } catch { /* senza memoria del browser l'ordine non si ricorda */ } }
+export const saveSort = (persist: string, key: string, dir: 1 | -1) => { try { localStorage.setItem('emule.sort.' + persist, JSON.stringify({ key, dir })) } catch { /* without browser storage the order is not remembered */ } }
 
 export function useSort<T>(rows: () => T[], cols: Record<string, SortCol<T>>, initial = '', initialDir: 1 | -1 = 1, persist = '') {
   const saved = persist ? loadSort(persist) : {}

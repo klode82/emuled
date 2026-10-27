@@ -1,5 +1,5 @@
-// Ricerca globale ed2k (GlobalSearch + CServerConnect + CUDPSocket originali): un server TCP finto per la connessione e la ricerca locale, due server finti che
-// rispondono solo via UDP (OP_GLOBSEARCHREQ -> OP_GLOBSEARCHRES). Tutti su un indirizzo della macchina (non loopback: la lista server scarta 127.*).
+// eD2K global search (original GlobalSearch + CServerConnect + CUDPSocket): a fake TCP server for the connection and the local search, two fake servers that
+// answer only via UDP (OP_GLOBSEARCHREQ -> OP_GLOBSEARCHRES). All on a machine address (not loopback: the server list discards 127.*).
 #include "StdAfx.h"
 #include "net/Profile.h"
 #include "net/ServerSearch.h"
@@ -49,9 +49,9 @@ static void PutServer(std::string &f, in_addr ip, uint16_t port, const std::stri
 
 int main()
 {
-	emule::net::ScopedProfile profile;		// profilo temporaneo: preferenze iniziali e oggetti dell'applicazione
+	emule::net::ScopedProfile profile;		// temporary profile: initial preferences and application objects
 	in_addr ip; if (!LocalIp(ip)) { std::printf("SKIP nessuna interfaccia non loopback\n"); return 0; }
-	// due server solo-UDP: prima si prendono le porte UDP, il server in lista ha porta TCP = UDP - 4 (come ogni server ed2k)
+	// two UDP-only servers: first grab the UDP ports, the listed server has TCP port = UDP - 4 (like every ed2k server)
 	int u[2]; uint16_t uport[2];
 	for (int i = 0; i < 2; ++i) {
 		u[i] = socket(AF_INET, SOCK_DGRAM, 0); sockaddr_in b{}; b.sin_family = AF_INET; b.sin_addr = ip;
@@ -65,7 +65,7 @@ int main()
 	fs::path tmp = fs::temp_directory_path() / ("globsearch_" + std::to_string(getpid())); fs::create_directories(tmp);
 	{
 		std::string f; f += (char)0xE0; f += U32(3);
-		PutServer(f, ip, (uint16_t)(uport[0] - 4), "B solo UDP"); PutServer(f, ip, (uint16_t)(uport[1] - 4), "C solo UDP"); PutServer(f, ip, ntohs(a.sin_port), "A connesso");		// il connesso e' ultimo: come nell'originale il connesso conta una posizione della lista
+		PutServer(f, ip, (uint16_t)(uport[0] - 4), "B solo UDP"); PutServer(f, ip, (uint16_t)(uport[1] - 4), "C solo UDP"); PutServer(f, ip, ntohs(a.sin_port), "A connesso");		// the connected one is last: as in the original, the connected server counts as one list position
 		std::ofstream o(tmp / "server.met", std::ios::binary); o.write(f.data(), (std::streamsize)f.size());
 	}
 
@@ -103,12 +103,12 @@ int main()
 	for (auto &kv : r.hits_per_server) std::printf(" [%s: %u]", kv.first.c_str(), kv.second); std::printf("\n");
 	std::printf("  B ha visto %zu byte, C ha visto %zu byte\n", udpSearch[0].size(), udpSearch[1].size());
 	CHECK(r.error.empty()); CHECK(r.connected && r.high_id && r.client_id == 0x0A0B0C0D);
-	CHECK(r.servers_in_list == 3 && r.servers_asked == 2);				// i due server non connessi, qualunque sia la loro posizione (l'originale ne perdeva uno)
-	CHECK(tcpSearch == std::string("\x01\x0A\x00" "fight club", 13));				// stessa stringa unica di eMule
+	CHECK(r.servers_in_list == 3 && r.servers_asked == 2);				// the two non-connected servers, wherever they sit in the list (the original lost one)
+	CHECK(tcpSearch == std::string("\x01\x0A\x00" "fight club", 13));				// same single string as eMule
 	{ unsigned seenB = udpSearch[0].empty() ? 0 : 1, seenC = udpSearch[1].empty() ? 0 : 1;
-	  CHECK(seenB + seenC == r.servers_asked);										// ogni server interrogato ha ricevuto la richiesta
-	  CHECK((udpSearch[0].empty() || udpSearch[0] == tcpSearch) && (udpSearch[1].empty() || udpSearch[1] == tcpSearch));	// con lo stesso albero
-	  CHECK(r.hits.size() == 1 + r.servers_asked);									// 1 dal TCP + 1 per ogni server UDP interrogato
+	  CHECK(seenB + seenC == r.servers_asked);										// every queried server received the request
+	  CHECK((udpSearch[0].empty() || udpSearch[0] == tcpSearch) && (udpSearch[1].empty() || udpSearch[1] == tcpSearch));	// with the same tree
+	  CHECK(r.hits.size() == 1 + r.servers_asked);									// 1 from TCP + 1 for each queried UDP server
 	  bool t = false; for (auto &h : r.hits) t |= h.name == "Fight Club (TCP).avi"; CHECK(t);
 	  for (auto &h : r.hits) if (h.name.find("UDP") != std::string::npos) CHECK(h.server_port == uport[h.name.find("UDP C") != std::string::npos] - 4); }
 	fs::remove_all(tmp);

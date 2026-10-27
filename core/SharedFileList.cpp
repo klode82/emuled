@@ -751,7 +751,7 @@ bool CSharedFileList::RemoveFile(CKnownFile *pFile, bool bDeleted)
 	bool bResult = (m_Files_map.RemoveKey(CCKey(pFile->GetFileHash())) != FALSE);
 	listlock.Unlock();
 
-	if (output)		// LINUX: nel daemon non c'e' la lista grafica
+	if (output)		// LINUX: no graphical list in the daemon
 		output->RemoveFile(pFile, bDeleted);
 	m_keywords->RemoveKeywords(pFile);
 	if (bResult) {
@@ -1142,8 +1142,8 @@ bool CSharedFileList::IsFilePtrInList(const CKnownFile *file) const
 void CSharedFileList::HashNextFile()
 {
 	// SLUGFILLER: SafeHash
-	// LINUX: nell'originale qui si aspettava che la finestra principale fosse aperta (::IsWindow); nel demone non c'e' finestra e IsWindow rispondeva
-	// sempre "no": l'hash dei file condivisi non partiva mai. I messaggi di fine calcolo si accodano e girano nel ciclo degli eventi (EmuleDlgStub).
+	// LINUX: in the original this waited for the main window to be open (::IsWindow); in the daemon there is no window and IsWindow always
+	// answered "no": hashing of shared files never started. The end-of-calculation messages are queued and run in the event loop (EmuleDlgStub).
 	if (theApp.IsClosing())
 		return;
 	if (!theApp.IsClosing())
@@ -1472,7 +1472,7 @@ void CSharedFileList::CheckAndAddSingleFile(const CFileFind &ff)
 	bool bTime = ff.GetLastWriteTime(&tFoundFileTime);
 
 	// ignore real(!) LNK files
-	// LINUX: i collegamenti .lnk di Windows non si risolvono: un .lnk non si condivide (i collegamenti simbolici di Linux sono file normali per stat)
+	// LINUX: Windows .lnk shortcuts are not resolved: a .lnk is not shared (Linux symlinks are normal files for stat)
 	if (ExtensionIs(strFoundFileName, _T(".lnk")))
 		return;
 
@@ -1646,7 +1646,7 @@ CString CSharedFileList::GetPseudoDirName(const CString &strDirectoryName)
 		// remove first backslash
 		ASSERT(strPseudoName[0] == _T('/'));
 		strPseudoName.Delete(0, 1);
-		strPseudoName.Replace(_T('/'), _T('\\'));		// LINUX: nel protocollo ed2k i nomi delle cartelle condivise usano il backslash, come in Windows
+		strPseudoName.Replace(_T('/'), _T('\\'));		// LINUX: in the ed2k protocol shared folder names use the backslash, as in Windows
 	}
 	// we have the name, make sure it is unique
 	if (m_mapPseudoDirNames.PLookup(strPseudoName)) {

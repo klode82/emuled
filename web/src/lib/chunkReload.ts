@@ -1,5 +1,5 @@
-// Dopo un aggiornamento dell'interfaccia i file delle schermate (che si caricano al primo uso) cambiano nome: una pagina rimasta aperta prova a caricare quelli vecchi e
-// la schermata "non si apre". Se succede, si ricarica la pagina (location.assign con solo "#/percorso" cambierebbe il frammento senza ricaricare nulla; una volta sola, per non girare in tondo se il demone e' spento).
+// After an interface update the screens' files (loaded on first use) change name: a page left open tries to load the old ones and
+// the screen "does not open". If that happens, the page is reloaded (location.assign with only "#/path" would change the fragment without reloading; only once, to avoid looping if the daemon is off).
 import type { Router } from 'vue-router'
 
 export const isChunkError = (e: unknown): boolean =>
@@ -9,7 +9,7 @@ const KEY = 'emuled.reloaded'
 export function installChunkReload(router: Router, reload: (url: string) => void = (u) => { history.replaceState(null, '', u); location.reload() }): void {
   router.onError((e, to) => {
     if (!isChunkError(e)) return
-    try { if (sessionStorage.getItem(KEY) === to.fullPath) return; sessionStorage.setItem(KEY, to.fullPath) } catch { /* senza archivio si ricarica comunque */ }
+    try { if (sessionStorage.getItem(KEY) === to.fullPath) return; sessionStorage.setItem(KEY, to.fullPath) } catch { /* without storage it reloads anyway */ }
     reload(router.resolve(to.fullPath).href)
   })
   router.afterEach(() => { try { sessionStorage.removeItem(KEY) } catch { /* ok */ } })

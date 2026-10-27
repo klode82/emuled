@@ -1,5 +1,5 @@
-// Sessione: token, collegamento live (WebSocket) e caricamento iniziale degli altri store. Se il WebSocket cade si ricarica tutto alla riconnessione
-// e, finche' e' giu', si interroga l'API ogni 5 secondi.
+// Session: token, live connection (WebSocket) and initial load of the other stores. If the WebSocket drops everything is reloaded on reconnection
+// and, while it is down, the API is polled every 5 seconds.
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { Api, ApiError, authLogin, authSetup } from '@/lib/api'
@@ -14,7 +14,7 @@ import { useLog } from './log'
 
 const KEY = 'emuled.token'
 const read = () => { try { return localStorage.getItem(KEY) ?? '' } catch { return '' } }
-const write = (v: string) => { try { v ? localStorage.setItem(KEY, v) : localStorage.removeItem(KEY) } catch { /* archivio non disponibile */ } }
+const write = (v: string) => { try { v ? localStorage.setItem(KEY, v) : localStorage.removeItem(KEY) } catch { /* storage not available */ } }
 
 export const useSession = defineStore('session', () => {
   const token = ref(read())
@@ -41,14 +41,14 @@ export const useSession = defineStore('session', () => {
   function startPoll() { if (!poll) poll = setInterval(() => void refreshAll(), 5000) }
   function stopPoll() { if (poll) { clearInterval(poll); poll = null } }
 
-  async function login(raw: string, quiet = false): Promise<boolean> {		// quiet: tentativo con il token salvato, non scritto dall'utente
+  async function login(raw: string, quiet = false): Promise<boolean> {		// quiet: attempt with the saved token, not typed by the user
     busy.value = true; error.value = ''
     const candidate = new Api(raw.trim())
     try {
       await candidate.status()
     } catch (e) {
       busy.value = false
-      if (quiet && e instanceof ApiError && e.status === 401) { token.value = ''; write(''); return false }		// token di una vecchia installazione o scaduto: si dimentica, senza dare un errore che l'utente non ha causato
+      if (quiet && e instanceof ApiError && e.status === 401) { token.value = ''; write(''); return false }		// token from an old installation or expired: forget it, without showing an error the user did not cause
       error.value = e instanceof ApiError && e.status === 401 ? t('login.invalidToken') : e instanceof Error ? e.message : String(e)
       return false
     }
@@ -58,8 +58,8 @@ export const useSession = defineStore('session', () => {
     await refreshAll()
     return true
   }
-  // Accesso con nome utente e password (o primo account con il codice di impostazione): il demone risponde con un gettone di sessione, che da qui in poi
-  // si usa come il token del file (stessa chiave nel browser, stesso Bearer: il contratto dei template non cambia).
+  // Login with username and password (or first account with the setup code): the daemon replies with a session token, which from here on
+  // is used like the file token (same key in the browser, same Bearer: the template contract does not change).
   async function loginUser(username: string, password: string): Promise<boolean> {
     busy.value = true; error.value = ''
     try { const r = await authLogin(username.trim(), password); busy.value = false; return await login(r.token) }
@@ -71,7 +71,7 @@ export const useSession = defineStore('session', () => {
     catch (e) { busy.value = false; error.value = errText(e); return false }
   }
   async function resume() { if (token.value && !ready.value) await login(token.value, true) }
-  // Riavvia il demone e aspetta che torni; poi ricarica la pagina. Ritorna '' se e' andato a buon fine, altrimenti il messaggio d'errore.
+  // Restart the daemon and wait for it to come back; then reload the page. Returns '' on success, otherwise the error message.
   async function restartDaemon(): Promise<string> {
     const a = getApi()
     try {

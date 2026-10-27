@@ -1,5 +1,5 @@
-// CString su UTF-8. API compatibile con MFC per le funzioni usate dal core.
-// Cresce a richiesta: aggiungere i metodi solo quando un file portato li usa.
+// CString on UTF-8. MFC-compatible API for the functions the core uses.
+// Grows on demand: add methods only when a ported file uses them.
 #pragma once
 #include "win_types.h"
 #include <string>
@@ -16,7 +16,7 @@ public:
 	CString(const char *p, int n) : s_(p, n) {}
 	CString(char c, int n = 1) : s_(n, c) {}
 	CString(const std::string &p) : s_(p) {}
-	// CStringW == CString: stringhe interne UTF-8 (Bench #554). Da UTF-16 si converte qui.
+	// CStringW == CString: internal strings are UTF-8 (Bench #554). UTF-16 is converted here.
 	CString(const WCHAR *w, int n = -1) { AppendUtf16(w, n); }
 	void AppendUtf16(const WCHAR *w, int n)
 	{
@@ -61,12 +61,12 @@ public:
 	int CompareNoCase(const char *p) const { return strcasecmp(s_.c_str(), p); }
 	CString Left(int n) const { return CString(s_.substr(0, std::max(0, n))); }
 	CString Right(int n) const { n = std::min<int>(std::max(0, n), GetLength()); return CString(s_.substr(s_.size() - n)); }
-	CString Mid(int i, int n = -1) const { if (i < 0) i = 0; if (i > GetLength()) i = GetLength(); return CString(n < 0 ? s_.substr(i) : s_.substr(i, n)); }		// come MFC: indici fuori limite si riportano ai limiti
+	CString Mid(int i, int n = -1) const { if (i < 0) i = 0; if (i > GetLength()) i = GetLength(); return CString(n < 0 ? s_.substr(i) : s_.substr(i, n)); }		// as in MFC: out-of-range indexes are clamped to the limits
 	CString &MakeLower() { for (auto &c : s_) c = (char)tolower((unsigned char)c); return *this; }
 	CString &MakeUpper() { for (auto &c : s_) c = (char)toupper((unsigned char)c); return *this; }
 	int Insert(int i, char ch) { if (i < 0) i = 0; if ((size_t)i > s_.size()) i = (int)s_.size(); s_.insert((size_t)i, 1, ch); return GetLength(); }
 	CString &Trim() { return TrimLeft().TrimRight(); }
-	// Trim con insieme di caratteri (MFC): toglie dai due lati ogni carattere compreso in pszTargets
+	// Trim with a character set (MFC): removes from both sides every character contained in pszTargets
 	CString &Trim(char c) { char t[2] = {c, 0}; return Trim(t); }
 	CString &TrimLeft(char c) { char t[2] = {c, 0}; return TrimLeft(t); }
 	CString &TrimRight(char c) { char t[2] = {c, 0}; return TrimRight(t); }
@@ -92,7 +92,7 @@ public:
 	int FindOneOf(const char *set) const { auto p = s_.find_first_of(set); return p == std::string::npos ? -1 : (int)p; }
 	int Replace(char from, char to) { int n = 0; for (auto &c : s_) if (c == from) { c = to; ++n; } return n; }
 	int Collate(const char *p) const { return strcoll(s_.c_str(), p); }
-	// Come CStringT::Tokenize: il primo token parte da iStart, iStart avanza oltre il separatore; a fine stringa vale -1.
+	// As CStringT::Tokenize: the first token starts at iStart, iStart advances past the separator; at end of string it is -1.
 	CString Tokenize(const char *delims, int &iStart) const
 	{
 		if (iStart < 0 || (size_t)iStart > s_.size()) { iStart = -1; return CString(); }
@@ -106,8 +106,8 @@ public:
 	int Insert(int i, const char *p) { s_.insert(i, p); return GetLength(); }
 	int Delete(int i, int n = 1) { s_.erase(i, n); return GetLength(); }
 
-	// Format stile MFC. Su Windows "long" ha 32 bit, su Linux 64: LONG/ULONG sono a 32 bit (win_types.h), quindi
-	// "%lu", "%ld", "%lX" perdono la 'l'. "%I64u" diventa "%llu". Nessun attributo format: la traduzione lo inganna.
+	// MFC-style Format. On Windows "long" is 32 bits, on Linux 64: LONG/ULONG are 32 bits (win_types.h), so
+	// "%lu", "%ld", "%lX" lose the 'l'. "%I64u" becomes "%llu". No format attribute: the translation would fool it.
 	void FormatV(const char *fmt, va_list ap)
 	{
 		std::string f;
@@ -118,8 +118,8 @@ public:
 			while (*p && strchr("-+ #0123456789.*", *p)) f += *p++;
 			if (p[0] == 'I' && p[1] == '6' && p[2] == '4') { f += "ll"; p += 3; }
 			else if (p[0] == 'l' && p[1] != 'l' && p[1] && strchr("diuxXo", p[1])) ++p;
-			else if ((p[0] == 'h' || p[0] == 'l') && p[1] == 's') ++p;		// %hs, %ls: stringhe UTF-8 come %s
-			else if (p[0] == 'S') { f += 's'; continue; }					// %S (stringa 'altra larghezza') = %s
+			else if ((p[0] == 'h' || p[0] == 'l') && p[1] == 's') ++p;		// %hs, %ls: UTF-8 strings like %s
+			else if (p[0] == 'S') { f += 's'; continue; }					// %S ('other width' string) = %s
 			if (!*p) break;
 			f += *p;
 		}
@@ -134,8 +134,8 @@ public:
 		va_list ap; va_start(ap, fmt); CString t; t.FormatV(fmt, ap); va_end(ap); s_ += t.s_;
 	}
 };
-// CPTR(s, i): in MFC una stringa vuota ha un buffer con qualche byte a zero, quindi &s[1] di una stringa vuota e' una stringa vuota. Con std::string oltre la fine si leggerebbe
-// memoria a caso (scriveva spazzatura in TempDirs= di preferences.ini con una sola cartella temporanea): oltre la lunghezza si ritorna il terminatore.
+// CPTR(s, i): in MFC an empty string has a buffer with a few zero bytes, so &s[1] of an empty string is an empty string. With std::string, past the end it would read
+// random memory (it wrote garbage into TempDirs= of preferences.ini with a single temp folder): past the length the terminator is returned.
 inline LPCTSTR emule_cptr(const CString &s, int i) { return (LPCTSTR)s + (i >= 0 && i < s.GetLength() ? i : s.GetLength()); }
 typedef CString CStringA;
 typedef CString CStringW;

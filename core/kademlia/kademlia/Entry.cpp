@@ -273,7 +273,7 @@ bool CKeyEntry::SearchTermsMatch(const SSearchTerm &rSearchTerm) const
 				}
 		}
 		return false;
-	// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+	// LINUX: the other values do nothing (listed so -Wswitch flags new values)
 	case SSearchTerm::OpEqual:
 	case SSearchTerm::OpGreater:
 	case SSearchTerm::OpGreaterEqual:
@@ -301,7 +301,7 @@ bool CKeyEntry::SearchTermsMatch(const SSearchTerm &rSearchTerm) const
 				return uValue == tInt;
 			case SSearchTerm::OpNotEqual:
 				return uValue != tInt;
-			// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+			// LINUX: the other values do nothing (listed so -Wswitch flags new values)
 			case SSearchTerm::AND:
 			case SSearchTerm::MetaTag:
 			case SSearchTerm::NOT:
@@ -617,7 +617,7 @@ void CKeyEntry::ReadPublishTrackingDataFromFile(CDataIO *pData, bool bIncludesAI
 	ASSERT(m_pliPublishingIPs == NULL);
 	m_pliPublishingIPs = new CList<structPublishingIP>();
 	uint32 nIPCount = pData->ReadUInt32();
-	[[maybe_unused]] time_t tDbgLastTime = 0;		// LINUX: serve solo agli ASSERT (spenti in produzione)
+	[[maybe_unused]] time_t tDbgLastTime = 0;		// LINUX: only needed by the ASSERTs (off in production)
 	for (uint32 i = 0; i < nIPCount; ++i) {
 		structPublishingIP sToAdd;
 		sToAdd.m_uIP = pData->ReadUInt32();

@@ -124,7 +124,7 @@ void CKnownFile::Dump(CDumpContext &dc) const
 }
 #endif
 
-// LINUX: DrawShareStatusBar (barra grafica di condivisione con GDI) non serve al daemon: la UI web disegna lo stato delle parti dai dati.
+// LINUX: DrawShareStatusBar (graphical share bar with GDI) is not needed by the daemon: the web UI draws the part status from the data.
 
 void CKnownFile::UpdateFileRatingCommentAvail(bool bForceUpdate)
 {
@@ -1225,9 +1225,9 @@ void CKnownFile::RemoveBrokenUnicodeMetaDataTags()
 	}
 }
 
-// LINUX: UpdateMetaDataTags legge i metadati dei file multimediali (artista, album, durata, bitrate, codec) con id3lib, RIFF, RealMedia e Windows Media:
-// serve alla pubblicazione su Kad e alla ricerca per tag. Non portato: task "Anteprima e MediaInfo" (Fase 8, task 607). Nel frattempo i file si pubblicano
-// senza questi tag (nome, dimensione, tipo): e' valido per il protocollo, solo meno ricco.
+// LINUX: UpdateMetaDataTags reads the metadata of multimedia files (artist, album, length, bitrate, codec) with id3lib, RIFF, RealMedia and Windows Media:
+// it is needed for publishing on Kad and for tag search. Not ported: task "Preview and MediaInfo" (Phase 8, task 607). Meanwhile files are published
+// without these tags (name, size, type): valid for the protocol, just less rich.
 void CKnownFile::UpdateMetaDataTags()
 {
 }
@@ -1280,7 +1280,7 @@ bool CKnownFile::IsMovie() const
 	return GetED2KFileTypeID(GetFileName()) == ED2KFT_VIDEO;
 }
 
-// LINUX: GrabImage/GrabbingFinished (miniature dal video con DirectShow) non portati: Fase 8, anteprima file.
+// LINUX: GrabImage/GrabbingFinished (video thumbnails with DirectShow) not ported: Phase 8, file preview.
 
 bool CKnownFile::ImportParts(const CString &pathName)
 {
@@ -1303,7 +1303,7 @@ bool CKnownFile::ImportParts(const CString &pathName)
 		return false;
 	}
 
-	if (pathName.IsEmpty() || !PathFileExists(pathName))	// LINUX: il file da cui importare lo sceglie l'interfaccia (nell'originale una finestra di dialogo)
+	if (pathName.IsEmpty() || !PathFileExists(pathName))	// LINUX: the file to import from is chosen by the interface (in the original a dialog box)
 		return false;
 
 	CAddFileThread *addfilethread = (CAddFileThread*)AfxBeginThread(RUNTIME_CLASS(CAddFileThread), THREAD_PRIORITY_LOWEST, 0, CREATE_SUSPENDED);

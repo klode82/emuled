@@ -43,8 +43,8 @@ namespace Kademlia
 	void KadTagStrMakeLower(Kademlia::CKadTagValueString &rwstr);
 	bool EqualKadTagStr(LPCTSTR dst, LPCTSTR src) noexcept;
 
-	// LINUX: nell'originale CKadTagNameString deriva da CStringA e CKadTagValueString da CStringW (stringhe ATL a 8 e 16 bit). Qui tutte le stringhe
-	// sono UTF-8: il nome resta un confronto binario (un nome puo' contenere byte >= 0xD0 che non vanno letti come multibyte), il valore e' testo UTF-8.
+	// LINUX: in the original CKadTagNameString derives from CStringA and CKadTagValueString from CStringW (8- and 16-bit ATL strings). Here all strings
+	// are UTF-8: the name stays a binary comparison (a name may contain bytes >= 0xD0 that must not be read as multibyte), the value is UTF-8 text.
 	class CKadTagNameString : public CStringA
 	{
 	public:
@@ -52,9 +52,9 @@ namespace Kademlia
 		explicit CKadTagNameString(LPCSTR psz) : CStringA(psz) {}
 		CKadTagNameString(LPCSTR psz, int len) : CStringA(psz, len) {}
 
-		// confronto binario (indipendente da codepage e lingua)
+		// binary comparison (independent of codepage and language)
 		int Compare(LPCSTR psz) const noexcept { return strcmp(GetString(), psz); }
-		// confronto senza maiuscole/minuscole solo ASCII (indipendente da codepage e lingua)
+		// ASCII-only case-insensitive comparison (independent of codepage and language)
 		int CompareNoCase(LPCSTR psz) const noexcept
 		{
 			const unsigned char *a = (const unsigned char*)GetString(), *b = (const unsigned char*)psz;
@@ -79,7 +79,7 @@ namespace Kademlia
 		CKadTagValueString(const char *psz) : CStringW(psz) {}		// LINUX: UTF-8
 		CKadTagValueString& operator=(const CStringW &s) { CStringW::operator=(s); return *this; }
 
-		// Collate/CollateNoCase/MakeUpper non vanno usate (vedi KadTagStrMakeLower): dipendono dalla lingua.
+		// Collate/CollateNoCase/MakeUpper must not be used (see KadTagStrMakeLower): they depend on the language.
 		CKadTagValueString& MakeLower() { KadTagStrMakeLower(*this); return *this; }
 	};
 

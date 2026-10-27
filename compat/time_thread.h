@@ -1,4 +1,4 @@
-// Tempo e thread MFC. Solo cio che usa il sorgente (censimento Bench #565-567).
+// MFC time and threads. Only what the source uses (Bench census #565-567).
 #pragma once
 #include <atomic>
 #include <chrono>
@@ -54,7 +54,7 @@ public:
 	int GetHour() const { struct tm t; localtime_r(&t_, &t); return t.tm_hour; }
 	int GetMinute() const { struct tm t; localtime_r(&t_, &t); return t.tm_min; }
 	int GetSecond() const { struct tm t; localtime_r(&t_, &t); return t.tm_sec; }
-	int GetDayOfWeek() const { struct tm t; localtime_r(&t_, &t); return t.tm_wday + 1; }	// MFC: 1 = domenica
+	int GetDayOfWeek() const { struct tm t; localtime_r(&t_, &t); return t.tm_wday + 1; }	// MFC: 1 = Sunday
 	CString Format(const char *fmt) const { struct tm t; localtime_r(&t_, &t); char b[256]; size_t n = strftime(b, sizeof b, fmt, &t); return CString(b, (int)n); }
 	CString FormatGmt(const char *fmt) const { struct tm t; gmtime_r(&t_, &t); char b[256]; size_t n = strftime(b, sizeof b, fmt, &t); return CString(b, (int)n); }
 	CTimeSpan operator-(const CTime &o) const { return CTimeSpan((long long)t_ - o.t_); }
@@ -68,14 +68,14 @@ public:
 	bool operator>=(const CTime &o) const { return t_ >= o.t_; }
 };
 
-// Evento di sincronizzazione (CEvent): manuale (bManualReset) o a reset automatico.
+// Synchronization event (CEvent): manual (bManualReset) or auto-reset.
 class CEvent
 {
 	std::mutex m_; std::condition_variable cv_; bool set_;
 	bool manual_;
 public:
 	explicit CEvent(bool initiallyOwn = false, bool manualReset = false, const char * = nullptr) : set_(initiallyOwn), manual_(manualReset) {}
-	// notify con il mutex preso: chi attende non puo' tornare e distruggere l'evento mentre la notifica e' ancora in corso
+	// notify with the mutex held: a waiter cannot return and destroy the event while the notification is still in progress
 	bool SetEvent() { std::lock_guard<std::mutex> l(m_); set_ = true; cv_.notify_all(); return true; }
 	bool ResetEvent() { std::lock_guard<std::mutex> l(m_); set_ = false; return true; }
 	bool PulseEvent() { SetEvent(); ResetEvent(); return true; }
@@ -88,13 +88,13 @@ public:
 		return true;
 	}
 	bool Unlock() { return true; }
-	operator HANDLE() const { return const_cast<CEvent*>(this); }			// il codice originale passa un CEvent dove serve un HANDLE
+	operator HANDLE() const { return const_cast<CEvent*>(this); }			// the original code passes a CEvent where a HANDLE is expected
 };
-// WaitForSingleObject vale solo per i CEvent (gli unici handle che il core attende)
+// WaitForSingleObject only works for CEvent (the only handles the core waits on)
 inline DWORD WaitForSingleObject(HANDLE h, DWORD ms) { return static_cast<CEvent*>(h)->Lock(ms) ? WAIT_OBJECT_0 : WAIT_TIMEOUT; }
 inline DWORD timeGetTime() { return GetTickCount(); }
 
-// Priorita' dei thread: i valori MFC si traducono in nice (solo per il thread corrente).
+// Thread priority: MFC values are translated to nice (current thread only).
 #define THREAD_PRIORITY_IDLE			(-15)
 #define THREAD_PRIORITY_LOWEST			(-2)
 #define THREAD_PRIORITY_BELOW_NORMAL	(-1)
@@ -124,7 +124,7 @@ inline bool CObject::IsKindOf(const CRuntimeClass *pClass) const
 			return true;
 	return false;
 }
-// La base puo' non essere un CObject (CAsyncSocketEx, CException...): allora la catena finisce li'.
+// The base may not be a CObject (CAsyncSocketEx, CException...): then the chain ends there.
 template<class B> inline const CRuntimeClass *RtcBase() { if constexpr (requires { B::RtcGet(); }) return B::RtcGet(); else return nullptr; }
 #define RUNTIME_CLASS(c)				(&c::class##c)
 #define DECLARE_DYNAMIC(c)				public: static const CRuntimeClass class##c; static const CRuntimeClass *RtcGet() { return &class##c; } virtual const CRuntimeClass *GetRuntimeClass() const;
@@ -134,11 +134,11 @@ template<class B> inline const CRuntimeClass *RtcBase() { if constexpr (requires
 
 typedef UINT (*AFX_THREADPROC)(LPVOID);
 
-// CWinThread: thread con InitInstance/Run/ExitInstance come in MFC. La procedura puo' essere una funzione o una sottoclasse.
+// CWinThread: thread with InitInstance/Run/ExitInstance as in MFC. The procedure can be a function or a subclass.
 class CWinThread : public CObject
 {
 public:
-	bool m_bAutoDelete = true;					// MFC: vero per predefinizione. Con CREATE_SUSPENDED si puo' mettere a false prima di ResumeThread()
+	bool m_bAutoDelete = true;					// MFC: true by default. With CREATE_SUSPENDED it can be set to false before ResumeThread()
 	DWORD m_nThreadID = 0;
 	int m_nPriority = 0;
 	CWinThread() = default;
@@ -149,15 +149,15 @@ public:
 	virtual int Run() { return proc_ ? (int)proc_(param_) : 0; }
 	bool CreateThread(DWORD flags = 0)
 	{
-		// Il corpo del thread parte solo quando th_ e' stato assegnato (suspended_ interno): altrimenti un thread che finisce
-		// subito e si autodistrugge toccherebbe th_ mentre il creatore lo sta ancora assegnando.
+		// The thread body starts only once th_ has been assigned (internal suspended_): otherwise a thread that finishes
+		// immediately and self-destroys would touch th_ while the creator is still assigning it.
 		{ std::lock_guard<std::mutex> l(m_); suspended_ = true; }
 		th_ = std::thread([this] { Body(); });
 		if (!(flags & CREATE_SUSPENDED)) ResumeThread();
 		return true;
 	}
-	DWORD ResumeThread() { std::lock_guard<std::mutex> l(m_); suspended_ = false; cv_.notify_all(); return 1; }	// notify col mutex preso: con m_bAutoDelete il thread puo' distruggere this subito dopo
-	bool SetThreadPriority(int p) { m_nPriority = p; if (running_) apply_(); return true; }	// effetto reale solo dall'interno del thread
+	DWORD ResumeThread() { std::lock_guard<std::mutex> l(m_); suspended_ = false; cv_.notify_all(); return 1; }	// notify with the mutex held: with m_bAutoDelete the thread may destroy this right after
+	bool SetThreadPriority(int p) { m_nPriority = p; if (running_) apply_(); return true; }	// real effect only from inside the thread
 	void Join() { if (th_.joinable() && th_.get_id() != std::this_thread::get_id()) th_.join(); else if (th_.joinable()) th_.detach(); }
 	bool IsRunning() const { return running_; }
 private:
@@ -169,7 +169,7 @@ private:
 		if (InitInstance()) exit_code_ = Run();
 		exit_code_ = ExitInstance();
 		running_ = false;
-		if (m_bAutoDelete) { th_.detach(); delete this; }		// come MFC: il thread con m_bAutoDelete si distrugge alla fine. Dopo questo punto nessun accesso a this
+		if (m_bAutoDelete) { th_.detach(); delete this; }		// as in MFC: a thread with m_bAutoDelete destroys itself at the end. No access to this after this point
 	}
 	AFX_THREADPROC proc_ = nullptr; LPVOID param_ = nullptr;
 	std::thread th_; std::mutex m_; std::condition_variable cv_;
@@ -179,7 +179,7 @@ private:
 
 inline CWinThread *AfxBeginThread(AFX_THREADPROC proc, LPVOID param, int priority = THREAD_PRIORITY_NORMAL, UINT = 0, DWORD flags = 0, void * = nullptr)
 {
-	// MFC: il thread si autodistrugge a fine corsa (m_bAutoDelete = true). Per attenderlo: CREATE_SUSPENDED, m_bAutoDelete = false, ResumeThread().
+	// MFC: the thread self-destroys when done (m_bAutoDelete = true). To wait for it: CREATE_SUSPENDED, m_bAutoDelete = false, ResumeThread().
 	CWinThread *t = new CWinThread(proc, param); t->m_nPriority = priority; t->CreateThread(flags); return t;
 }
 inline CWinThread *AfxBeginThread(const CRuntimeClass *rc, int priority = THREAD_PRIORITY_NORMAL, UINT = 0, DWORD flags = 0, void * = nullptr)

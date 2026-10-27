@@ -1,4 +1,4 @@
-// Descrizione delle preferenze dell'API (docs/APIDOC.md, sezione Preferenze): gruppo, tipo, limiti. Etichetta e spiegazione sono in i18n: prefs.items.<chiave>.label / .hint
+// Description of the API preferences (docs/APIDOC.md, Preferences section): group, type, limits. Label and explanation are in i18n: prefs.items.<key>.label / .hint
 export interface PrefMeta { key: string; group: string; type: 'bool' | 'int' | 'string'; optional?: boolean; min?: number; max?: number; unit?: string; restart?: boolean }
 
 export const PREF_GROUPS = ['general', 'connection', 'network', 'security', 'downloads', 'diagnostics'] as const

@@ -1,4 +1,4 @@
-// CArray, CList, CMap con l'API MFC usata dal core, su STL. POSITION come in MFC (iterazione con GetNext(pos)).
+// CArray, CList, CMap with the MFC API used by the core, on STL. POSITION as in MFC (iteration with GetNext(pos)).
 #pragma once
 #include "win_types.h"
 #include <vector>
@@ -12,7 +12,7 @@
 #define AFXAPI
 typedef struct __POSITION *POSITION;
 
-// std::vector<bool> e' una specializzazione che non da' riferimenti a bool: CArray<bool> usa un contenitore di singoli byte
+// std::vector<bool> is a specialization that gives no references to bool: CArray<bool> uses a container of single bytes
 struct BoolSlot { bool v; BoolSlot(bool x = false) : v(x) {} };
 
 template<class T, class ARG = const T&>
@@ -51,7 +51,7 @@ class CList
 {
 	struct Node { Node *prev, *next; T data; };
 	Node *head_ = nullptr, *tail_ = nullptr;
-	std::atomic<INT_PTR> n_{0};		// atomico: il numero di elementi e' letto (approssimato, come in eMule) anche da altri thread
+	std::atomic<INT_PTR> n_{0};		// atomic: the element count is read (approximately, as in eMule) also by other threads
 	static Node *N(POSITION p) { return reinterpret_cast<Node*>(p); }
 	static POSITION P(Node *n) { return reinterpret_cast<POSITION>(n); }
 public:
@@ -75,7 +75,7 @@ public:
 	const T &GetHead() const { return head_->data; }
 	const T &GetTail() const { return tail_->data; }
 	POSITION FindIndex(INT_PTR i) const { Node *n = head_; while (n && i-- > 0) n = n->next; return P(n); }
-	// ordinamento stabile con confronto "a < b"
+	// stable sort with "a < b" comparison
 	template<class Less> void Sort(Less less)
 	{
 		std::vector<T> v; for (Node *n = head_; n; n = n->next) v.push_back(n->data);
@@ -122,7 +122,7 @@ public:
 	}
 };
 
-// HashKey come in MFC: i tipi con chiave non banale la specializzano (es. CAICHHash).
+// HashKey as in MFC: types with a non-trivial key specialize it (e.g. CAICHHash).
 template<class ARG_KEY> inline UINT AFXAPI HashKey(ARG_KEY key) { return (UINT)(((UINT_PTR)key) >> 4); }
 
 template<class KEY, class ARG_KEY = const KEY&, class VALUE = int, class ARG_VALUE = const VALUE&>
@@ -150,7 +150,7 @@ public:
 	{
 		auto i = idx_.find(k);
 		if (i == idx_.end()) {
-			Entry *e = new Entry{{KEY(k), VALUE()}, tail_, nullptr};		// KEY(k): costruzione diretta, senza copia (CCKey ha il costruttore di copia "explicit")
+			Entry *e = new Entry{{KEY(k), VALUE()}, tail_, nullptr};		// KEY(k): direct construction, no copy (CCKey has an "explicit" copy constructor)
 			(tail_ ? tail_->next : head_) = e; tail_ = e; i = idx_.emplace(k, e).first;
 		}
 		return i->second->pair.value;
@@ -167,7 +167,7 @@ public:
 	}
 	void RemoveAll() { for (Entry *e = head_, *n; e; e = n) { n = e->next; delete e; } head_ = tail_ = nullptr; idx_.clear(); }
 	void InitHashTable(UINT n, bool = true) { idx_.reserve(n); }
-	// Iterazione per puntatore alla coppia (la coppia e' il primo membro di Entry).
+	// Iteration by pointer to the pair (the pair is the first member of Entry).
 	const CPair *PGetFirstAssoc() const { return head_ ? &head_->pair : nullptr; }
 	CPair *PGetFirstAssoc() { return head_ ? &head_->pair : nullptr; }
 	const CPair *PGetNextAssoc(const CPair *p) const { const Entry *e = reinterpret_cast<const Entry*>(p); return e->next ? &e->next->pair : nullptr; }
@@ -176,7 +176,7 @@ public:
 	void GetNextAssoc(POSITION &p, KEY &k, VALUE &v) const { Entry *e = E(p); k = e->pair.key; v = e->pair.value; p = reinterpret_cast<POSITION>(e->next); }
 };
 
-// ---- varianti MFC "tipizzate" e per puntatori (stessa semantica, sopra CList/CArray/CMap) ----
+// ---- "typed" MFC variants and pointer variants (same semantics, on top of CList/CArray/CMap) ----
 class CPtrList : public CList<void*, void*> {};
 class CObList : public CList<void*, void*> {};
 template<class BASE, class TYPE> class CTypedPtrList : public CList<TYPE, TYPE> {};
@@ -187,7 +187,7 @@ typedef CArray<UINT, UINT> CUIntArray;
 typedef CArray<DWORD, DWORD> CDWordArray;
 typedef CArray<WORD, WORD> CWordArray;
 
-// CSimpleArray (ATL): vettore semplice con l'interfaccia di ATL (GetSize, Add, Remove, Find, RemoveAt, operator[])
+// CSimpleArray (ATL): simple vector with the ATL interface (GetSize, Add, Remove, Find, RemoveAt, operator[])
 template<class T>
 class CSimpleArray
 {

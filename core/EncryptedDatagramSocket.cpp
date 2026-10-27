@@ -147,8 +147,8 @@ struct Crypt_Header_Struct
 
 static CryptoPP::AutoSeededRandomPool cryptRandomGen;
 
-// LINUX: i pacchetti UDP che non sono eMule (ne' Kad) sulla nostra porta, di solito altri programmi che la sondano (STUN, QUIC/HTTP3, torrent...), non si loggano uno per uno:
-// il primo di ogni indirizzo si scrive subito con la spiegazione, poi al massimo un riepilogo al minuto. g_udpJunk dice a ClientUDPSocket di non ripetere "Unknown protocol".
+// LINUX: UDP packets that are neither eMule nor Kad on our port, usually other programs probing it (STUN, QUIC/HTTP3, torrent...), are not logged one by one:
+// the first one per address is written at once with an explanation, then at most one summary per minute. g_udpJunk tells ClientUDPSocket not to repeat "Unknown protocol".
 static bool g_udpJunk = false;
 bool CEncryptedDatagramSocket::TakeUdpJunk() { const bool j = g_udpJunk; g_udpJunk = false; return j; }
 static void NoteUdpJunk(uint32 dwIP, const BYTE *p, int n)
@@ -157,17 +157,17 @@ static void NoteUdpJunk(uint32 dwIP, const BYTE *p, int n)
 	static std::map<uint32, Seen> seen;
 	g_udpJunk = true;
 	if (seen.size() > 512) seen.clear();
-	const char *kind = "non riconosciuto";
+	const char *kind = "unrecognized";
 	if (n >= 20 && p[4] == 0x21 && p[5] == 0x12 && p[6] == 0xA4 && p[7] == 0x42) kind = "STUN";
 	else if (n >= 5 && (p[0] & 0xC0) == 0xC0 && !p[1] && !p[2] && !p[3] && p[4] == 1) kind = "QUIC (HTTP/3)";
 	Seen &e = seen[dwIP]; ++e.count; ++e.unreported;
 	const time_t now = time(nullptr);
 	if (e.count == 1) {
 		char hex[40] = ""; for (int i = 0; i < n && i < 12; ++i) snprintf(hex + strlen(hex), 4, "%02X ", p[i]);
-		DebugLogWarning(_T("Pacchetto UDP che non e' eMule ne' Kad da %s (%d byte, tipo: %s, inizio: %s): non si puo' decifrare, di solito e' un altro programma che sonda la nostra porta UDP. Gli altri da questo indirizzo si contano e si riassumono al massimo una volta al minuto."), (LPCTSTR)ipstr(dwIP), n, kind, hex);
+		DebugLogWarning(_T("UDP packet that is neither eMule nor Kad from %s (%d bytes, type: %s, start: %s): cannot be decrypted, usually another program probing our UDP port. Others from this address are counted and summarized at most once a minute."), (LPCTSTR)ipstr(dwIP), n, kind, hex);
 		e.last = now; e.unreported = 0;
 	} else if (now - e.last >= 60) {
-		DebugLogWarning(_T("Pacchetti UDP non eMule da %s: %u nell'ultimo minuto (%u in tutto; ultimo di tipo %s)"), (LPCTSTR)ipstr(dwIP), e.unreported, e.count, kind);
+		DebugLogWarning(_T("Non-eMule UDP packets from %s: %u in the last minute (%u in total; last of type %s)"), (LPCTSTR)ipstr(dwIP), e.unreported, e.count, kind);
 		e.last = now; e.unreported = 0;
 	}
 }

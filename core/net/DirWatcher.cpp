@@ -37,7 +37,7 @@ void DirWatcher::OnIo(uint32_t)
 	alignas(inotify_event) char buf[4096]; bool any = false; ssize_t n;
 	while ((n = ::read(fd_, buf, sizeof buf)) > 0)
 		for (char *p = buf; p < buf + n; p += sizeof(inotify_event) + reinterpret_cast<inotify_event *>(p)->len)
-			if (!(reinterpret_cast<inotify_event *>(p)->mask & IN_IGNORED)) any = true;		// IN_IGNORED = una cartella tolta da noi con Set(): non e' un cambiamento
+			if (!(reinterpret_cast<inotify_event *>(p)->mask & IN_IGNORED)) any = true;		// IN_IGNORED = a folder removed by us with Set(): not a change
 	if (!any) return;
 	if (timer_) loop_.CancelTimer(timer_);
 	timer_ = loop_.AddTimer(quiet_ms_, [this] { timer_ = 0; onChange_(); });

@@ -1,4 +1,4 @@
-// DirWatcher: un file nuovo, uno tolto o uno spostato dentro fanno scattare onChange UNA volta dopo la quiete; il resto no.
+// DirWatcher: a new file, a removed one or one moved in trigger onChange ONCE after quiet; nothing else does.
 #include "net/DirWatcher.h"
 #include <chrono>
 #include <cstdio>
@@ -20,13 +20,13 @@ int main()
 	int fired = 0;
 	{
 		DirWatcher w(loop, [&] { ++fired; }, 300);
-		CHECK(w.Set({(base / "a").string(), (base / "b").string(), (base / "manca").string()}) == 2);		// la cartella assente si salta
-		Spin(loop, 0.5); CHECK(fired == 0);												// niente cambia, niente scatta
-		for (int i = 0; i < 5; ++i) { std::ofstream(base / "a" / ("f" + std::to_string(i))) << "x"; Spin(loop, 0.05); }		// molti eventi ravvicinati...
-		CHECK(fired == 0); Spin(loop, 0.6); CHECK(fired == 1);							// ...un solo ricontrollo, dopo la quiete
-		fs::remove(base / "a" / "f0"); Spin(loop, 0.6); CHECK(fired == 2);				// file tolto
-		fs::rename(base / "a" / "f1", base / "b" / "f1"); Spin(loop, 0.6); CHECK(fired == 3);	// spostato fra due cartelle guardate (due eventi, uno scatto)
-		CHECK(w.Set({(base / "b").string()}) == 1);										// si cambia elenco: la "a" non si guarda piu'
+		CHECK(w.Set({(base / "a").string(), (base / "b").string(), (base / "manca").string()}) == 2);		// the missing folder is skipped
+		Spin(loop, 0.5); CHECK(fired == 0);												// nothing changes, nothing triggers
+		for (int i = 0; i < 5; ++i) { std::ofstream(base / "a" / ("f" + std::to_string(i))) << "x"; Spin(loop, 0.05); }		// many close events...
+		CHECK(fired == 0); Spin(loop, 0.6); CHECK(fired == 1);							// ...a single recheck, after quiet
+		fs::remove(base / "a" / "f0"); Spin(loop, 0.6); CHECK(fired == 2);				// removed file
+		fs::rename(base / "a" / "f1", base / "b" / "f1"); Spin(loop, 0.6); CHECK(fired == 3);	// moved between two watched folders (two events, one trigger)
+		CHECK(w.Set({(base / "b").string()}) == 1);										// the list changes: "a" is no longer watched
 		fs::remove(base / "a" / "f2"); Spin(loop, 0.6); CHECK(fired == 3);
 		std::ofstream(base / "b" / "g") << "y"; Spin(loop, 0.6); CHECK(fired == 4);
 	}

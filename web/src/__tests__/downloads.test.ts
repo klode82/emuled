@@ -16,15 +16,15 @@ describe('downloads store', () => {
     s.apply({ type: 'download.updated', data: d({ name: 'a', percent: 50 }) }); expect(s.items['Ha'].percent).toBe(50)
     s.detail = 'Ha'; s.selected.add('Ha')
     s.apply({ type: 'download.removed', data: { hash: 'Ha', name: 'a' } })
-    expect(s.all).toHaveLength(1); expect(s.detail).toBeNull(); expect(s.selected.size).toBe(0)   // selezione e dettaglio non restano su un file sparito
+    expect(s.all).toHaveLength(1); expect(s.detail).toBeNull(); expect(s.selected.size).toBe(0)   // selection and detail do not stay on a vanished file
   })
   it('filtri, conteggi, ricerca per nome e ordinamento', () => {
     const s = useDownloads()
     for (const x of [d({ name: 'Zeta', speed: 5, sources: 2 }), d({ name: 'alfa', status: 'paused' }), d({ name: 'Beta', status: 'complete', percent: 100 }), d({ name: 'gamma' })]) s.apply({ type: 'download.added', data: x })
     expect(s.counts).toMatchObject({ all: 4, active: 1, waiting: 1, paused: 1, done: 1 })
     s.filter = 'paused'; expect(s.list.map((x) => x.name)).toEqual(['alfa'])
-    s.filter = 'all'; expect(s.list.map((x) => x.name)).toEqual(['alfa', 'Beta', 'gamma', 'Zeta'])   // senza distinguere maiuscole
-    s.setSort('name'); expect(s.list[0].name).toBe('Zeta')                                            // secondo clic: ordine inverso
+    s.filter = 'all'; expect(s.list.map((x) => x.name)).toEqual(['alfa', 'Beta', 'gamma', 'Zeta'])   // case-insensitive
+    s.setSort('name'); expect(s.list[0].name).toBe('Zeta')                                            // second click: reverse order
     s.query = 'ET'; expect(s.list.map((x) => x.name).sort()).toEqual(['Beta', 'Zeta'])
     s.query = ''; s.category = 3; expect(s.list).toHaveLength(0)
   })

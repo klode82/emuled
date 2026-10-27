@@ -1,5 +1,5 @@
-// Valida in SOLA LETTURA i file di un profilo eMule reale. Uso: test_met_real CARTELLA_CONFIG [CARTELLA_TEMP [CARTELLA_BACKUP]]
-// Non scrive nulla. Se la cartella non esiste il test e' saltato (exit 0).
+// Validates in READ-ONLY mode the files of a real eMule profile. Usage: test_met_real CONFIG_FOLDER [TEMP_FOLDER [BACKUP_FOLDER]]
+// Writes nothing. If the folder does not exist the test is skipped (exit 0).
 #include "StdAfx.h"
 #include "met/MetFormat.h"
 #include <filesystem>

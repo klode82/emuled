@@ -1,4 +1,4 @@
-// LINUX (codice nuovo): vedi KadProbe.h
+// LINUX (new code): see KadProbe.h
 #include "StdAfx.h"
 #include "DownloadQueue.h"
 #include "ClientList.h"
@@ -50,17 +50,17 @@ KadProbeResult ProbeKad(const KadProbeOptions &opt)
 
 	{
 		EventLoop loop; ScopedLoop sl(loop);
-		ScopedProfile profile;							// cartella temporanea: config/, Temp/, Incoming/ (si toglie alla fine)
+		ScopedProfile profile;							// temporary folder: config/, Temp/, Incoming/ (removed at the end)
 		const std::string dir = profile.config();
-		if (!opt.nodes_dat.empty() && !fs::copy_file(opt.nodes_dat, dir + "nodes.dat", ec)) { res.error = "nodes.dat non copiabile: " + ec.message(); return res; }
-		theApp.uploadqueue->CancelTimer();				// la sonda non fa girare le code: le sorgenti si raccolgono soltanto, nessun client si connette
+		if (!opt.nodes_dat.empty() && !fs::copy_file(opt.nodes_dat, dir + "nodes.dat", ec)) { res.error = "cannot copy nodes.dat: " + ec.message(); return res; }
+		theApp.uploadqueue->CancelTimer();				// the probe does not run the queues: sources are only collected, no client connects
 		UploadBandwidthThrottler *oldThr = theApp.uploadBandwidthThrottler;
 		UploadBandwidthThrottler thr; theApp.uploadBandwidthThrottler = &thr;
 		{
 			CClientUDPSocket udp;
 			CClientUDPSocket *oldUdpSock = theApp.clientudp;
 			theApp.clientudp = &udp;
-			if (!udp.Create()) res.error = "socket UDP non creato (porta " + std::to_string(res.udp_port) + " occupata?)";
+			if (!udp.Create()) res.error = "UDP socket not created (port " + std::to_string(res.udp_port) + " in use?)";
 			else {
 				Kademlia::CKademlia::SetConfigDir(dir.c_str());
 				Kademlia::CKademlia::Start(new Kademlia::CPrefs((dir + "preferencesKad.dat").c_str()));
@@ -77,8 +77,8 @@ KadProbeResult ProbeKad(const KadProbeOptions &opt)
 				while (NowMs() - t0 < opt.seconds * 1000.0) {
 					loop.RunOnce(50);
 					if (wantSources && !searchStarted && Kademlia::CKademlia::IsConnected()) {
-						// come PartFile.cpp (riga 2325): ricerca di tipo FILE sull'hash del file
-						// il file e' un vero CPartFile creato da un link ed2k (in Temp/ del profilo temporaneo): Kad vi consegna le sorgenti come nel download
+						// like PartFile.cpp (line 2325): FILE-type search on the file hash
+						// the file is a real CPartFile created from an ed2k link (in Temp/ of the temporary profile): Kad hands it the sources as in a download
 						CString lnk; lnk.Format(_T("ed2k://|file|probe.bin|%llu|%s|/"), (unsigned long long)opt.source_size, (LPCTSTR)CString(opt.source_hash.c_str()).MakeUpper());
 						std::unique_ptr<CED2KLink> pLink(CED2KLink::CreateLinkFromUrl(lnk));
 						if (pLink && pLink->GetKind() == CED2KLink::kFile) theApp.downloadqueue->AddFileLinkToDownload(*pLink->GetFileLink());
@@ -88,7 +88,7 @@ KadProbeResult ProbeKad(const KadProbeOptions &opt)
 						if (s) { searchId = s->GetSearchID(); probeFile->SetKadFileSearchID(searchId); } else searchDone = true;
 					}
 					if (!opt.search.empty() && !kwStarted && Kademlia::CKademlia::IsConnected()) {
-						// come CSearchResultsWnd::DoNewKadSearch: parola chiave = primo termine, albero di ricerca = GetSearchPacket, poi PrepareFindKeywords
+						// like CSearchResultsWnd::DoNewKadSearch: keyword = first term, search tree = GetSearchPacket, then PrepareFindKeywords
 						SSearchParams sp; sp.eType = SearchTypeKademlia; sp.strExpression = opt.search.c_str(); sp.strExtension = opt.ext.c_str(); sp.strFileType = opt.file_type.c_str();
 						sp.ullMinSize = opt.min_size; sp.ullMaxSize = opt.max_size; sp.uAvailability = opt.min_sources; sp.uComplete = opt.min_complete;
 						int iPos = 0; sp.strKeyword = sp.strExpression.Tokenize(_T(" "), iPos);
@@ -97,22 +97,22 @@ KadProbeResult ProbeKad(const KadProbeOptions &opt)
 						kwStarted = true;
 						try {
 							CSafeMemFile data(100);
-							if (!GetSearchPacket(data, &sp, true, nullptr)) throw SearchParseError("espressione vuota");
-							if (sp.strKeyword.IsEmpty() || sp.strKeyword.FindOneOf(g_szInvKadKeywordChars) >= 0) throw SearchParseError("parola chiave Kad non valida (caratteri vietati o vuota)");
+							if (!GetSearchPacket(data, &sp, true, nullptr)) throw SearchParseError("empty expression");
+							if (sp.strKeyword.IsEmpty() || sp.strKeyword.FindOneOf(g_szInvKadKeywordChars) >= 0) throw SearchParseError("invalid Kad keyword (forbidden characters or empty)");
 							UINT n = (UINT)data.GetLength(); LPBYTE buf = nullptr;
 							if (n) { buf = new BYTE[n]; data.SeekToBegin(); data.Read(buf, n); }
 							Kademlia::CSearch *s = Kademlia::CSearchManager::PrepareFindKeywords((LPCTSTR)sp.strKeyword, n, buf);
 							delete[] buf;
 							res.keyword = (LPCTSTR)sp.strKeyword; res.keyword_search_started = s != nullptr; res.keyword_search_after_s = (int)((NowMs() - t0) / 1000);
 							if (s) kwId = s->GetSearchID(); else kwDone = true;
-						} catch (const SearchParseError &e) { res.error = std::string("ricerca non valida: ") + e.what(); break; }
-						catch (const CString &e) { res.error = std::string("ricerca Kad rifiutata: ") + (LPCTSTR)e; break; }
+						} catch (const SearchParseError &e) { res.error = std::string("invalid search: ") + e.what(); break; }
+						catch (const CString &e) { res.error = std::string("Kad search rejected: ") + (LPCTSTR)e; break; }
 					}
 					if (kwStarted && !kwDone && kwId && !Kademlia::CSearchManager::IsSearching(kwId)) { kwDone = true; kwEnd = NowMs() + 3000; }
 					if (kwDone && kwEnd && NowMs() >= kwEnd && !wantSources) break;
-					if (searchStarted && !searchDone && !Kademlia::CSearchManager::IsSearching(searchId)) { searchDone = true; searchEnd = NowMs() + 3000; }	// ricerca finita: ancora 3 s per i pacchetti in volo
+					if (searchStarted && !searchDone && !Kademlia::CSearchManager::IsSearching(searchId)) { searchDone = true; searchEnd = NowMs() + 3000; }	// search finished: 3 more seconds for packets in flight
 					if (searchDone && searchEnd && NowMs() >= searchEnd) break;
-					if (NowMs() >= nextTick) { Kademlia::CKademlia::Process(); nextTick += 1000; }		// l'originale chiama Process() una volta al secondo
+					if (NowMs() >= nextTick) { Kademlia::CKademlia::Process(); nextTick += 1000; }		// the original calls Process() once per second
 				}
 				res.seconds_run = (int)((NowMs() - t0) / 1000);
 				if (Kademlia::CKademlia::GetRoutingZone()) res.contacts_after = Kademlia::CKademlia::GetRoutingZone()->GetNumContacts();

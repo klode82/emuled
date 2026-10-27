@@ -1,98 +1,98 @@
-# APIDOC — il manuale delle chiamate dell'API di `emuled`
+# APIDOC — the manual of the `emuled` API calls
 
-Questo manuale spiega, in modo semplice, ogni chiamata dell'API del demone. La descrizione formale, leggibile dalle macchine (OpenAPI 3.0.3), è in [`openapi.json`](openapi.json) e il demone la serve anche a `/api/v1/openapi.json`. Le due cose sono tenute allineate da un test (`ctest`, prova `daemon_api`): ogni percorso dichiarato nella descrizione deve esistere davvero nel demone.
+This manual explains, in simple terms, every call of the daemon's API. The formal, machine-readable description (OpenAPI 3.0.3) is in [`openapi.json`](openapi.json) and the daemon also serves it at `/api/v1/openapi.json`. The two are kept aligned by a test (`ctest`, test `daemon_api`): every path declared in the description must really exist in the daemon.
 
-Le sigle e i termini di eMule sono spiegati nel [MANUAL](MANUAL.md); qui sono ripetuti solo quelli che servono a capire un campo.
+The eMule acronyms and terms are explained in the [MANUAL](MANUAL.md); only the ones needed to understand a field are repeated here.
 
-## 1. Come si parla con il demone
+## 1. How to talk to the daemon
 
-**Avvio.** Il demone è `emuled --run` (vedi MANUAL, B5). L'API è dentro lo stesso processo e parte da sola:
+**Start.** The daemon is `emuled --run` (see MANUAL, B5). The API lives inside the same process and starts by itself:
 
 ```
 emuled --run --profile /percorso/eMule/config --api-port 8765
 ```
 
-- **Dove ascolta.** Solo su `127.0.0.1` (la macchina stessa), porta `8765` (si cambia con `--api-port`). L'indirizzo si cambia con `--api-bind`, ma aprirlo ad altri computer è una scelta tua: l'API non cifra niente (se serve l'accesso da fuori, metti davanti un proxy con TLS).
-- **Senza API:** `--no-api`.
-- **Interfaccia web.** Con `--web-dir CARTELLA` il demone serve gli stessi file della web UI sulla stessa porta (`http://127.0.0.1:8765/`), così la web UI usa l'API senza altre impostazioni.
+- **Where it listens.** Only on `127.0.0.1` (the machine itself), port `8765` (change it with `--api-port`). The address is changed with `--api-bind`, but opening it to other computers is your own choice: the API encrypts nothing (if you need access from outside, put a proxy with TLS in front of it).
+- **Without API:** `--no-api`.
+- **Web interface.** With `--web-dir FOLDER` the daemon serves the same files as the web UI on the same port (`http://127.0.0.1:8765/`), so the web UI uses the API without other settings.
 
-**Chi entra.** L'interfaccia web usa un **account** (nome utente e password, vedi la sezione 2 «Account»): `POST /api/v1/auth/login` risponde con un gettone di sessione. Gli script e gli strumenti possono usare invece il **token del file** descritto qui sotto. Le due cose valgono allo stesso modo come Bearer.
+**Who gets in.** The web interface uses an **account** (user name and password, see section 2 "Account"): `POST /api/v1/auth/login` answers with a session token. Scripts and tools can use instead the **file token** described below. The two are equally valid as Bearer.
 
-**Il token.** Ogni chiamata (tranne `ping`, `openapi.json` e le tre di `auth/`) deve avere l'intestazione `Authorization: Bearer TOKEN`. Il token sta in `emuled.token` nella cartella di configurazione del profilo (lo crea il demone al primo avvio, 64 caratteri esadecimali, leggibile solo dal proprietario del file). Lo si può scegliere con `--api-token`. Il WebSocket dei browser, che non può mettere intestazioni, accetta anche `?token=TOKEN` nell'indirizzo.
+**The token.** Every call (except `ping`, `openapi.json` and the three under `auth/`) must have the header `Authorization: Bearer TOKEN`. The token is in `emuled.token` in the profile's configuration folder (the daemon creates it at first start, 64 hexadecimal characters, readable only by the file's owner). You can choose it with `--api-token`. The browsers' WebSocket, which cannot set headers, also accepts `?token=TOKEN` in the address.
 
 ```
 TOKEN=$(cat /percorso/eMule/config/emuled.token)
 curl -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8765/api/v1/status
 ```
 
-**Risposte.** Sono sempre JSON, in UTF-8. Un errore ha la forma `{"error": "spiegazione in italiano", "code": "codice_stabile"}`: `error` è per chi legge, **`code` non cambia** con la lingua né con le parole e serve ai programmi (l'interfaccia lo traduce). Lo stato HTTP è uno di questi:
+**Answers.** They are always JSON, in UTF-8. An error has the form `{"error": "explanation in English", "code": "stable_code"}`: `error` is for people reading, **`code` does not change** with the language or with the wording and is meant for programs (the interface translates it). The HTTP status is one of these:
 
-| Codice | Quando |
+| Code | When |
 |---|---|
-| 400 | corpo non è un oggetto JSON; hash non valido |
-| 401 | token mancante o errato |
-| 404 | percorso inesistente; download o server non trovato |
-| 405 | metodo non consentito per quel percorso (per esempio `DELETE` su `/status`) |
-| 409 | il file è già in download |
-| 413 | corpo oltre 1 MB |
-| 422 | dati validi come JSON ma sbagliati (link, hash, dimensione, indirizzo) |
+| 400 | body is not a JSON object; invalid hash |
+| 401 | token missing or wrong |
+| 404 | path does not exist; download or server not found |
+| 405 | method not allowed for that path (for example `DELETE` on `/status`) |
+| 409 | the file is already downloading |
+| 413 | body over 1 MB |
+| 422 | data valid as JSON but wrong (link, hash, size, address) |
 
-**Codici `code`.** Generici, dallo stato: `bad_request`, `unauthorized`, `forbidden`, `not_found`, `method_not_allowed`, `conflict`, `body_too_large`, `invalid`, `internal`. Specifici: `bad_json`, `bad_hash`, `bad_link`, `bad_address`, `bad_param`, `bad_priority`, `bad_category`, `bad_scope`, `bad_search`, `bad_directories`, `unknown_pref`, `unknown_field`, `url_not_http`, `route_not_found`, `download_not_found`, `server_not_found`, `category_not_found`, `search_not_found`, `file_not_found`, `not_shared`, `already_downloading`, `server_exists`, `server_refused`, `category_zero`, `job_running`, `search_not_started`, `not_added`, `ed2k_not_connected`, `kad_not_connected`, `kad_off`, `kad_unavailable`, `kad_already_connected`, `no_network`, `no_web_ui`, `forbidden_path`, `headers_too_long`, `loop_unavailable`.
+**`code` values.** Generic, from the status: `bad_request`, `unauthorized`, `forbidden`, `not_found`, `method_not_allowed`, `conflict`, `body_too_large`, `invalid`, `internal`. Specific: `bad_json`, `bad_hash`, `bad_link`, `bad_address`, `bad_param`, `bad_priority`, `bad_category`, `bad_scope`, `bad_search`, `bad_directories`, `unknown_pref`, `unknown_field`, `url_not_http`, `route_not_found`, `download_not_found`, `server_not_found`, `category_not_found`, `search_not_found`, `file_not_found`, `not_shared`, `already_downloading`, `server_exists`, `server_refused`, `category_zero`, `job_running`, `search_not_started`, `not_added`, `ed2k_not_connected`, `kad_not_connected`, `kad_off`, `kad_unavailable`, `kad_already_connected`, `no_network`, `no_web_ui`, `forbidden_path`, `headers_too_long`, `loop_unavailable`.
 
-**Limiti di sicurezza.** Intestazioni fino a 16 KB, corpo fino a 1 MB, 64 connessioni insieme, connessioni inattive chiuse dopo 60 secondi. Dai percorsi dei file statici non si può uscire dalla cartella della web UI (`..` e `%2e%2e` sono rifiutati).
+**Safety limits.** Headers up to 16 KB, body up to 1 MB, 64 connections at once, idle connections closed after 60 seconds. The static file paths cannot leave the web UI folder (`..` and `%2e%2e` are rejected).
 
-### Gli altri indirizzi del demone (fuori da `/api/`)
+### The daemon's other addresses (outside `/api/`)
 
-Il demone serve anche le pagine dell'interfaccia, **senza token**: `/t/<id>/…` è la cartella del template `<id>` (con la sua pagina d'ingresso anche per i percorsi senza estensione, come nelle applicazioni a pagina singola; `/t/<id>` senza barra finale rimanda a `/t/<id>/`; i percorsi che escono dalla cartella, anche tramite collegamenti simbolici, danno **403**; un template che non c'è o non è valido dà una pagina d'aiuto con **404**; un file oltre **32 MB** dà **413**). Le pagine dei template hanno le intestazioni `Content-Security-Policy` (richieste, script, stili, font e immagini solo verso lo stesso indirizzo), `Referrer-Policy: no-referrer` e `X-Frame-Options: DENY`. `/` è una paginetta che legge dal browser la scelta salvata (`localStorage`, chiave `emuled.template`; senza scelta `console`) e porta a `/t/<id>/`, conservando la parte dopo `#`. `/?template=<id>` imposta la scelta (anche per condividerla) e `/?template=console` è l'**indirizzo di emergenza** che riporta al template predefinito anche se quello scelto è rotto. Se il demone è avviato con `web_dir`, `/` serve quella cartella come prima (un'interfaccia sola). I template si cercano in `/usr/share/emuled/templates/`, `~/.emuled/templates/` e nella cartella extra (`--templates-dir`).
+The daemon also serves the interface pages, **without a token**: `/t/<id>/…` is the folder of the template `<id>` (with its entry page also for paths without an extension, as in single-page applications; `/t/<id>` without the trailing slash redirects to `/t/<id>/`; paths that leave the folder, even through symbolic links, give **403**; a template that does not exist or is not valid gives a help page with **404**; a file over **32 MB** gives **413**). The template pages have the headers `Content-Security-Policy` (requests, scripts, styles, fonts and images only towards the same address), `Referrer-Policy: no-referrer` and `X-Frame-Options: DENY`. `/` is a small page that reads the saved choice from the browser (`localStorage`, key `emuled.template`; with no choice, `console`) and leads to `/t/<id>/`, keeping the part after `#`. `/?template=<id>` sets the choice (also to share it) and `/?template=console` is the **emergency address** that brings you back to the default template even if the chosen one is broken. If the daemon is started with `web_dir`, `/` serves that folder as before (a single interface). Templates are searched in `/usr/share/emuled/templates/`, `~/.emuled/templates/` and in the extra folder (`--templates-dir`).
 
-## 2. Stato
+## 2. Status
 
-### `GET /api/v1/ping` — il demone è acceso? *(senza token)*
+### `GET /api/v1/ping` — is the daemon on? *(no token)*
 
 ```
 {"pong": true}
 ```
 
-### `GET /api/v1/openapi.json` — la descrizione formale *(senza token)*
+### `GET /api/v1/openapi.json` — the formal description *(no token)*
 
-### Account — `GET /api/v1/auth/status`, `POST /api/v1/auth/setup`, `POST /api/v1/auth/login` *(senza token)*
+### Account — `GET /api/v1/auth/status`, `POST /api/v1/auth/setup`, `POST /api/v1/auth/login` *(no token)*
 
-L'interfaccia web si usa con nome utente e password. L'account sta nel file `emuled.users` della cartella del profilo (permessi `0600`): nome, un **sale** casuale, l'hash PBKDF2-HMAC-SHA256 della password (200000 giri) e un segreto che firma le sessioni. La password non si può recuperare, solo reimpostare dal terminale con `emuled --reset-user` (cambia anche il segreto: le sessioni già aperte decadono; funziona anche a demone acceso).
+The web interface is used with a user name and password. The account is in the file `emuled.users` in the profile folder (permissions `0600`): name, a random **salt**, the PBKDF2-HMAC-SHA256 hash of the password (200000 rounds) and a secret that signs the sessions. The password cannot be recovered, only reset from the terminal with `emuled --reset-user` (this also changes the secret: sessions already open expire; it also works while the daemon is running).
 
-- `GET /api/v1/auth/status` → `{"configured": true|false, "setup_required": true|false}`. Dice all'interfaccia se mostrare l'accesso o il primo avvio.
-- `POST /api/v1/auth/setup` `{"setup_code": "...", "username": "mario", "password": "almeno-8-caratteri"}` crea il **primo** account e risponde `201` con `{"token": "s1.…", "username": "mario", "expires_in": 2592000}`. Il **codice di impostazione** è il token del file `emuled.token`: il demone lo stampa all'avvio finché non c'è un account, così chi raggiunge la porta senza averlo non può prendersi l'interfaccia. Errori: `403 bad_setup_code`, `400 bad_username`/`bad_password`, `409 account_exists` (esiste già un account).
-- `POST /api/v1/auth/login` `{"username": "...", "password": "..."}` → `200` con lo stesso gettone (valido 30 giorni). Errori: `401 bad_credentials` (il demone non dice se è sbagliato il nome o la password), `429 too_many_attempts` con `Retry-After: 60`: cinque tentativi sbagliati da uno stesso indirizzo bloccano quell'indirizzo per un minuto.
+- `GET /api/v1/auth/status` → `{"configured": true|false, "setup_required": true|false}`. It tells the interface whether to show the login or the first start.
+- `POST /api/v1/auth/setup` `{"setup_code": "...", "username": "mario", "password": "at-least-8-characters"}` creates the **first** account and answers `201` with `{"token": "s1.…", "username": "mario", "expires_in": 2592000}`. The **setup code** is the token of the file `emuled.token`: the daemon prints it at start as long as there is no account, so whoever reaches the port without having it cannot take over the interface. Errors: `403 bad_setup_code`, `400 bad_username`/`bad_password`, `409 account_exists` (an account already exists).
+- `POST /api/v1/auth/login` `{"username": "...", "password": "..."}` → `200` with the same token (valid 30 days). Errors: `401 bad_credentials` (the daemon does not say whether the name or the password is wrong), `429 too_many_attempts` with `Retry-After: 60`: five wrong attempts from the same address block that address for one minute.
 
-Il gettone di sessione si usa come il token del file (`Authorization: Bearer s1.…`, oppure `?token=` per il WebSocket). Nel browser sta alla stessa chiave `localStorage['emuled.token']`.
+The session token is used like the file token (`Authorization: Bearer s1.…`, or `?token=` for the WebSocket). In the browser it is stored under the same key `localStorage['emuled.token']`.
 
-### Primo avvio — `GET /api/v1/setup`, `POST /api/v1/setup/done`, `GET /api/v1/ports/check`
+### First start — `GET /api/v1/setup`, `POST /api/v1/setup/done`, `GET /api/v1/ports/check`
 
-Servono al **Wizard web** di primo avvio (nome sulla rete, porte, offuscamento, limiti, cartelle), che l'interfaccia mostra a schermo intero dopo la creazione del primo account.
-- `GET /api/v1/setup` → `{"pending": true|false}`. `pending` diventa `true` quando si crea il primo account (`auth/setup`) e resta tale finché non si conferma. Un profilo che non ha mai avuto il Wizard (di prima di questa funzione) risponde `false`.
-- `POST /api/v1/setup/done` → `{"pending": false}`: l'interfaccia lo chiama quando l'utente finisce il Wizard.
-- `GET /api/v1/ports/check?tcp=P&udp=Q` → `{"tcp": {"port": P, "valid": true, "free": true, "own": false}, "udp": {...}}`. Prova davvero a mettersi in ascolto (TCP) o ad aprire (UDP) la porta, poi chiude. `own: true` = è la porta che emuled ha già in uso, quindi non è un conflitto (`free` è `true`). Si può passare solo `tcp` o solo `udp`. Non cambia niente: il Wizard lo usa per **avvisare**, senza bloccare. Le porte vere si impostano con `PATCH /api/v1/preferences` (`tcp_port`, `udp_port`, valgono al riavvio).
+They serve the first-start **web Wizard** (name on the network, ports, obfuscation, limits, folders), which the interface shows full screen after the first account is created.
+- `GET /api/v1/setup` → `{"pending": true|false}`. `pending` becomes `true` when the first account is created (`auth/setup`) and stays so until it is confirmed. A profile that never had the Wizard (from before this feature) answers `false`.
+- `POST /api/v1/setup/done` → `{"pending": false}`: the interface calls it when the user finishes the Wizard.
+- `GET /api/v1/ports/check?tcp=P&udp=Q` → `{"tcp": {"port": P, "valid": true, "free": true, "own": false}, "udp": {...}}`. It really tries to listen on (TCP) or open (UDP) the port, then closes it. `own: true` = it is the port emuled is already using, so it is not a conflict (`free` is `true`). You can pass only `tcp` or only `udp`. It changes nothing: the Wizard uses it to **warn**, without blocking. The real ports are set with `PATCH /api/v1/preferences` (`tcp_port`, `udp_port`, they apply at restart).
 
-### Riavvio e prova delle porte — `POST /api/v1/system/restart`, `GET /api/v1/ports/test-url`
+### Restart and port test — `POST /api/v1/system/restart`, `GET /api/v1/ports/test-url`
 
-- `POST /api/v1/system/restart` → `200 {"restarting": true}`. Il demone si spegne in modo pulito (salva tutto) e **riparte da solo**, stesso processo e stessi argomenti (`execv`: vale con systemd, Docker o da terminale). Risponde subito e riparte dopo meno di un secondo; per sapere che è tornato basta richiamare `GET /status` (`uptime_s` ricomincia da zero). Serve per le porte nuove (`restart_required` di `PATCH /preferences`). `501` se il riavvio non è disponibile.
-- `GET /api/v1/ports/test-url?lang=1040` → `{"url": "https://porttest.emule-project.net/connectiontest.php?tcpport=P&udpport=Q&lang=1040&obf=0", "tcp": P, "udp": Q, "obfuscation": false}`. È l'indirizzo che usa eMule (`TriggerPortTest`) con le porte **in uso adesso**: se le hai appena cambiate, riavvia prima. Con l'offuscamento acceso l'indirizzo ha `obf=1&clienthash=<hash utente>`. `lang` è l'identificatore di lingua di Windows (1040 italiano, 1033 inglese, predefinito). **Il demone non apre l'indirizzo**: lo apre il browser, su un clic dell'utente; il sito prova a collegarsi alle porte TCP e UDP e il demone risponde (`OP_PORTTEST`).
+- `POST /api/v1/system/restart` → `200 {"restarting": true}`. The daemon shuts down cleanly (saves everything) and **starts again by itself**, same process and same arguments (`execv`: it works with systemd, Docker or from a terminal). It answers at once and restarts in less than a second; to know it is back, just call `GET /status` again (`uptime_s` starts from zero). It is needed for new ports (`restart_required` of `PATCH /preferences`). `501` if restart is not available.
+- `GET /api/v1/ports/test-url?lang=1040` → `{"url": "https://porttest.emule-project.net/connectiontest.php?tcpport=P&udpport=Q&lang=1040&obf=0", "tcp": P, "udp": Q, "obfuscation": false}`. It is the address eMule uses (`TriggerPortTest`) with the ports **in use right now**: if you have just changed them, restart first. With obfuscation on, the address has `obf=1&clienthash=<user hash>`. `lang` is the Windows language identifier (1040 Italian, 1033 English, the default). **The daemon does not open the address**: the browser opens it, on a user click; the site tries to connect to the TCP and UDP ports and the daemon answers (`OP_PORTTEST`).
 
-### Importare un eMule esistente — `GET /api/v1/setup/import`, `POST /api/v1/setup/import/scan`, `POST /api/v1/setup/import`
+### Importing an existing eMule — `GET /api/v1/setup/import`, `POST /api/v1/setup/import/scan`, `POST /api/v1/setup/import`
 
-Per chi ha già eMule (di solito su Windows): il Wizard web può portare qui identità, crediti, file conosciuti, server, nodi Kad e preferenze. **Solo durante il primo avvio** (Wizard non finito) e una volta sola: dopo `409`.
-- `GET /api/v1/setup/import` → `{"available": true, "imported": false, "candidates": ["/home/utente/.emuled.old/profile"]}`. `candidates` (solo se `available`): le cartelle del computer che sembrano la configurazione di un eMule — vecchie installazioni `~/.emuled*`, `~/.config/emule`, `~/eMule/config`, eMule sotto Wine, `/mnt` e `/media` —, escluso il profilo in uso.
-- `POST /api/v1/setup/import/scan` `{"path": "/mnt/z/eMule/config", "rules": [...]}` → `{"files": [{"name", "size"}], "total_bytes", "nick", "dirs": [{"windows": "Z:\\eMule\\Incoming\\", "path": "/mnt/z/eMule/Incoming/", "mapped": true, "exists": true}], "rules": [{"win": "Z:/eMule", "linux": "/mnt/z/eMule"}]}`. **Sola lettura.** Senza `rules` il demone le propone cercando, sopra la cartella indicata, il punto dove le cartelle di Windows esistono davvero. Errori: `422` (non sembra una cartella di eMule — mancano `preferences.ini`, `known.met` e `clients.met` —, oppure è la cartella di emuled stesso, oppure una regola non vale), `409` (non è il primo avvio).
-- `POST /api/v1/setup/import` `{"path": "...", "rules": [{"win": "Z:\\eMule", "linux": "/mnt/z/eMule"}]}` → `200 {"staged": true, "restarting": true}`. Copia i file in `<profilo>/import-ready/` correggendo i percorsi in `preferences.ini`, `shareddir.dat` (resta UTF-16) e `Category.ini`; poi **il demone si riavvia da solo** (stesso processo, stessi argomenti) e all'avvio, prima di leggere il profilo, mette i file al loro posto. I file sostituiti vanno in `<profilo>/pre-import-AAAAMMGG-hhmmss/`. Non si copiano i download in corso (`Temp/`) né gli indici Kad. Un'importazione interrotta prima della fine si butta all'avvio. Errori: `422` come sopra o spazio insufficiente.
+For those who already have eMule (usually on Windows): the web Wizard can bring over identity, credits, known files, servers, Kad nodes and preferences. **Only during the first start** (Wizard not finished) and only once: after that, `409`.
+- `GET /api/v1/setup/import` → `{"available": true, "imported": false, "candidates": ["/home/utente/.emuled.old/profile"]}`. `candidates` (only if `available`): the computer folders that look like an eMule configuration — old `~/.emuled*` installations, `~/.config/emule`, `~/eMule/config`, eMule under Wine, `/mnt` and `/media` —, excluding the profile in use.
+- `POST /api/v1/setup/import/scan` `{"path": "/mnt/z/eMule/config", "rules": [...]}` → `{"files": [{"name", "size"}], "total_bytes", "nick", "dirs": [{"windows": "Z:\\eMule\\Incoming\\", "path": "/mnt/z/eMule/Incoming/", "mapped": true, "exists": true}], "rules": [{"win": "Z:/eMule", "linux": "/mnt/z/eMule"}]}`. **Read only.** Without `rules` the daemon proposes them by looking, above the given folder, for the place where the Windows folders really exist. Errors: `422` (it does not look like an eMule folder — `preferences.ini`, `known.met` and `clients.met` are missing —, or it is emuled's own folder, or a rule is not valid), `409` (it is not the first start).
+- `POST /api/v1/setup/import` `{"path": "...", "rules": [{"win": "Z:\\eMule", "linux": "/mnt/z/eMule"}]}` → `200 {"staged": true, "restarting": true}`. It copies the files to `<profile>/import-ready/` fixing the paths in `preferences.ini`, `shareddir.dat` (stays UTF-16) and `Category.ini`; then **the daemon restarts by itself** (same process, same arguments) and at start, before reading the profile, puts the files in their place. The replaced files go to `<profile>/pre-import-YYYYMMDD-hhmmss/`. Downloads in progress (`Temp/`) and the Kad indexes are not copied. An import interrupted before the end is discarded at start. Errors: `422` as above or not enough space.
 
-### Cartelle del computer — `GET /api/v1/fs`, `POST /api/v1/fs/mkdir`
+### Computer folders — `GET /api/v1/fs`, `POST /api/v1/fs/mkdir`
 
-Servono alla finestra «Scegli una cartella» del Wizard e delle Preferenze (Incoming, Temp, cartelle condivise). **Sono le cartelle del computer dove gira il demone**, non quelle del PC del browser: con Docker sono quelle del contenitore e dei volumi montati. Come ogni altra chiamata richiedono il gettone; il demone vede solo ciò che l'utente con cui gira può vedere. Mai il contenuto dei file.
-- `GET /api/v1/fs?path=/percorso&hidden=0|1` → `{"path": "/percorso", "parent": "/" | null, "home": "/home/utente", "writable": true, "free_bytes": 123, "truncated": false, "entries": [{"name": "Download", "path": "/percorso/Download", "readable": true, "writable": true}]}`. Senza `path` parte dalla cartella dell'utente. Il percorso si normalizza (`..` e collegamenti simbolici vengono risolti). Solo sottocartelle, in ordine alfabetico senza distinguere maiuscole; le nascoste (che iniziano con `.`) solo con `hidden=1`; al massimo 2000 (`truncated`). Errori: `400 bad_path` (non assoluto), `400 not_a_directory`, `404 dir_not_found`, `403 forbidden_path`.
-- `POST /api/v1/fs/mkdir` `{"path": "/percorso/nuova"}` crea **una** cartella (quella che la contiene deve esistere) e risponde `201 {"path": ...}`. Errori: `409 dir_exists`, `404 dir_not_found`, `400 bad_path`/`bad_dirname`, `403 forbidden_path`.
+They serve the "Choose a folder" window of the Wizard and of Preferences (Incoming, Temp, shared folders). **These are the folders of the computer where the daemon runs**, not those of the browser's PC: with Docker they are those of the container and of the mounted volumes. Like every other call they require the token; the daemon sees only what the user it runs as can see. Never the content of files.
+- `GET /api/v1/fs?path=/percorso&hidden=0|1` → `{"path": "/percorso", "parent": "/" | null, "home": "/home/utente", "writable": true, "free_bytes": 123, "truncated": false, "entries": [{"name": "Download", "path": "/percorso/Download", "readable": true, "writable": true}]}`. Without `path` it starts from the user's folder. The path is normalized (`..` and symbolic links are resolved). Only subfolders, in alphabetical order ignoring case; hidden ones (starting with `.`) only with `hidden=1`; at most 2000 (`truncated`). Errors: `400 bad_path` (not absolute), `400 not_a_directory`, `404 dir_not_found`, `403 forbidden_path`.
+- `POST /api/v1/fs/mkdir` `{"path": "/percorso/nuova"}` creates **one** folder (the one containing it must exist) and answers `201 {"path": ...}`. Errors: `409 dir_exists`, `404 dir_not_found`, `400 bad_path`/`bad_dirname`, `403 forbidden_path`.
 
-### `GET /api/v1/status` — lo stato generale
+### `GET /api/v1/status` — the general status
 
-`version` e' la versione del protocollo/client eMule (quella che si annuncia in rete); `emuled_version` e' la versione di emuled; `base_version` e' il codice eMule da cui deriva.
+`version` is the eMule protocol/client version (the one announced on the network); `emuled_version` is the emuled version; `base_version` is the eMule code it derives from.
 
 ```json
 {
@@ -106,325 +106,325 @@ Servono alla finestra «Scegli una cartella» del Wizard e delle Preferenze (Inc
 }
 ```
 
-- **`ed2k`** — il collegamento al server. **`high_id`**: il server ha potuto collegarsi alla nostra porta TCP, quindi gli altri client ci raggiungono; se è `false` (ID basso, *LowID*) possiamo solo chiamare noi (e passiamo dal server per i "richiami", *callback*). `id` è il numero che il server ci ha dato.
-- **`kad`** — la rete Kademlia (*Kad*), senza server. `tcp_firewalled` e `udp_firewalled` dicono se le nostre porte sono chiuse dall'esterno (*firewall*); `udp_verified` che il controllo è stato confermato da nodi veri. `contacts` sono i nodi nella tabella di instradamento (*routing*).
-- **`transfers`** — velocità in **byte al secondo**; `uploading` i client a cui stiamo dando dati, `waiting` quelli in coda da noi.
+- **`ed2k`** — the connection to the server. **`high_id`**: the server was able to connect to our TCP port, so other clients can reach us; if it is `false` (low ID, *LowID*) we can only call out ourselves (and we go through the server for "callbacks"). `id` is the number the server gave us.
+- **`kad`** — the Kademlia network (*Kad*), without servers. `tcp_firewalled` and `udp_firewalled` say whether our ports are closed from the outside (*firewall*); `udp_verified` that the check was confirmed by real nodes. `contacts` are the nodes in the routing table (*routing*).
+- **`transfers`** — speeds in **bytes per second**; `uploading` the clients we are giving data to, `waiting` those queued with us.
 
-## 3. Download
+## 3. Downloads
 
-Un download è un file in scaricamento. La sua identità è l'**hash** (MD4 in 32 caratteri esadecimali, maiuscoli).
+A download is a file being downloaded. Its identity is the **hash** (MD4 as 32 hexadecimal characters, uppercase).
 
-**L'oggetto `Download`**
+**The `Download` object**
 
-| Campo | Significato |
+| Field | Meaning |
 |---|---|
-| `hash` | l'MD4 del file |
-| `name`, `size` | nome e dimensione in byte |
-| `completed`, `percent` | byte **validi** scaricati e percentuale |
-| `status` | `ready` (in corso), `empty` (nessun dato), `waiting_for_hash`, `hashing` (si controlla il file), `error`, `insufficient_disk_space`, `paused`, `completing` (si sposta in Incoming), `complete`, `unknown` |
-| `stopped` | fermato (ha perso le sorgenti) |
-| `sources`, `sources_transferring` | sorgenti conosciute e quelle che stanno trasferendo |
-| `speed` | byte al secondo |
+| `hash` | the file's MD4 |
+| `name`, `size` | name and size in bytes |
+| `completed`, `percent` | **valid** bytes downloaded and percentage |
+| `status` | `ready` (in progress), `empty` (no data), `waiting_for_hash`, `hashing` (the file is being checked), `error`, `insufficient_disk_space`, `paused`, `completing` (being moved to Incoming), `complete`, `unknown` |
+| `stopped` | stopped (it lost its sources) |
+| `sources`, `sources_transferring` | known sources and those currently transferring |
+| `speed` | bytes per second |
 | `priority` | `auto`, `very_low`, `low`, `normal`, `high`, `release` |
-| `category` | numero della categoria (0 = tutte) |
-| `part_file` | nome del `.part.met` in `Temp/` |
+| `category` | category number (0 = all) |
+| `part_file` | name of the `.part.met` in `Temp/` |
 
-### `GET /api/v1/downloads` — l'elenco
+### `GET /api/v1/downloads` — the list
 
 ```
 curl -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8765/api/v1/downloads
 ```
 
-### `POST /api/v1/downloads` — aggiungi un download
+### `POST /api/v1/downloads` — add a download
 
-Con un link ed2k:
+With an ed2k link:
 
 ```
 curl -X POST -H "Authorization: Bearer $TOKEN" -d '{"link":"ed2k://|file|Nome.pdf|7743600|B2C072C57F57A9A6AEECB50390DC27F8|/"}' http://127.0.0.1:8765/api/v1/downloads
 ```
 
-Oppure con `hash`, `name` e `size`:
+Or with `hash`, `name` and `size`:
 
 ```
 -d '{"hash":"B2C072C57F57A9A6AEECB50390DC27F8","name":"Nome.pdf","size":7743600}'
 ```
 
-Risposte: **201** con il download; **409** se c'è già; **422** se link, hash o dimensione non vanno; **400** se il corpo non è JSON.
+Answers: **201** with the download; **409** if it already exists; **422** if link, hash or size are not valid; **400** if the body is not JSON.
 
-### `GET /api/v1/downloads/{hash}` — un download
+### `GET /api/v1/downloads/{hash}` — one download
 
 ### `POST /api/v1/downloads/{hash}/pause` · `/resume` · `/stop`
 
-- **pause** — mette in pausa e tiene le sorgenti;
-- **resume** — riprende (anche se era in pausa per spazio insufficiente);
-- **stop** — ferma e scarta le sorgenti.
+- **pause** — pauses and keeps the sources;
+- **resume** — resumes (even if it was paused for insufficient space);
+- **stop** — stops and discards the sources.
 
-### I completati
+### The completed ones
 
-Quando un download finisce esce dalla coda, ma — come nella finestra di eMule — **resta in lista come «Completato»** (`status: "complete"`, con `completed_at` e `path`) finché non lo togli. Si toglie con `DELETE /downloads/{hash}` (esce solo dalla lista: **il file resta su disco**) o tutti insieme con `POST /downloads/clear-completed` (risposta `{"removed": N}`). Con la preferenza `remove_finished_downloads` attiva i completati non entrano mai in lista. L'elenco dei completati è solo in memoria (come la finestra di eMule): al riavvio del demone si svuota. Su un completato `pause`, `resume`, `stop`, `sources` e `parts` rispondono **409**.
+When a download finishes it leaves the queue, but — as in eMule's window — **it stays in the list as "Complete"** (`status: "complete"`, with `completed_at` and `path`) until you remove it. It is removed with `DELETE /downloads/{hash}` (it only leaves the list: **the file stays on disk**) or all together with `POST /downloads/clear-completed` (answer `{"removed": N}`). With the preference `remove_finished_downloads` on, completed downloads never enter the list. The list of completed downloads is in memory only (like eMule's window): it is emptied when the daemon restarts. On a completed one, `pause`, `resume`, `stop`, `sources` and `parts` answer **409**.
 
-### `GET /api/v1/downloads/{hash}/sources` — le fonti
+### `GET /api/v1/downloads/{hash}/sources` — the sources
 
-Ogni download ha anche `best_queue_rank`: la posizione in coda più vicina tra tutte le sue fonti (0 = nessuna in coda), e `file_op` / `file_op_percent`: l'operazione in corso sul file (`none`, `hashing` = verifica degli hash, `copying`, `uncompressing`, `import_parts`) con il suo avanzamento 0-100. L'interfaccia la mostra come barra verde sopra quella del completamento.
+Every download also has `best_queue_rank`: the closest queue position among all its sources (0 = none in queue), and `file_op` / `file_op_percent`: the operation in progress on the file (`none`, `hashing` = hash check, `copying`, `uncompressing`, `import_parts`) with its progress 0-100. The interface shows it as a green bar above the completion one.
 
-Oltre alle fonti del file, l'elenco comprende quelle **«per un altro file»** (A4AF, *Ask For Another File*): utenti che hanno anche questo file ma che eMule sta già usando per un altro download dello stesso utente (tipico con gli episodi di una serie). Hanno il campo `other_file` con il download per cui sono usate adesso, e non contano in `sources` del download (che ha il campo `sources_other_files`).
+Besides the file's own sources, the list includes those **"for another file"** (A4AF, *Ask For Another File*): users who also have this file but whom eMule is already using for another download of the same user (typical with the episodes of a series). They have the field `other_file` with the download they are currently used for, and they do not count in the download's `sources` (which has the field `sources_other_files`).
 
-Per ogni fonte: `name`, `software` (es. «eMule v0.50a»), `ip`, `port`, `low_id` (ID basso: si raggiunge solo con richiamo), `state` (`downloading`, `on_queue`, `connected`, `connecting`, `waiting_callback`, `waiting_callback_kad`, `requesting_hashset`, `no_needed_parts` = non ha parti che ci servono, `too_many_connections`, `low_to_low_id`, `banned`, `error`, `remote_queue_full`, `none`), `from` (`server`, `kad`, `source_exchange`, `passive`, `link`), `queue_rank` (posizione nella sua coda), `speed`, `session_downloaded`, `available_parts` e `part_count`.
+For each source: `name`, `software` (e.g. "eMule v0.50a"), `ip`, `port`, `low_id` (low ID: it can only be reached with a callback), `state` (`downloading`, `on_queue`, `connected`, `connecting`, `waiting_callback`, `waiting_callback_kad`, `requesting_hashset`, `no_needed_parts` = it has no parts we need, `too_many_connections`, `low_to_low_id`, `banned`, `error`, `remote_queue_full`, `none`), `from` (`server`, `kad`, `source_exchange`, `passive`, `link`), `queue_rank` (position in its queue), `speed`, `session_downloaded`, `available_parts` and `part_count`.
 
-### `POST /api/v1/downloads/{hash}/find-sources` — cerca fonti adesso
+### `POST /api/v1/downloads/{hash}/find-sources` — look for sources now
 
-Di solito eMule chiede nuove fonti al server ogni **15 minuti** e a Kad con attese fino a **1 ora** per tentativo: un download con 0 fonti può restare fermo a lungo. Questa chiamata azzera quelle attese: al giro dopo il demone le chiede subito. Risponde **202** con `server` e `kad` (`false` se non sei collegato a quella rete: la richiesta per lei non parte), `paused` (un download fermo cerca quando riparte) e `wait_s`: **il server accetta un gruppo di richieste di fonti ogni 5 minuti** (protezione dell'originale, 15 file × 20 s), quindi la richiesta in coda parte fra `wait_s` secondi, non subito. **404/409** come le altre chiamate sui download.
+Usually eMule asks the server for new sources every **15 minutes** and Kad with waits of up to **1 hour** per attempt: a download with 0 sources can stay stuck for a long time. This call resets those waits: on the next round the daemon asks right away. It answers **202** with `server` and `kad` (`false` if you are not connected to that network: the request for it does not start), `paused` (a stopped download searches when it starts again) and `wait_s`: **the server accepts one group of source requests every 5 minutes** (protection of the original, 15 files × 20 s), so the queued request starts in `wait_s` seconds, not immediately. **404/409** like the other calls on downloads.
 
-### `POST /api/v1/downloads/{hash}/stream` e `GET /api/v1/stream/{id}/{nome}` — streaming
+### `POST /api/v1/downloads/{hash}/stream` and `GET /api/v1/stream/{id}/{nome}` — streaming
 
-Per guardare o ascoltare un file **mentre scarica** (o dopo) con un player locale (VLC, mpv…). `POST …/stream` crea un **link temporaneo** e risponde **201** con `path` (da aggiungere all'indirizzo del demone, es. `http://127.0.0.1:8765` + `path`), `name`, `size`, `mime` e `expires_in` (secondi: 6 ore). Il link vale per **un solo file** e **non contiene il token**: l'autorizzazione è l'`id` nel percorso (128 bit casuali), quindi si può dare a un player senza esporre il resto dell'API. Per un download in corso accende anche la *priorità di anteprima*: eMule scarica per prime la **prima e l'ultima parte** del file, che a molti formati servono per partire.
+To watch or listen to a file **while it downloads** (or afterwards) with a local player (VLC, mpv…). `POST …/stream` creates a **temporary link** and answers **201** with `path` (to be appended to the daemon's address, e.g. `http://127.0.0.1:8765` + `path`), `name`, `size`, `mime` and `expires_in` (seconds: 6 hours). The link is valid for **one file only** and **does not contain the token**: the authorization is the `id` in the path (128 random bits), so it can be given to a player without exposing the rest of the API. For a download in progress it also turns on the *preview priority*: eMule downloads the file's **first and last part** first, which many formats need in order to start.
 
-`GET /api/v1/stream/{id}/{nome}` serve il file con richieste a intervalli (`Range`, risposta **206**; `Accept-Ranges: bytes`). `{nome}` è solo il nome del file, per i player: non conta. Per un **download in corso** si manda solo ciò che è già su disco: un intervallo che comincia in una parte non ancora scaricata dà **503** con `Retry-After: 3` (il player riprova), e uno che supera i byte presenti viene accorciato. **403** = link scaduto o sconosciuto, **416** = intervallo non valido. Funziona anche per i completati.
+`GET /api/v1/stream/{id}/{nome}` serves the file with range requests (`Range`, answer **206**; `Accept-Ranges: bytes`). `{nome}` is just the file name, for the players: it does not matter. For a **download in progress** only what is already on disk is sent: a range that begins in a part not yet downloaded gives **503** with `Retry-After: 3` (the player retries), and one that goes beyond the bytes present is shortened. **403** = link expired or unknown, **416** = invalid range. It also works for completed ones.
 
-### `GET /api/v1/downloads/{hash}/names` — i nomi usati dalle fonti
+### `GET /api/v1/downloads/{hash}/names` — the names used by the sources
 
-È la scheda «Nome» di eMule: `current` (il nome attuale) e `names`, l'elenco dei nomi con cui le fonti chiamano il file, ognuno con `count` (quante fonti lo usano), i più diffusi per primi. L'elenco è vuoto finché nessuna fonte ha risposto. **404** se il download non c'è o è già completato. Per cambiare il nome: `PATCH /api/v1/downloads/{hash}` con `{"name": "nuovo nome.mkv"}` (non vuoto, senza `/`, al massimo 255 byte; vale subito e anche a download completato; **409** se il file è in verifica o in completamento; **422** se il nome non è valido).
+It is eMule's "Name" tab: `current` (the current name) and `names`, the list of names the sources call the file by, each with `count` (how many sources use it), the most common first. The list is empty until some source has answered. **404** if the download does not exist or is already completed. To change the name: `PATCH /api/v1/downloads/{hash}` with `{"name": "new name.mkv"}` (not empty, without `/`, at most 255 bytes; it applies at once and also when the download is complete; **409** if the file is being checked or completed; **422** if the name is not valid).
 
-### `GET /api/v1/downloads/{hash}/comments` — commenti e valutazioni
+### `GET /api/v1/downloads/{hash}/comments` — comments and ratings
 
-È la scheda «Tutti i commenti» di eMule. `comments` è un elenco di `{network, rating, comment, file_name, user}`: `network` è `ed2k` (arrivato da una fonte) o `kad` (nota trovata su Kad), `rating` va da 1 (falso) a 5 (eccellente), 0 = nessuna valutazione. Ci sono anche `kad_connected`, `kad_searching` (una ricerca di note è in corso) e `filter` (il filtro antispam in uso, vedi la preferenza `comment_filter`).
+It is eMule's "All comments" tab. `comments` is a list of `{network, rating, comment, file_name, user}`: `network` is `ed2k` (it came from a source) or `kad` (a note found on Kad), `rating` goes from 1 (fake) to 5 (excellent), 0 = no rating. There are also `kad_connected`, `kad_searching` (a note search is in progress) and `filter` (the anti-spam filter in use, see the preference `comment_filter`).
 
-### `POST /api/v1/downloads/{hash}/comments/search-kad` — cerca i commenti su Kad
+### `POST /api/v1/downloads/{hash}/comments/search-kad` — search for comments on Kad
 
-Il pulsante «Ricerca in Kad»: chiede a Kad le note degli altri utenti su questo file. Risponde **202** con `{"started": true}`; i risultati arrivano piano piano e si leggono con `GET …/comments`. **422** se Kad non è collegato, **409** se una ricerca di note per questo file è già in corso.
+The "Search on Kad" button: it asks Kad for other users' notes about this file. It answers **202** with `{"started": true}`; the results arrive little by little and are read with `GET …/comments`. **422** if Kad is not connected, **409** if a note search for this file is already in progress.
 
-### `GET /api/v1/downloads/{hash}/blocks` — i blocchi in scarico adesso
+### `GET /api/v1/downloads/{hash}/blocks` — the blocks being downloaded now
 
-eMule scarica un *blocco* (chunk, `part_size` = 9 728 000 byte, quello della mappa) a **pezzi** da `block_size` = 184 320 byte (180 KB) che chiede alle fonti. Questa chiamata dice quali blocchi stanno arrivando in questo momento: `active` ha un elemento per ogni blocco con `part` (numero da 0), `size`, `missing` (byte ancora mancanti) e `sources`: le fonti che lo stanno trasferendo, ciascuna con `name`, `software`, `ip`, `port`, `speed` (byte/s) e `blocks`, i pezzi richiesti con `start` e `end` (posizioni nel file, estremi compresi) e `transferred` (byte già arrivati di quel pezzo). Conta solo la richiesta già partita verso la fonte, non quelle in attesa di essere inviate. `receiving` dice se il blocco sta **arrivando davvero** (una fonte ha velocità o un pezzo ha già dei byte) o è solo **richiesto** e in attesa della risposta. Elenco vuoto se nessuna fonte sta trasferendo. **404** se il download non c'è o è completato.
+eMule downloads a *block* (chunk, `part_size` = 9 728 000 bytes, the one of the map) in **pieces** of `block_size` = 184 320 bytes (180 KB) that it requests from the sources. This call says which blocks are arriving at this moment: `active` has one element for each block with `part` (number from 0), `size`, `missing` (bytes still missing) and `sources`: the sources that are transferring it, each with `name`, `software`, `ip`, `port`, `speed` (bytes/s) and `blocks`, the requested pieces with `start` and `end` (positions in the file, both ends included) and `transferred` (bytes already arrived of that piece). Only the request already sent to the source counts, not those waiting to be sent. `receiving` says whether the block is **really arriving** (a source has speed or a piece already has bytes) or is only **requested** and waiting for the answer. Empty list if no source is transferring. **404** if the download does not exist or is completed.
 
-### `GET /api/v1/downloads/{hash}/details` — i dettagli
+### `GET /api/v1/downloads/{hash}/details` — the details
 
-È la scheda «Generale» di eMule in JSON, per un download in corso (**404** se non c'è o è già completato): `name`, `part_met` e `part_met_path`, `hash`, `aich_hash` (o `null`) con `aich_status` (`error`, `empty`, `untrusted`, `trusted`, `verified`, `complete`), `hashset` (`ed2k` e `aich`: sono disponibili gli hash di tutte le parti?), `size` e `size_on_disk`, `type` (estensione), `parts` (`total`, `available`, `available_pct`), `status`, `sources` (`total`, `valid`, `transferring`, `no_needed_parts`, `other_file`), `speed`, `transferred`, `compression_gain`, `completed`, `corrupted`, `remaining` (ognuno con `bytes` e `pct`, troncata al decimo come eMule), `recovered_parts` (le parti recuperate dall'I.C.H.), e le date in secondi Unix: `added`, `active_seconds`, `last_seen_complete`, `last_received`.
+It is eMule's "General" tab in JSON, for a download in progress (**404** if it does not exist or is already completed): `name`, `part_met` and `part_met_path`, `hash`, `aich_hash` (or `null`) with `aich_status` (`error`, `empty`, `untrusted`, `trusted`, `verified`, `complete`), `hashset` (`ed2k` and `aich`: are the hashes of all parts available?), `size` and `size_on_disk`, `type` (extension), `parts` (`total`, `available`, `available_pct`), `status`, `sources` (`total`, `valid`, `transferring`, `no_needed_parts`, `other_file`), `speed`, `transferred`, `compression_gain`, `completed`, `corrupted`, `remaining` (each with `bytes` and `pct`, truncated to the tenth like eMule), `recovered_parts` (the parts recovered by I.C.H.), and the dates in Unix seconds: `added`, `active_seconds`, `last_seen_complete`, `last_received`.
 
-### `POST /api/v1/downloads/{hash}/content` e `GET …/content` — il contenuto del file
+### `POST /api/v1/downloads/{hash}/content` and `GET …/content` — the file's content
 
-È la scheda «Contenuto» di eMule, fatta dal programma esterno **`mediainfo`** (si cerca nel `PATH`; si può indicare con la chiave `mediainfo` di `config.yaml` o con `EMULED_MEDIAINFO`). `POST` lancia la lettura sul `.part` di un download in corso (basta che ci sia l'intestazione del contenitore: per un mkv i primi byte) o sul file di un completato e risponde **202**; `GET` dà lo stato: `idle`, `running`, `done`, `failed` (`reason`: `timeout`, `bad_output`, `spawn`) o `unavailable` (`not_installed`: mediainfo non c'è, e allora anche il `POST` risponde 200 con questo stato). A lettura finita (`done`): `recognized` (`false` se mediainfo non capisce il file), `general` (`format`, `size`, `duration_s`, `overall_bitrate`, `title`, `movie`, `date`), `video[]` (`codec`, `profile`, `codec_id`, `bitrate`, `width`, `height`, `aspect`, `fps`, `lang`, `title`), `audio[]` (`codec`, `commercial`, `bitrate`, `channels`, `sampling`, `lang`, `title`, `default`) e `text[]` (sottotitoli: `codec`, `lang`, `title`, `default`, `forced`). Il programma si lancia **senza shell** (il percorso è un argomento) e con un limite di 10 secondi.
+It is eMule's "Content" tab, done by the external program **`mediainfo`** (searched in the `PATH`; it can be specified with the `mediainfo` key of `config.yaml` or with `EMULED_MEDIAINFO`). `POST` starts the reading on the `.part` of a download in progress (it is enough that the container header is there: for an mkv, the first bytes) or on the file of a completed one and answers **202**; `GET` gives the state: `idle`, `running`, `done`, `failed` (`reason`: `timeout`, `bad_output`, `spawn`) or `unavailable` (`not_installed`: mediainfo is not there, and in that case `POST` too answers 200 with this state). When the reading is finished (`done`): `recognized` (`false` if mediainfo does not understand the file), `general` (`format`, `size`, `duration_s`, `overall_bitrate`, `title`, `movie`, `date`), `video[]` (`codec`, `profile`, `codec_id`, `bitrate`, `width`, `height`, `aspect`, `fps`, `lang`, `title`), `audio[]` (`codec`, `commercial`, `bitrate`, `channels`, `sampling`, `lang`, `title`, `default`) and `text[]` (subtitles: `codec`, `lang`, `title`, `default`, `forced`). The program is launched **without a shell** (the path is an argument) and with a limit of 10 seconds.
 
-### `GET /api/v1/downloads/{hash}/parts` — i blocchi
+### `GET /api/v1/downloads/{hash}/parts` — the blocks
 
-eMule divide il file in blocchi da **9 728 000 byte** (`part_size`). Per ogni blocco: `index`, `size` (l'ultimo è più corto), `missing` (byte ancora da scaricare), `sources` (in quante fonti c'è) e `state`: `empty`, `partial`, `complete` o `corrupted` (da riscaricare), e `verified`: `false` per un blocco completo che **non si può controllare** perché il file non ha l'elenco degli hash dei blocchi (hashset; con un blocco solo vale l'hash del file). In più, al livello superiore, `hashset` (c'è l'elenco degli hash?). Con questi si disegna la mappa dei blocchi: la legenda distingue anche i blocchi **rari** (1-2 fonti: `sources` ≤ 2) e quelli **senza fonti** (`sources` = 0). Chi non conosce `verified` o `hashset` (versioni più vecchie del demone) li tratta come «verificato».
+eMule divides the file into blocks of **9 728 000 bytes** (`part_size`). For each block: `index`, `size` (the last one is shorter), `missing` (bytes still to download), `sources` (in how many sources it is present) and `state`: `empty`, `partial`, `complete` or `corrupted` (to be downloaded again), and `verified`: `false` for a complete block that **cannot be checked** because the file has no list of the blocks' hashes (hashset; with a single block the file's hash applies). In addition, at the top level, `hashset` (is the list of hashes there?). With these the block map is drawn: the legend also distinguishes the **rare** blocks (1-2 sources: `sources` ≤ 2) and those **without sources** (`sources` = 0). Whoever does not know `verified` or `hashset` (older daemon versions) treats them as "verified".
 
-### `DELETE /api/v1/downloads/{hash}` — annulla
+### `DELETE /api/v1/downloads/{hash}` — cancel
 
-Toglie il download dalla coda e **cancella il file parziale** (`.part` e `.part.met`). Non si può annullare. Risponde con l'ultimo stato del download.
+It removes the download from the queue and **deletes the partial file** (`.part` and `.part.met`). It cannot be undone. It answers with the download's last state.
 
-## 4. Server ed2k
+## 4. ed2k servers
 
-### `GET /api/v1/servers` — la lista (il `server.met`)
+### `GET /api/v1/servers` — the list (the `server.met`)
 
-Campi: `name`, `description`, `address`, `ip`, `port`, `users`, `files` (quanti ne indicizza), `max_users`, `ping_ms`, `failed_count` (tentativi falliti), `static` (server "fisso", non rimosso se muore).
+Fields: `name`, `description`, `address`, `ip`, `port`, `users`, `files` (how many it indexes), `max_users`, `ping_ms`, `failed_count` (failed attempts), `static` ("fixed" server, not removed if it dies).
 
-### `POST /api/v1/servers` — aggiungi un server
+### `POST /api/v1/servers` — add a server
 
-Corpo: `{"address": "176.123.5.89:4725", "name": "eMule Sunrise", "priority": "normal", "static": false}` (solo `address` è obbligatorio; l'indirizzo può essere anche un nome DNS). **201** con il server; **409** se c'è già; **422** se `address` non è `indirizzo:porta`, o se l'indirizzo non è ammesso (rete locale, `0.0.0.0`, filtrato): lo rifiuta eMule stesso. La lista si riscrive subito in `server.met`.
+Body: `{"address": "176.123.5.89:4725", "name": "eMule Sunrise", "priority": "normal", "static": false}` (only `address` is required; the address can also be a DNS name). **201** with the server; **409** if it already exists; **422** if `address` is not `address:port`, or if the address is not allowed (local network, `0.0.0.0`, filtered): eMule itself rejects it. The list is rewritten at once into `server.met`.
 
-### `PATCH /api/v1/servers/{indirizzo:porta}` — modifica
+### `PATCH /api/v1/servers/{indirizzo:porta}` — change
 
-Corpo con uno o più campi: `priority` (`low`, `normal`, `high`: con «usa le priorità dei server» i server alti si provano per primi), `static` (server **fisso**: non si toglie da solo quando smette di rispondere), `name`. **404** se non è in lista.
+Body with one or more fields: `priority` (`low`, `normal`, `high`: with "use server priorities" the high servers are tried first), `static` (**fixed** server: it is not removed by itself when it stops answering), `name`. **404** if it is not in the list.
 
-### `DELETE /api/v1/servers/{indirizzo:porta}` — togli
+### `DELETE /api/v1/servers/{indirizzo:porta}` — remove
 
-Se è il server a cui sei collegato, prima ti scollega. Risponde con il server tolto.
+If it is the server you are connected to, it disconnects you first. It answers with the removed server.
 
-### `POST /api/v1/servers/connect` — collegati
+### `POST /api/v1/servers/connect` — connect
 
-Con `{"address": "176.123.5.89:4725"}` a quel server; senza corpo a uno qualsiasi. Risponde subito **202**: il risultato si legge da `/status` (`ed2k.connected`). **404** se il server non è in lista.
+With `{"address": "176.123.5.89:4725"}` to that server; without a body to any one. It answers **202** at once: the result is read from `/status` (`ed2k.connected`). **404** if the server is not in the list.
 
-### `POST /api/v1/servers/disconnect` — scollegati
+### `POST /api/v1/servers/disconnect` — disconnect
 
-## 5. Ricerca
+## 5. Search
 
-Una ricerca alla volta: avviarne una nuova annulla la precedente, e dell'ultima si tengono i risultati.
+One search at a time: starting a new one cancels the previous one, and the results of the last one are kept.
 
-### `POST /api/v1/searches` — avvia
+### `POST /api/v1/searches` — start
 
-Corpo: `{"query": "ubuntu iso", "scope": "server"}`. `query` ha la sintassi del campo di ricerca di eMule (virgolette, `OR`, `NOT`). `scope`:
-- `server` (predefinito): solo il server ed2k a cui si è collegati;
-- `all`: ricerca globale, anche tutti gli altri server della lista, per UDP (uno ogni 750 ms);
-- `kad`: rete Kademlia (usa la prima parola come chiave);
-- `global`: ed2k (tutti i server, come `all`) **e** Kad insieme, risultati uniti per hash. Basta che una delle due reti sia connessa; l'altra viene saltata.
+Body: `{"query": "ubuntu iso", "scope": "server"}`. `query` has the syntax of eMule's search field (quotes, `OR`, `NOT`). `scope`:
+- `server` (default): only the ed2k server you are connected to;
+- `all`: global search, also all the other servers in the list, over UDP (one every 750 ms);
+- `kad`: Kademlia network (uses the first word as the key);
+- `global`: ed2k (all servers, like `all`) **and** Kad together, results merged by hash. It is enough that one of the two networks is connected; the other is skipped.
 
-Filtri facoltativi: `ext` (estensione senza punto), `type` (`Audio`, `Video`, `Image`, `Doc`, `Pro`, `Arc`, `Iso`), `min_size`, `max_size` (byte), `min_sources`, `min_complete`.
-Risponde **202** con `id` e `state: "running"`. Corre una sola ricerca alla volta: una nuova ferma la precedente. Ogni ricerca è una **scheda** che resta con i suoi risultati, anche dopo un riavvio del demone (file `searches.json` nella cartella di configurazione), finché non la si toglie con `DELETE`. **409** se non si è connessi (al server, a Kad per `kad`, a nessuna delle due per `global`); **422** per espressione o `scope` non validi.
+Optional filters: `ext` (extension without the dot), `type` (`Audio`, `Video`, `Image`, `Doc`, `Pro`, `Arc`, `Iso`), `min_size`, `max_size` (bytes), `min_sources`, `min_complete`.
+It answers **202** with `id` and `state: "running"`. Only one search runs at a time: a new one stops the previous one. Every search is a **tab** that stays with its results, even after a daemon restart (file `searches.json` in the configuration folder), until it is removed with `DELETE`. **409** if you are not connected (to the server, to Kad for `kad`, to neither for `global`); **422** for an invalid expression or `scope`.
 
-### `GET /api/v1/searches/{id}` — stato e risultati
+### `GET /api/v1/searches/{id}` — state and results
 
-`state` è `running`, `finished` (tutti interrogati e nessuna risposta nuova da 6 s, o passati 120 s) o `cancelled`. `results` è l'elenco dei file, uniti per `hash` (lo stesso file da più server conta una volta) e ordinati per `sources`: `hash`, `name`, `type`, `size`, `sources` (il valore più alto dichiarato), `complete_sources`, `answers` (da quanti server/nodi è arrivato). Per scaricare un risultato: `POST /downloads` con `hash`, `name`, `size`. **404** se la ricerca è sconosciuta o è stata tolta.
+`state` is `running`, `finished` (all queried and no new answer for 6 s, or 120 s elapsed) or `cancelled`. `results` is the list of files, merged by `hash` (the same file from several servers counts once) and sorted by `sources`: `hash`, `name`, `type`, `size`, `sources` (the highest declared value), `complete_sources`, `answers` (from how many servers/nodes it came). To download a result: `POST /downloads` with `hash`, `name`, `size`. **404** if the search is unknown or was removed.
 
-### `GET /api/v1/searches` — ricerche in memoria
+### `GET /api/v1/searches` — searches in memory
 
-Tutte le schede, la più recente per prima, senza `results`.
+All the tabs, the most recent first, without `results`.
 
-### `POST /api/v1/searches/{id}/refresh` — aggiorna la scheda
+### `POST /api/v1/searches/{id}/refresh` — refresh the tab
 
-Rifà la stessa ricerca (stessa parola, stesso `scope` e stessi filtri, che la scheda ricorda anche dopo un riavvio) **nella stessa scheda**: l'`id` non cambia e i risultati si rifanno da capo. Come `POST /searches`, ferma la ricerca che stava correndo. **404** se la scheda non c'è; **409** se la rete scelta non è collegata (la scheda e i suoi risultati restano).
+It redoes the same search (same word, same `scope` and same filters, which the tab remembers even after a restart) **in the same tab**: the `id` does not change and the results are redone from scratch. Like `POST /searches`, it stops the search that was running. **404** if the tab does not exist; **409** if the chosen network is not connected (the tab and its results stay).
 
-### `POST /api/v1/searches/{id}/cancel` — ferma
+### `POST /api/v1/searches/{id}/cancel` — stop
 
-Ferma la ricerca in corso; la scheda e i risultati già arrivati restano.
+It stops the search in progress; the tab and the results already arrived stay.
 
-### `DELETE /api/v1/searches/{id}` — togli la scheda
+### `DELETE /api/v1/searches/{id}` — remove the tab
 
-Ferma la ricerca se è in corso e toglie la scheda per sempre: è l'unico modo in cui una scheda sparisce.
+It stops the search if it is in progress and removes the tab for good: it is the only way a tab disappears.
 
-## 6. WebSocket (eventi in diretta)
+## 6. WebSocket (live events)
 
-Invece di interrogare l'API di continuo, ci si collega a `ws://127.0.0.1:8765/api/v1/events?token=TOKEN` (il browser non può mettere l'intestazione `Authorization` in un WebSocket, per questo il token va nell'indirizzo; senza token valido la risposta è 401). Il demone manda messaggi di testo JSON `{"type": "...", "data": {...}}`; i messaggi che arrivano dal client si ignorano.
+Instead of polling the API continuously, you connect to `ws://127.0.0.1:8765/api/v1/events?token=TOKEN` (the browser cannot set the `Authorization` header in a WebSocket, that is why the token goes in the address; without a valid token the answer is 401). The daemon sends JSON text messages `{"type": "...", "data": {...}}`; messages coming from the client are ignored.
 
-Una volta al secondo il demone confronta lo stato con quello precedente e manda solo ciò che è cambiato:
+Once a second the daemon compares the state with the previous one and sends only what changed:
 
-| `type` | quando | `data` |
+| `type` | when | `data` |
 |---|---|---|
-| `stats` | ogni secondo | come `transfers` di `/status` (velocità, numero di download, upload in corso e in coda) |
-| `server.state` | cambia il collegamento al server ed2k | come `ed2k` di `/status` |
-| `kad.state` | cambia lo stato di Kad (collegato, firewall, contatti) | come `kad` di `/status` |
-| `download.added` | un download entra in coda | l'oggetto Download |
-| `download.updated` | cambia qualcosa di un download (percentuale, sorgenti, stato…) | l'oggetto Download |
-| `download.removed` | un download esce (annullato o completato e tolto) | `{hash, name}` |
-| `search.results` | cambia la ricerca in corso (stato o numero di risposte) | l'oggetto Search, senza i risultati: per leggerli `GET /searches/{id}` |
-| `log` | ci sono righe nuove nel registro (a pacchetti, al massimo 200) | `{"lines": [...], "last_id": N}`: righe come in `GET /log` |
+| `stats` | every second | like `transfers` of `/status` (speeds, number of downloads, uploads in progress and in queue) |
+| `server.state` | the connection to the ed2k server changes | like `ed2k` of `/status` |
+| `kad.state` | Kad's state changes (connected, firewall, contacts) | like `kad` of `/status` |
+| `download.added` | a download enters the queue | the Download object |
+| `download.updated` | something about a download changes (percentage, sources, state…) | the Download object |
+| `download.removed` | a download leaves (cancelled or completed and removed) | `{hash, name}` |
+| `search.results` | the search in progress changes (state or number of answers) | the Search object, without the results: to read them `GET /searches/{id}` |
+| `log` | there are new lines in the log (in batches, at most 200) | `{"lines": [...], "last_id": N}`: lines as in `GET /log` |
 
-Gli eventi nascono da un confronto periodico, quindi la latenza massima è 1 s.
+Events come from a periodic comparison, so the maximum latency is 1 s.
 
-## 7. File condivisi e upload
+## 7. Shared files and uploads
 
-### `POST /api/v1/servers/update` — aggiorna la lista da un indirizzo
+### `POST /api/v1/servers/update` — update the list from an address
 
-Corpo `{"url": "https://esempio.org/server.met"}`. Scarica il file (solo `http` e `https`, certificato verificato, al massimo 8 MB e 60 s, fino a 5 redirect) e lo **unisce** alla lista: i server nuovi si aggiungono, nessuno si toglie. Risponde **202**; l'esito si legge con `GET /api/v1/servers/update`: `state` è `running`, `done` (con `added`, i server nuovi, e `total`) o `failed` (con `error`). **422** se l'indirizzo non è http(s); **409** se un aggiornamento è già in corso. L'indirizzo riuscito si ricorda in `AC_ServerMetURLs.dat` (come eMule); `GET /api/v1/servers/urls` li elenca. Alla fine **riscrive subito `server.met`** (prima i server arrivati da un indirizzo web si salvavano solo allo spegnimento pulito del demone).
+Body `{"url": "https://esempio.org/server.met"}`. It downloads the file (only `http` and `https`, certificate verified, at most 8 MB and 60 s, up to 5 redirects) and **merges** it into the list: new servers are added, none is removed. It answers **202**; the outcome is read with `GET /api/v1/servers/update`: `state` is `running`, `done` (with `added`, the new servers, and `total`) or `failed` (with `error`). The successful address is remembered in `AC_ServerMetURLs.dat` (like eMule); `GET /api/v1/servers/urls` lists them. At the end it **rewrites `server.met` at once** (before, servers that came from a web address were saved only when the daemon shut down cleanly).
 
-### `POST /api/v1/kad/bootstrap` — ripopola Kad
+### `POST /api/v1/kad/bootstrap` — repopulate Kad
 
-Corpo `{"url": "https://esempio.org/nodes.dat"}` oppure `{"address": "1.2.3.4:4672"}` (uno dei due). Con `url` scarica un `nodes.dat` (solo `http`/`https`, stesse regole di `/servers/update`), ne aggiunge i contatti alla tabella di Kad e, se Kad era spento, lo avvia: risponde **202** e l'esito si legge con `GET /api/v1/kad/bootstrap` (`state`: `running`, `done` con `added` e `contacts`, `failed` con `error`). Con `address` chiede a quel nodo i primi contatti (serve Kad non ancora collegato). **409** se Kad non è disponibile (porta UDP spenta o demone senza rete), se è già collegato (con `address`) o se un bootstrap è già in corso; **422** per parametri non validi.
+Body `{"url": "https://esempio.org/nodes.dat"}` or `{"address": "1.2.3.4:4672"}` (one of the two). With `url` it downloads a `nodes.dat` (only `http`/`https`, same rules as `/servers/update`), adds its contacts to Kad's table and, if Kad was off, starts it: it answers **202** and the outcome is read with `GET /api/v1/kad/bootstrap` (`state`: `running`, `done` with `added` and `contacts`, `failed` with `error`). With `address` it asks that node for the first contacts (Kad must not be connected yet). **409** if Kad is not available (UDP port off or daemon without network), if it is already connected (with `address`) or if a bootstrap is already in progress; **422** for invalid parameters.
 
-### `GET /api/v1/shared` — i file che offri
-Per ogni file: `hash`, `name`, `size`, `path`, `part_file` (è un download ancora in corso), `priority` (`auto`, `very_low`, `low`, `normal`, `high`, `release`), `requests` e `accepted` (richieste e richieste accettate da quando il demone è acceso), `transferred` (byte dati), i tre valori `all_time_*` (da sempre) e `queued` (client in coda per quel file).
+### `GET /api/v1/shared` — the files you offer
+For each file: `hash`, `name`, `size`, `path`, `part_file` (it is a download still in progress), `priority` (`auto`, `very_low`, `low`, `normal`, `high`, `release`), `requests` and `accepted` (requests and accepted requests since the daemon was turned on), `transferred` (data bytes), the three `all_time_*` values (since ever) and `queued` (clients queued for that file).
 
-### `POST /api/v1/shared/reload` — ricontrolla le cartelle
-Rilegge le cartelle condivise e calcola l'hash dei file nuovi (può durare a lungo sui file grandi). Risponde **202** con `count` e `hashing` (file ancora da calcolare).
+### `POST /api/v1/shared/reload` — recheck the folders
+It rereads the shared folders and computes the hash of the new files (it can take a long time on big files). It answers **202** with `count` and `hashing` (files still to be computed).
 
-### `POST /api/v1/shared/{hash}/priority` — priorità
-Corpo `{"priority": "high"}`. Più è alta, più il file passa avanti nelle code di chi lo chiede. **404** se il file non è condiviso, **422** se la priorità non esiste.
+### `POST /api/v1/shared/{hash}/priority` — priority
+Body `{"priority": "high"}`. The higher it is, the more the file moves ahead in the queues of those who request it. **404** if the file is not shared, **422** if the priority does not exist.
 
-### `GET /api/v1/uploads` — chi scarica da te
-`uploading` (chi riceve dati adesso) e `waiting` (la coda), più `speed` totale. Per ogni client: `name`, `ip`, `port`, `software`, `user_hash`, `file_hash`, `file_name`, `speed`, `session_uploaded`, `score` (il punteggio che decide l'ordine in coda).
+### `GET /api/v1/uploads` — who downloads from you
+`uploading` (who is receiving data now) and `waiting` (the queue), plus the total `speed`. For each client: `name`, `ip`, `port`, `software`, `user_hash`, `file_hash`, `file_name`, `speed`, `session_uploaded`, `score` (the score that decides the order in the queue).
 
 ## 8. Kad
 
-### `GET /api/v1/kad` — stato
-`running`, `connected`, `tcp_firewalled`, `udp_firewalled`, `udp_verified` (il test del firewall UDP è finito), `contacts`, `users` (stima). Gli ultimi campi ci sono solo se Kad è acceso. È lo stesso oggetto di `kad` in `/status`.
+### `GET /api/v1/kad` — state
+`running`, `connected`, `tcp_firewalled`, `udp_firewalled`, `udp_verified` (the UDP firewall test has finished), `contacts`, `users` (estimate). The last fields are there only if Kad is on. It is the same object as `kad` in `/status`.
 
-### `POST /api/v1/kad/connect` — avvia
-Avvia (o riavvia) Kad con il `nodes.dat` del profilo. All'avvio del demone Kad parte da solo se il profilo lo vuole (`NetworkKademlia` del `preferences.ini`, acceso di default) e non c'è `--no-kad`; altrimenti si avvia con questo comando. il collegamento richiede qualche decina di secondi, lo stato si legge da `/kad`. **202** se parte; **409** se il demone è senza Kad (`--no-kad` o `--offline`) o se non riesce a partire.
+### `POST /api/v1/kad/connect` — start
+Starts (or restarts) Kad with the profile's `nodes.dat`. When the daemon starts, Kad starts by itself if the profile wants it (`NetworkKademlia` in `preferences.ini`, on by default) and there is no `--no-kad`; otherwise it is started with this command. The connection takes a few tens of seconds, the state is read from `/kad`. **202** if it starts; **409** if the daemon has no Kad (`--no-kad` or `--offline`) or if it cannot start.
 
-### `POST /api/v1/kad/recheck-firewall` — ricontrolla il firewall
-Rifà il test di raggiungibilità (TCP e UDP), come il comando di eMule. Risponde **202**; il risultato si legge da `/kad` dopo qualche decina di secondi. **409** se Kad è spento.
+### `POST /api/v1/kad/recheck-firewall` — recheck the firewall
+Redoes the reachability test (TCP and UDP), like eMule's command. It answers **202**; the result is read from `/kad` after a few tens of seconds. **409** if Kad is off.
 
-### `POST /api/v1/kad/disconnect` — ferma
-Ferma Kad e salva i contatti. Risponde 200 anche se era già ferma.
+### `POST /api/v1/kad/disconnect` — stop
+Stops Kad and saves the contacts. It answers 200 even if it was already stopped.
 
-## 9. Preferenze
+## 9. Preferences
 
-### `GET /api/v1/preferences` — leggi
-Un oggetto piatto chiave/valore. Le chiavi (stesse del dialogo Preferenze di eMule):
+### `GET /api/v1/preferences` — read
+A flat key/value object. The keys (the same as in eMule's Preferences dialog):
 
-| Chiave | Tipo | Significato |
+| Key | Type | Meaning |
 |---|---|---|
-| `nick` | testo | il nome con cui compari agli altri |
-| `tcp_port`, `udp_port` | intero | porte di ascolto (1–65535; UDP anche 0 = spenta). *Valgono dopo il riavvio.* |
-| `max_download_kbps`, `max_upload_kbps` | intero | limite in kB/s; **0 = illimitato** |
-| `max_connections` | intero | connessioni aperte insieme (massimo) |
-| `max_connections_per_5s` | intero | nuove connessioni ogni 5 secondi (protegge il router) |
-| `max_sources_per_file` | intero | sorgenti tenute per ogni download |
-| `network_ed2k`, `network_kademlia` | sì/no | quali reti usare (Kad: *dal riavvio*) |
-| `auto_connect` | sì/no | collegarsi a un server all'avvio (*dal riavvio*) |
-| `reconnect` | sì/no | riconnettersi se il server cade |
-| `add_servers_from_server`, `add_servers_from_clients` | sì/no | aggiungere alla lista i server segnalati da server e client |
-| `use_server_priorities` | sì/no | scegliere i server in base alla priorità |
-| `safe_server_connect` | sì/no | collegamento "sicuro": un server alla volta |
-| `static_servers_only` | sì/no | collegarsi solo ai server fissi |
-| `dead_server_retries` | intero | tentativi falliti dopo cui un server si toglie |
-| `crypt_supported`, `crypt_requested`, `crypt_required` | sì/no | offuscamento del protocollo (RC4): supportato, preferito, obbligatorio (*dal riavvio*) |
-| `secure_ident` | sì/no | identificazione sicura dei client (firma dei crediti) (*dal riavvio*) |
-| `credit_system` | sì/no | sistema dei crediti (chi ti ha dato dati passa avanti in coda) |
-| `add_new_downloads_paused` | sì/no | i download nuovi partono in pausa |
-| `auto_up_priority`, `auto_down_priority` | sì/no | priorità automatica per i file nuovi |
-| `transfer_full_chunks` | sì/no | finire il blocco in corso prima di passare al cliente successivo |
-| `remove_finished_downloads` | sì/no | togliere dall'elenco i download finiti |
-| `upnp_enabled` | sì/no | UPnP: chiede al router di inoltrare le porte TCP e UDP (si accende e si spegne subito, senza riavvio; lo stato è in `GET /status`, campo `upnp`) |
-| `upnp_close_on_exit` | sì/no | UPnP: toglie le regole dal router quando il demone si ferma |
-| `verbose_log` | sì/no | scrivere nel registro anche i messaggi di debug (sono molti: serve per cercare un problema) |
-| `save_log_to_disk` | sì/no | scrivere il registro anche nel file `logs/emuled.log` del profilo (resta dopo un riavvio o un arresto improvviso; a 20 MB passa a `emuled.log.1`) |
-| `comment_filter` | testo | filtro antispam dei commenti: parole separate da `\|` (in minuscolo) che fanno scartare un commento di un altro utente; predefinito: `http://\|https://\|ftp://\|www.\|ftp.` |
-| `save_debug_to_disk` | sì/no | scrivere nel file anche le righe di debug (vale solo con `verbose_log` acceso) |
+| `nick` | text | the name you appear under to others |
+| `tcp_port`, `udp_port` | integer | listening ports (1–65535; UDP also 0 = off). *They apply after restart.* |
+| `max_download_kbps`, `max_upload_kbps` | integer | limit in kB/s; **0 = unlimited** |
+| `max_connections` | integer | connections open at once (maximum) |
+| `max_connections_per_5s` | integer | new connections every 5 seconds (protects the router) |
+| `max_sources_per_file` | integer | sources kept for each download |
+| `network_ed2k`, `network_kademlia` | yes/no | which networks to use (Kad: *from restart*) |
+| `auto_connect` | yes/no | connect to a server at start (*from restart*) |
+| `reconnect` | yes/no | reconnect if the server drops |
+| `add_servers_from_server`, `add_servers_from_clients` | yes/no | add to the list the servers reported by servers and clients |
+| `use_server_priorities` | yes/no | choose servers by priority |
+| `safe_server_connect` | yes/no | "safe" connection: one server at a time |
+| `static_servers_only` | yes/no | connect only to fixed servers |
+| `dead_server_retries` | integer | failed attempts after which a server is removed |
+| `crypt_supported`, `crypt_requested`, `crypt_required` | yes/no | protocol obfuscation (RC4): supported, preferred, required (*from restart*) |
+| `secure_ident` | yes/no | secure identification of clients (signature of credits) (*from restart*) |
+| `credit_system` | yes/no | credit system (whoever gave you data moves ahead in the queue) |
+| `add_new_downloads_paused` | yes/no | new downloads start paused |
+| `auto_up_priority`, `auto_down_priority` | yes/no | automatic priority for new files |
+| `transfer_full_chunks` | yes/no | finish the current block before moving to the next client |
+| `remove_finished_downloads` | yes/no | remove finished downloads from the list |
+| `upnp_enabled` | yes/no | UPnP: asks the router to forward the TCP and UDP ports (it turns on and off at once, without restart; the state is in `GET /status`, field `upnp`) |
+| `upnp_close_on_exit` | yes/no | UPnP: removes the rules from the router when the daemon stops |
+| `verbose_log` | yes/no | also write debug messages to the log (there are many: useful for hunting a problem) |
+| `save_log_to_disk` | yes/no | also write the log to the file `logs/emuled.log` of the profile (it stays after a restart or a sudden stop; at 20 MB it moves to `emuled.log.1`) |
+| `comment_filter` | text | anti-spam filter for comments: words separated by `\|` (lowercase) that make a comment from another user be discarded; default: `http://\|https://\|ftp://\|www.\|ftp.` |
+| `save_debug_to_disk` | yes/no | also write the debug lines to the file (applies only with `verbose_log` on) |
 
-### `PATCH /api/v1/preferences` — cambia
-Corpo: solo le chiavi da cambiare, es. `{"max_upload_kbps": 50}`. **Si controlla tutto prima**: se una chiave non esiste o un valore non va (tipo, limiti) risponde **422** e non cambia nulla. Risposta: `preferences` (tutte, aggiornate), `restart_required` (le chiavi cambiate che valgono dal prossimo avvio) e `saved`.
+### `PATCH /api/v1/preferences` — change
+Body: only the keys to change, e.g. `{"max_upload_kbps": 50}`. **Everything is checked first**: if a key does not exist or a value is not valid (type, limits) it answers **422** and changes nothing. Answer: `preferences` (all of them, updated), `restart_required` (the changed keys that apply from the next start) and `saved`.
 
-`saved` è `false` quando il demone è avviato con un'identità o con porte **temporanee** (con `--fake-profile`, o con `--tcp-port`/`--udp-port`): in quel caso le preferenze cambiano solo in memoria, perché salvarle scriverebbe nel profilo l'hash utente temporaneo e le porte provvisorie.
+`saved` is `false` when the daemon is started with a **temporary** identity or ports (with `--fake-profile`, or with `--tcp-port`/`--udp-port`): in that case the preferences change only in memory, because saving them would write the temporary user hash and the provisional ports into the profile.
 
-## 10. Categorie
+## 10. Categories
 
-Servono a ordinare i download (cartella di arrivo, priorità). La categoria **0** ("tutte") esiste sempre e non si cancella né cambia nome o cartella.
+They serve to sort downloads (destination folder, priority). Category **0** ("all") always exists and cannot be deleted, renamed or given another folder.
 
-- `GET /api/v1/categories` — l'elenco: `id`, `title`, `comment`, `incoming_path`, `priority` (0 bassa, 1 normale, 2 alta, 3 massima, 4 molto bassa, 5 automatica), `auto_cat` (parole che assegnano la categoria ai download nuovi), `regexp`, `color` (-1 = predefinito).
-- `POST /api/v1/categories` — crea (serve `title`); **201**, salvata subito in `Category.ini`.
-- `PATCH /api/v1/categories/{id}` — cambia solo i campi indicati.
-- `DELETE /api/v1/categories/{id}` — cancella; i suoi download tornano a "tutte" e gli id successivi scalano di uno.
+- `GET /api/v1/categories` — the list: `id`, `title`, `comment`, `incoming_path`, `priority` (0 low, 1 normal, 2 high, 3 highest, 4 very low, 5 automatic), `auto_cat` (words that assign the category to new downloads), `regexp`, `color` (-1 = default).
+- `POST /api/v1/categories` — create (`title` is required); **201**, saved at once in `Category.ini`.
+- `PATCH /api/v1/categories/{id}` — changes only the given fields.
+- `DELETE /api/v1/categories/{id}` — deletes; its downloads go back to "all" and the following ids shift down by one.
 
-Per mettere un download in una categoria: `"category": ID` in `POST /downloads`, oppure `PATCH /api/v1/downloads/{hash}` con `{"category": ID}` e/o `{"priority": "high"}` (`auto`, `very_low`, `low`, `normal`, `high`, `release`).
+To put a download in a category: `"category": ID` in `POST /downloads`, or `PATCH /api/v1/downloads/{hash}` with `{"category": ID}` and/or `{"priority": "high"}` (`auto`, `very_low`, `low`, `normal`, `high`, `release`).
 
-## 11. Cartelle
+## 11. Folders
 
 ### `GET /api/v1/directories`
-`incoming` (dove vanno i file **completati**; è condivisa da sola), `temp` (dove stanno i `.part` mentre si scarica: almeno una, se sono più d'una eMule le alterna) e `shared` (le altre cartelle che offri agli altri). In più, in sola lettura, `shared_missing`: quelle di `shared` che non esistono sul disco (restano in elenco finché non le togli).
+`incoming` (where **completed** files go; it is shared automatically), `temp` (where the `.part` files are while downloading: at least one, if there is more than one eMule alternates them) and `shared` (the other folders you offer to others). In addition, read only, `shared_missing`: those of `shared` that do not exist on disk (they stay in the list until you remove them).
 
 ### `PUT /api/v1/directories`
-Corpo con uno o più campi: `{"incoming": "/dati/Incoming", "temp": ["/dati/Temp"], "shared": ["/home/utente/Libri"]}`. Si **controlla tutto prima** e, se c'è un errore (**422**), non cambia nulla:
-- i percorsi devono essere **assoluti** e senza `..`;
-- `incoming` e `temp` si creano se mancano e devono essere **scrivibili**; `shared` deve esistere ed essere **leggibile**;
-- `incoming` e `temp` devono essere diverse; la cartella dei completati e la temporanea **non si possono condividere** (la prima lo è già);
-- niente doppioni.
+Body with one or more fields: `{"incoming": "/dati/Incoming", "temp": ["/dati/Temp"], "shared": ["/home/utente/Libri"]}`. **Everything is checked first** and, if there is an error (**422**), nothing changes:
+- paths must be **absolute** and without `..`;
+- `incoming` and `temp` are created if missing and must be **writable**; `shared` must exist and be **readable**;
+- `incoming` and `temp` must be different; the folder for completed files and the temporary one **cannot be shared** (the first already is);
+- no duplicates.
 
-Cambiando `shared` il demone ricontrolla i file e calcola gli hash dei nuovi (può volerci un po': l'elenco `/shared` si riempie man mano). I `.part` già iniziati **restano dove sono**: la nuova cartella temporanea vale per i download nuovi. La risposta ha `directories` (lo stato dopo il cambio) e `saved`: come per le preferenze, le cartelle si scrivono nel profilo solo se il demone usa l'identità e le porte del profilo; altrimenti valgono finché è acceso.
+When `shared` changes, the daemon rechecks the files and computes the hashes of the new ones (it can take a while: the `/shared` list fills up gradually). The `.part` files already started **stay where they are**: the new temporary folder applies to new downloads. The answer has `directories` (the state after the change) and `saved`: as with preferences, the folders are written to the profile only if the daemon uses the profile's identity and ports; otherwise they apply as long as it is running.
 
-## 12. Registro degli eventi
+## 12. Event log
 
-È la scheda «Registro» di eMule: tutto ciò che il demone scrive mentre lavora (collegamenti ai server, errori, avvisi) più una riga `[api] …` per ogni azione fatta via API (download aggiunto o annullato, server aggiunto, preferenze cambiate, …), così si vede **chi ha fatto cosa**. È un buffer in memoria delle ultime 3000 righe: al riavvio del demone riparte vuoto.
+It is eMule's "Log" tab: everything the daemon writes while working (connections to servers, errors, warnings) plus a `[api] …` line for every action done through the API (download added or cancelled, server added, preferences changed, …), so you can see **who did what**. It is an in-memory buffer of the last 3000 lines: it starts empty again when the daemon restarts.
 
-### `GET /api/v1/log` — leggi
+### `GET /api/v1/log` — read
 
-Parametri facoltativi:
-- `limit` — da 1 a 2000 righe (predefinito 500);
-- `level` — livello minimo: `debug`, `info` (predefinito), `warning`, `error`;
-- `after` — numero dell'ultima riga già vista: ritorna solo le **più nuove**, dalla più vecchia. Senza `after` ritorna le ultime `limit`.
+Optional parameters:
+- `limit` — from 1 to 2000 lines (default 500);
+- `level` — minimum level: `debug`, `info` (default), `warning`, `error`;
+- `after` — number of the last line already seen: it returns only the **newest** ones, from the oldest. Without `after` it returns the last `limit`.
 
-Risposta: `lines` (ognuna con `id` progressivo e mai riusato, `time` in millisecondi Unix, `level`, `source` e `text`), `last_id` (da passare come `after` la volta dopo) e `truncated` (con `after`: alcune righe in mezzo sono già state scartate dal buffer). `source` vale `general`, `server` (messaggi dei server ed2k) o `api` (azioni fatte via API).
+Answer: `lines` (each with a progressive `id` that is never reused, `time` in Unix milliseconds, `level`, `source` and `text`), `last_id` (to pass as `after` next time) and `truncated` (with `after`: some lines in between were already discarded from the buffer). `source` is `general`, `server` (messages from the ed2k servers) or `api` (actions done through the API).
 
-Le righe di **debug** compaiono solo con la preferenza `verbose_log` accesa (sono molte e rallentano un poco).
+The **debug** lines appear only with the preference `verbose_log` on (there are many and they slow things down a little).
 
-### `DELETE /api/v1/log` — svuota
+### `DELETE /api/v1/log` — clear
 
-Toglie tutte le righe (`{"removed": N}`); la numerazione continua. Per seguire il registro in diretta basta il WebSocket (evento `log`).
+It removes all the lines (`{"removed": N}`); the numbering continues. To follow the log live, the WebSocket is enough (event `log`).
 
-## 13. Template d'interfaccia
+## 13. Interface templates
 
-Un *template* è una cartella con una piccola applicazione web che parla solo con questa API; si sceglie dalle Preferenze e la scelta si ricorda nel browser (vedi «Gli altri indirizzi del demone» all'inizio). Il demone li cerca in `/usr/share/emuled/templates/` (di serie), `~/.emuled/templates/` (dell'utente) e nella cartella extra `--templates-dir`; ogni sottocartella con un `template.yaml` è un candidato.
+A *template* is a folder with a small web application that talks only to this API; it is chosen in Preferences and the choice is remembered in the browser (see "The daemon's other addresses" at the beginning). The daemon looks for them in `/usr/share/emuled/templates/` (built-in), `~/.emuled/templates/` (the user's) and in the extra folder `--templates-dir`; every subfolder with a `template.yaml` is a candidate.
 
-### `GET /api/v1/templates` — l'elenco
+### `GET /api/v1/templates` — the list
 
-Risposta: `templates` (un elemento per cartella trovata, **anche quelle non valide**, per spiegare all'utente perché non compaiono), `api_version` (la versione dell'API dei template che il demone capisce: 1) e `dirs` (le cartelle cercate: `system`, `user`, `extra`; utile per dire all'utente dove copiare un template). Per ogni template: `id`, `name`, `version`, `description`, `author`, `license`, `api` (versione richiesta), `source` (`system`, `user` o `dev` = cartella extra), `valid`, `errors` (elenco di frasi, vuoto se valido), `reserved` (nome riservato ai template di serie), `dir_name`, `url` (`/t/<id>/`, `null` se non valido) e `preview` (indirizzo dell'immagine di anteprima, `null` se manca).
+Answer: `templates` (one element per folder found, **including the invalid ones**, to explain to the user why they do not appear), `api_version` (the version of the template API that the daemon understands: 1) and `dirs` (the folders searched: `system`, `user`, `extra`; useful to tell the user where to copy a template). For each template: `id`, `name`, `version`, `description`, `author`, `license`, `api` (version required), `source` (`system`, `user` or `dev` = extra folder), `valid`, `errors` (list of sentences, empty if valid), `reserved` (name reserved for the built-in templates), `dir_name`, `url` (`/t/<id>/`, `null` if not valid) and `preview` (address of the preview image, `null` if missing).
 
-### `POST /api/v1/templates/rescan` — rilegge le cartelle
+### `POST /api/v1/templates/rescan` — rereads the folders
 
-Da usare dopo aver copiato o tolto un template. Risponde con lo stesso elenco. Nel Registro compare il riassunto («Template: N caricati, M non validi») e un avviso per ogni template non valido.
+To be used after copying or removing a template. It answers with the same list. In the Log the summary appears ("Template: N loaded, M invalid") and a warning for every invalid template.
 
-La scelta del template **non** passa dall'API: sta solo nel browser.
+The choice of template does **not** go through the API: it lives only in the browser.
 
-## 14. Ancora da fare
+## 14. Still to do
 
-Amici. Ogni gruppo avrà la sua sezione qui e le sue voci in `openapi.json` quando esisterà: il manuale descrive solo ciò che c'è.
+Friends. Each group will have its own section here and its entries in `openapi.json` when it exists: the manual describes only what is there.

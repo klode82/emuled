@@ -1,8 +1,8 @@
-// LINUX (codice nuovo): server HTTP/1.1 e WebSocket sul ciclo di eventi (epoll), nello stesso thread degli oggetti di eMule: i gestori delle richieste
-// possono leggere e modificare direttamente theApp senza altra sincronizzazione. Senza dipendenze esterne.
+// LINUX (new code): HTTP/1.1 and WebSocket server on the event loop (epoll), in the same thread as the eMule objects: request handlers
+// can read and modify theApp directly with no other synchronization. No external dependencies.
 //
-// Sicurezza: ascolta di default SOLO su 127.0.0.1; le chiamate sotto /api/ richiedono il token ("Authorization: Bearer ..." oppure "?token=..." per
-// il WebSocket dei browser); limiti su intestazioni (16 KB), corpo (1 MB), connessioni (64) e inattivita' (60 s, i WebSocket esclusi).
+// Security: listens by default ONLY on 127.0.0.1; calls under /api/ require the token ("Authorization: Bearer ..." or "?token=..." for
+// browsers' WebSocket); limits on headers (16 KB), body (1 MB), connections (64) and inactivity (60 s, WebSockets excluded).
 #pragma once
 #include "net/EventLoop.h"
 #include <cstdint>
@@ -18,12 +18,12 @@ namespace emule::api {
 struct Request
 {
 	std::string method;						// "GET", "POST", ...
-	std::string path;						// senza query, decodificato (%XX)
+	std::string path;						// without query, decoded (%XX)
 	std::map<std::string, std::string> query;
-	std::map<std::string, std::string> headers;	// nomi in minuscolo
-	std::map<std::string, std::string> params;	// parametri del percorso (:nome)
+	std::map<std::string, std::string> headers;	// lowercase names
+	std::map<std::string, std::string> params;	// path parameters (:name)
 	std::string body;
-	std::string peer;						// indirizzo del client
+	std::string peer;						// client address
 };
 
 struct Response
@@ -32,13 +32,13 @@ struct Response
 	std::string body;
 	std::string content_type = "application/json";
 	std::map<std::string, std::string> headers;
-	// risposta da file (streaming): body resta vuoto; il server legge dal file a pezzi, man mano che il client riceve. Content-Length = file_len.
+	// response from a file (streaming): body stays empty; the server reads the file in chunks, as the client receives. Content-Length = file_len.
 	std::string file_path; uint64_t file_offset = 0, file_len = 0;
 	static Response Json(int status, const std::string &json) { Response r; r.status = status; r.body = json; return r; }
-	static Response Error(int status, const std::string &message);		// {"error":"testo in italiano","code":"codice_stabile"}
+	static Response Error(int status, const std::string &message);		// {"error":"English text","code":"stable_code"}
 };
 
-// Un template d'interfaccia e' una cartella servita a /t/<id>/ (Bench 842): il resolver dice, dato l'id, dove sta la cartella e qual e' la pagina d'ingresso.
+// An interface template is a folder served at /t/<id>/ (Bench 842): given the id, the resolver says where the folder is and which is the entry page.
 struct TemplateTarget { std::string dir, entry; };
 using TemplateResolver = std::function<bool(const std::string &id, TemplateTarget &out)>;
 
@@ -53,24 +53,24 @@ public:
 	HttpServer(const HttpServer &) = delete;
 	HttpServer &operator=(const HttpServer &) = delete;
 
-	// Mette in ascolto sul ciclo corrente (EventLoop::Current()). port 0 = porta scelta dal sistema. false se non riesce (errore in LastError()).
+	// Starts listening on the current loop (EventLoop::Current()). port 0 = port chosen by the system. false on failure (error in LastError()).
 	bool Start(const std::string &bind_addr, uint16_t port);
-	void Stop();								// chiude ascolto e connessioni
+	void Stop();								// closes listener and connections
 	uint16_t port() const { return port_; }
 	const std::string &LastError() const { return error_; }
 
-	// Oltre al token del file, vale qualunque gettone che il verificatore accetta (sessioni degli account, vedi Auth); i percorsi "pubblici" non chiedono il gettone (login, impostazione)
+	// Besides the file token, any token the verifier accepts is valid (account sessions, see Auth); "public" paths do not require the token (login, setup)
 	void SetTokenVerifier(std::function<bool(const std::string &)> v) { verifier_ = std::move(v); }
 	void AddPublicPath(const std::string &path) { public_.insert(path); }
-	void SetToken(const std::string &token) { token_ = token; }		// vuoto = nessuna autenticazione (solo prove)
-	void SetStaticDir(const std::string &dir) { static_dir_ = dir; }	// file statici (web UI) per i percorsi che non sono /api/
-	// template: /t/<id>/... serve la cartella del template (con la pagina d'ingresso per i percorsi senza estensione, come le applicazioni a pagina singola);
-	// con launcher == true la pagina "/" e' una paginetta incorporata che porta al template scelto nel browser (emuled.template, altrimenti console)
+	void SetToken(const std::string &token) { token_ = token; }		// empty = no authentication (tests only)
+	void SetStaticDir(const std::string &dir) { static_dir_ = dir; }	// static files (web UI) for paths that are not /api/
+	// templates: /t/<id>/... serves the template folder (with the entry page for paths without extension, like single-page apps);
+	// with launcher == true the "/" page is a small built-in page leading to the template chosen in the browser (emuled.template, otherwise console)
 	void SetTemplates(TemplateResolver r, bool launcher) { templates_ = std::move(r); launcher_ = launcher; }
-	void Route(const std::string &method, const std::string &pattern, Handler h);	// es. Route("GET", "/api/v1/downloads/:hash", ...)
-	void SetWsHandler(const std::string &path, WsMessageHandler h) { ws_path_ = path; ws_handler_ = std::move(h); }	// il WebSocket e' un solo percorso (/api/v1/events)
+	void Route(const std::string &method, const std::string &pattern, Handler h);	// e.g. Route("GET", "/api/v1/downloads/:hash", ...)
+	void SetWsHandler(const std::string &path, WsMessageHandler h) { ws_path_ = path; ws_handler_ = std::move(h); }	// the WebSocket is a single path (/api/v1/events)
 
-	void Broadcast(const std::string &text);	// invia un messaggio di testo a tutti i WebSocket collegati
+	void Broadcast(const std::string &text);	// sends a text message to all connected WebSockets
 	size_t WsClients() const;
 
 	static std::string UrlDecode(const std::string &s);

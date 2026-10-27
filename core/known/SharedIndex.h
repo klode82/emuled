@@ -1,6 +1,6 @@
-// LINUX (codice nuovo): elenco dei file condivisi in memoria. Mette insieme known.met, scansione e hashing.
-// Rispetta la decisione sui thread (Bench #560): i worker di HashPool calcolano e basta; i risultati si applicano
-// SOLO dal thread logico, chiamando Poll() (o WaitIdle()). Nessun dato condiviso e' toccato dai worker.
+// LINUX (new code): in-memory list of shared files. Puts together known.met, scanning and hashing.
+// Follows the thread decision (Bench #560): the HashPool workers only compute; the results are applied
+// ONLY from the logical thread, calling Poll() (or WaitIdle()). No shared data is touched by the workers.
 #pragma once
 #include "known/Hasher.h"
 #include "known/SharedScanner.h"
@@ -12,26 +12,26 @@ namespace emule::known {
 class SharedIndex {
 public:
 	struct Config {
-		std::string known_met;				// percorso di known.met (se assente si parte da un elenco vuoto)
+		std::string known_met;				// path of known.met (if absent we start from an empty list)
 		ShareOptions share;
 		unsigned hash_threads = 2;
 	};
 	explicit SharedIndex(Config c);
 	~SharedIndex();
 
-	bool Open(std::string &err);			// carica known.met; se esiste ma non e' sano: false e il file NON viene toccato
-	ScanResult Rescan();					// legge le cartelle, mette in coda gli hash dei file nuovi o cambiati
-	size_t Poll();							// applica i risultati degli hash gia' pronti; ritorna quanti
-	void WaitIdle();						// attende la fine di tutti gli hash e li applica
+	bool Open(std::string &err);			// loads known.met; if it exists but is not sane: false and the file is NOT touched
+	ScanResult Rescan();					// reads the folders, queues the hashes of new or changed files
+	size_t Poll();							// applies the hash results that are ready; returns how many
+	void WaitIdle();						// waits for all hashes to finish and applies them
 	void CancelHashing();
-	bool Save(std::string &err);			// scrive known.met in modo sicuro (SafeWriteMet); no-op se nulla e' cambiato
+	bool Save(std::string &err);			// writes known.met safely (SafeWriteMet); no-op if nothing changed
 	bool dirty() const { return dirty_; }
 
 	struct Shared { std::string path; const KnownFile *file; };
-	std::vector<Shared> shared() const;		// file attualmente condivisi (presenti su disco e con hash)
+	std::vector<Shared> shared() const;		// files currently shared (present on disk and with a hash)
 	const KnownFileList &known() const { return known_; }
 	size_t hashing() const { return pool_->pending(); }
-	// eventi dell'ultimo Poll/WaitIdle
+	// events of the last Poll/WaitIdle
 	struct Stats { size_t hashed = 0, failed = 0, changed_while_hashing = 0, duplicates = 0; };
 	const Stats &stats() const { return stats_; }
 	const std::vector<std::string> &duplicate_paths() const { return duplicates_; }
@@ -40,9 +40,9 @@ private:
 	struct Result { HashPool::Job job; HashResult res; };
 	Config cfg_;
 	KnownFileList known_;
-	std::map<std::string, Hash16> shared_;				// percorso -> hash, solo thread logico
-	std::map<std::string, uint64_t> queued_;			// percorso -> mtime|dimensione dei lavori in coda
-	std::mutex rm_; std::vector<Result> ready_;			// unico punto di contatto con i worker
+	std::map<std::string, Hash16> shared_;				// path -> hash, logical thread only
+	std::map<std::string, uint64_t> queued_;			// path -> mtime|size of the queued jobs
+	std::mutex rm_; std::vector<Result> ready_;			// only point of contact with the workers
 	std::unique_ptr<HashPool> pool_;
 	bool dirty_ = false;
 	Stats stats_;

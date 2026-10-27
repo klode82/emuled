@@ -1,4 +1,4 @@
-// LINUX: vedi util/Crypto.h. Codice identico all'originale.
+// LINUX: see util/Crypto.h. Code identical to the original.
 #include "StdAfx.h"
 #include "util/Crypto.h"
 

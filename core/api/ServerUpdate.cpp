@@ -23,11 +23,11 @@ namespace emule::api {
 
 namespace {
 constexpr size_t kMaxBytes = 8u << 20;		// un server.met vero sta in pochi MB
-constexpr size_t kMaxUrls = 20;				// come la memoria "ultimi usati" di eMule
+constexpr size_t kMaxUrls = 20;				// like eMule's "last used" memory
 
 std::string AcPath() { return std::string((LPCTSTR)(thePrefs.GetMuleDirectory(EMULE_CONFIGDIR) + _T("AC_ServerMetURLs.dat"))); }
 
-// righe di testo UTF-16LE (come le scrive eMule: BOM + CRLF)
+// lines of UTF-16LE text (as eMule writes them: BOM + CRLF)
 std::vector<std::string> ReadAc()
 {
 	std::vector<std::string> v; std::ifstream f(AcPath(), std::ios::binary); std::string raw((std::istreambuf_iterator<char>(f)), {});
@@ -35,7 +35,7 @@ std::vector<std::string> ReadAc()
 	for (size_t i = (raw.size() >= 2 && (uint8_t)raw[0] == 0xFF && (uint8_t)raw[1] == 0xFE) ? 2 : 0; i + 1 < raw.size(); i += 2) {
 		unsigned c = (uint8_t)raw[i] | ((uint8_t)raw[i + 1] << 8);
 		if (c == '\n' || c == '\r') { if (!cur.empty()) v.push_back(cur); cur.clear(); }
-		else if (c < 128) cur += (char)c;		// gli indirizzi sono ASCII; il resto si scarta
+		else if (c < 128) cur += (char)c;		// addresses are ASCII; the rest is discarded
 	}
 	if (!cur.empty()) v.push_back(cur);
 	return v;
@@ -54,7 +54,7 @@ void Remember(const std::string &url)
 	WriteAc(n);
 }
 
-// un download http in un thread a parte; l'esito si raccoglie nel thread del ciclo (la lista dei server e le tabelle di Kad non sono fatte per due thread)
+// an http download in a separate thread; the outcome is collected in the loop thread (the server list and the Kad tables are not made for two threads)
 struct Fetch
 {
 	std::atomic<bool> finished{false};
@@ -71,7 +71,7 @@ std::shared_ptr<Fetch> StartFetch(const std::string &url, std::function<void(Fet
 		if (f->th.joinable()) f->th.join();
 		auto *loop = emule::net::EventLoop::Current(); const uint64_t t = f->timer; f->timer = 0;
 		done(*f);
-		if (loop && t) loop->CancelTimer(t);		// ultima cosa: cancellare il timer distrugge questa funzione
+		if (loop && t) loop->CancelTimer(t);		// last thing: cancelling the timer destroys this function
 	}, true);
 	return f;
 }
@@ -83,7 +83,7 @@ void Finish(Fetch &j)
 {
 	if (!j.ok) {
 		g_state = {{"state", "failed"}, {"url", j.url}, {"error", j.error}};
-		AddLogLine(true, _T("Server: aggiornamento da %s fallito: %s"), j.url.c_str(), j.error.c_str());
+		AddLogLine(true, _T("Server: update from %s failed: %s"), j.url.c_str(), j.error.c_str());
 		return;
 	}
 	CString tmp = thePrefs.GetMuleDirectory(EMULE_CONFIGDIR) + _T("temp-server.met");
@@ -92,31 +92,31 @@ void Finish(Fetch &j)
 	const bool good = theApp.serverlist->AddServerMetToList(tmp, true);
 	std::remove((LPCTSTR)tmp);
 	if (!good) {
-		g_state = {{"state", "failed"}, {"url", j.url}, {"error", "il file scaricato non e' un server.met valido"}};
-		AddLogLine(true, _T("Server: %s non e' un server.met valido"), j.url.c_str());
+		g_state = {{"state", "failed"}, {"url", j.url}, {"error", "the downloaded file is not a valid server.met"}};
+		AddLogLine(true, _T("Server: %s is not a valid server.met"), j.url.c_str());
 		return;
 	}
 	Remember(j.url);
-	theApp.serverlist->SaveServermetToFile();		// i server aggiunti da un indirizzo web si salvano subito (come l'aggiunta di un server solo, POST /servers): altrimenti li perdi se il demone non si ferma in modo pulito
+	theApp.serverlist->SaveServermetToFile();		// servers added from a web address are saved at once (like adding a single server, POST /servers): otherwise they are lost if the daemon does not stop cleanly
 	const INT_PTR now = theApp.serverlist->GetServerCount();
 	g_state = {{"state", "done"}, {"url", j.url}, {"added", (int64_t)(now - before)}, {"total", (int64_t)now}};
-	AddLogLine(false, _T("Server: lista aggiornata da %s: %d nuovi, %d in tutto"), j.url.c_str(), (int)(now - before), (int)now);
+	AddLogLine(false, _T("Server: list updated from %s: %d new, %d in total"), j.url.c_str(), (int)(now - before), (int)now);
 }
 
-// ---- Kad: bootstrap da un indirizzo (nodes.dat) o da un nodo (ip:porta)
+// ---- Kad: bootstrap from an address (nodes.dat) or from a node (ip:port)
 std::shared_ptr<Fetch> g_kadJob;
 json g_kadState = {{"state", "idle"}};
 bool KadReady(const DaemonHooks &hooks, std::string &err)
 {
-	if (!hooks.kad_start) { err = "Kad non disponibile (porta UDP spenta o demone senza rete)"; return false; }
-	if (!Kademlia::CKademlia::IsRunning() && !hooks.kad_start()) { err = "Kad non parte"; return false; }
+	if (!hooks.kad_start) { err = "Kad not available (UDP port off or daemon without network)"; return false; }
+	if (!Kademlia::CKademlia::IsRunning() && !hooks.kad_start()) { err = "Kad will not start"; return false; }
 	return true;
 }
 void FinishKad(Fetch &j)
 {
 	if (!j.ok || !Kademlia::CKademlia::GetRoutingZone()) {
-		g_kadState = {{"state", "failed"}, {"kind", "url"}, {"target", j.url}, {"error", j.ok ? "Kad non e' in funzione" : j.error}};
-		AddLogLine(true, _T("Kad: bootstrap da %s fallito: %s"), j.url.c_str(), j.ok ? "Kad non e' in funzione" : j.error.c_str());
+		g_kadState = {{"state", "failed"}, {"kind", "url"}, {"target", j.url}, {"error", j.ok ? "Kad is not running" : j.error}};
+		AddLogLine(true, _T("Kad: bootstrap from %s failed: %s"), j.url.c_str(), j.ok ? "Kad is not running" : j.error.c_str());
 		return;
 	}
 	CString tmp = thePrefs.GetMuleDirectory(EMULE_CONFIGDIR) + _T("temp-nodes.dat");
@@ -126,7 +126,7 @@ void FinishKad(Fetch &j)
 	std::remove((LPCTSTR)tmp);
 	const uint32_t now = Kademlia::CKademlia::GetRoutingZone()->GetNumContacts();
 	g_kadState = {{"state", "done"}, {"kind", "url"}, {"target", j.url}, {"added", (int64_t)now - (int64_t)before}, {"contacts", now}};
-	AddLogLine(false, _T("Kad: nodes.dat scaricato da %s: %d contatti nuovi, %d in tutto"), j.url.c_str(), (int)(now - before), (int)now);
+	AddLogLine(false, _T("Kad: nodes.dat downloaded from %s: %d new contacts, %d in total"), j.url.c_str(), (int)(now - before), (int)now);
 }
 } // namespace
 
@@ -142,45 +142,45 @@ void RegisterServerUpdateRoutes(HttpServer &srv, const DaemonHooks &hooks)
 	srv.Route("GET", "/api/v1/servers/update", [](const Request &) { return Response::Json(200, g_state.dump()); });
 	srv.Route("POST", "/api/v1/servers/update", [](const Request &r) {
 		json b = json::parse(r.body, nullptr, false);
-		if (b.is_discarded() || !b.is_object()) return Response::Error(400, "serve un oggetto JSON nel corpo");
+		if (b.is_discarded() || !b.is_object()) return Response::Error(400, "a JSON object is required in the body");
 		std::string url = b.value("url", std::string());
-		if (url.rfind("http://", 0) != 0 && url.rfind("https://", 0) != 0) return Response::Error(422, "serve un indirizzo http:// o https://");
-		if (g_state.value("state", "") == "running") return Response::Error(409, "un aggiornamento e' gia' in corso");
+		if (url.rfind("http://", 0) != 0 && url.rfind("https://", 0) != 0) return Response::Error(422, "an http address is required (http:// or https://)");
+		if (g_state.value("state", "") == "running") return Response::Error(409, "an update is already running");
 		auto *loop = emule::net::EventLoop::Current();
-		if (!loop) return Response::Error(500, "ciclo di eventi non disponibile");
+		if (!loop) return Response::Error(500, "event loop not available");
 		g_state = {{"state", "running"}, {"url", url}};
 		Audit("server list update requested: " + url);
-		AddLogLine(false, _T("Server: scarico la lista da %s"), url.c_str());
+		AddLogLine(false, _T("Server: downloading the list from %s"), url.c_str());
 		g_job = StartFetch(url, Finish);
 		return Response::Json(202, g_state.dump());
 	});
 	srv.Route("GET", "/api/v1/kad/bootstrap", [](const Request &) { return Response::Json(200, g_kadState.dump()); });
 	srv.Route("POST", "/api/v1/kad/bootstrap", [hooks](const Request &r) {
 		json b = json::parse(r.body, nullptr, false);
-		if (b.is_discarded() || !b.is_object()) return Response::Error(400, "serve un oggetto JSON nel corpo");
+		if (b.is_discarded() || !b.is_object()) return Response::Error(400, "a JSON object is required in the body");
 		std::string url = b.value("url", std::string()), addr = b.value("address", std::string());
-		if (url.empty() == addr.empty()) return Response::Error(422, "serve \"url\" (nodes.dat) oppure \"address\" (ip:porta di un nodo), uno dei due");
-		if (!url.empty() && url.rfind("http://", 0) != 0 && url.rfind("https://", 0) != 0) return Response::Error(422, "serve un indirizzo http:// o https://");
+		if (url.empty() == addr.empty()) return Response::Error(422, "either \"url\" (nodes.dat) or \"address\" (ip:port of a node) is required, one of the two");
+		if (!url.empty() && url.rfind("http://", 0) != 0 && url.rfind("https://", 0) != 0) return Response::Error(422, "an http address is required (http:// or https://)");
 		uint16_t port = 0; std::string host;
 		if (!addr.empty()) {
 			size_t c = addr.rfind(':'); int p = c == std::string::npos ? 0 : std::atoi(addr.c_str() + c + 1);
-			if (c == std::string::npos || c == 0 || p < 1 || p > 65535) return Response::Error(422, "l'indirizzo del nodo e' ip:porta");
+			if (c == std::string::npos || c == 0 || p < 1 || p > 65535) return Response::Error(422, "the node address is ip:port");
 			host = addr.substr(0, c); port = (uint16_t)p;
 		}
-		if (g_kadState.value("state", "") == "running") return Response::Error(409, "un bootstrap e' gia' in corso");
+		if (g_kadState.value("state", "") == "running") return Response::Error(409, "a bootstrap is already running");
 		std::string err; if (!KadReady(hooks, err)) return Response::Error(409, err);
 		if (!addr.empty()) {
-			if (Kademlia::CKademlia::IsConnected()) return Response::Error(409, "Kad e' gia' collegato");
+			if (Kademlia::CKademlia::IsConnected()) return Response::Error(409, "Kad is already connected");
 			Audit("kad bootstrap from node requested: " + addr);
 			Kademlia::CKademlia::Bootstrap(host.c_str(), port);
 			g_kadState = {{"state", "done"}, {"kind", "address"}, {"target", addr}};
-			AddLogLine(false, _T("Kad: bootstrap dal nodo %s"), addr.c_str());
+			AddLogLine(false, _T("Kad: bootstrap from node %s"), addr.c_str());
 			return Response::Json(202, g_kadState.dump());
 		}
-		if (!emule::net::EventLoop::Current()) return Response::Error(500, "ciclo di eventi non disponibile");
+		if (!emule::net::EventLoop::Current()) return Response::Error(500, "event loop not available");
 		g_kadState = {{"state", "running"}, {"kind", "url"}, {"target", url}};
 		Audit("kad nodes.dat update requested: " + url);
-		AddLogLine(false, _T("Kad: scarico nodes.dat da %s"), url.c_str());
+		AddLogLine(false, _T("Kad: downloading nodes.dat from %s"), url.c_str());
 		g_kadJob = StartFetch(url, FinishKad);
 		return Response::Json(202, g_kadState.dump());
 	});

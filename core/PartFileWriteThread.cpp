@@ -66,7 +66,7 @@ void CPartFileWriteThread::EndThread()
 
 UINT CPartFileWriteThread::RunInternal()
 {
-	// LINUX: la porta di completamento nasce nel costruttore (cosi' EndThread/WakeUpCall non la trovano mai vuota)
+	// LINUX: the completion port is created in the constructor (so EndThread/WakeUpCall never find it empty)
 
 	DWORD dwWrite = 0;
 	ULONG_PTR completionKey = 0;
@@ -131,7 +131,7 @@ void CPartFileWriteThread::WriteBuffers()
 			pOvWrite->oOverlap.InternalHigh = 0;
 			//pOvWrite->oOverlap.Offset = LODWORD(currentblock->StartOffset);
 			//pOvWrite->oOverlap.OffsetHigh = HIDWORD(currentblock->StartOffset);
-			OvSetOffset(&pOvWrite->oOverlap, pBuffer->start);		// LINUX: Offset e OffsetHigh a parte (il cast a uint64* violava lo strict aliasing)
+			OvSetOffset(&pOvWrite->oOverlap, pBuffer->start);		// LINUX: Offset and OffsetHigh separately (the cast to uint64* violated strict aliasing)
 			pOvWrite->oOverlap.hEvent = 0;
 			pOvWrite->pFile = pFile;
 			pOvWrite->pBuffer = pBuffer;

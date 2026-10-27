@@ -77,7 +77,7 @@ void CUPnPImplMiniLib::StopAsyncFind()
 			// or it might try to access the object later, but terminating is quite bad too. Well.
 			DebugLogError(_T("Waiting for UPnP StartDiscoveryThread to quit failed, trying to terminate the thread..."));
 
-			// LINUX: non c'e' un TerminateThread sicuro (annullare un thread a meta' lascia mutex e memoria in stato incerto): si rinuncia e si lascia finire il thread da solo
+			// LINUX: there is no safe TerminateThread (cancelling a thread midway leaves mutexes and memory in an uncertain state): give up and let the thread finish by itself
 			DebugLogError(_T("...cannot terminate the thread on this platform, leaving it to finish by itself"));
 		}
 		m_hThreadHandle = NULL;
@@ -192,7 +192,7 @@ CUPnPImplMiniLib::CStartDiscoveryThread::CStartDiscoveryThread()
 
 bool CUPnPImplMiniLib::CStartDiscoveryThread::InitInstance()
 {
-	return true;		// LINUX: l'originale chiama InitThreadLocale (lingua del thread, Windows)
+	return true;		// LINUX: the original calls InitThreadLocale (thread language, Windows)
 }
 
 int CUPnPImplMiniLib::CStartDiscoveryThread::Run()
@@ -243,7 +243,7 @@ int CUPnPImplMiniLib::CStartDiscoveryThread::Run()
 							, m_pOwner->m_achLanIP, sizeof m_pOwner->m_achLanIP
 							, m_pOwner->m_achWanIP, sizeof m_pOwner->m_achWanIP);
 #else
-			// LINUX: la miniupnpc di sistema (API 17) non restituisce l'IP WAN da UPNP_GetValidIGD: si legge dopo, a router trovato
+			// LINUX: the system miniupnpc (API 17) does not return the WAN IP from UPNP_GetValidIGD: it is read afterwards, once the router is found
 			int iResult = UPNP_GetValidIGD(structDeviceList, m_pOwner->m_pURLs, m_pOwner->m_pIGDData
 							, m_pOwner->m_achLanIP, sizeof m_pOwner->m_achLanIP);
 			if (iResult == 1 && UPNP_GetExternalIPAddress(m_pOwner->m_pURLs->controlURL, m_pOwner->m_pIGDData->first.servicetype, m_pOwner->m_achWanIP) != UPNPCOMMAND_SUCCESS)
@@ -389,7 +389,7 @@ void CUPnPImplMiniLib::Cleanup()
 void CUPnPImplMiniLib::StartThread()
 {
 	CStartDiscoveryThread *pStartDiscoveryThread = (CStartDiscoveryThread*)AfxBeginThread(RUNTIME_CLASS(CStartDiscoveryThread), THREAD_PRIORITY_NORMAL, 0, CREATE_SUSPENDED);
-	m_hThreadHandle = (HANDLE)pStartDiscoveryThread;		// LINUX: serve solo a sapere che il thread esiste (non c'e' un handle di thread come in Windows)
+	m_hThreadHandle = (HANDLE)pStartDiscoveryThread;		// LINUX: only needed to know the thread exists (there is no thread handle as in Windows)
 	pStartDiscoveryThread->SetValues(this);
 	pStartDiscoveryThread->ResumeThread();
 }

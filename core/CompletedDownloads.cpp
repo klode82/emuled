@@ -1,4 +1,4 @@
-// LINUX (codice nuovo): vedi CompletedDownloads.h
+// LINUX (new code): see CompletedDownloads.h
 #include "StdAfx.h"
 #include "CompletedDownloads.h"
 #include "PartFile.h"
@@ -18,7 +18,7 @@ void CompletedDownloads::Add(const CPartFile *f)
 	c.hash = (LPCTSTR)md4str(f->GetFileHash()); c.name = (LPCTSTR)f->GetFileName(); c.path = (LPCTSTR)f->GetFilePath();
 	c.size = (uint64_t)f->GetFileSize(); c.completed_at = (uint64_t)std::time(nullptr);
 	c.category = (int)const_cast<CPartFile *>(f)->GetCategory(); c.priority = f->GetDownPriority(); c.auto_priority = f->IsAutoDownPriority();
-	Remove(c.hash);									// un file riscaricato e finito di nuovo: una riga sola
+	Remove(c.hash);									// a file downloaded again and finished anew: a single row
 	g_list.push_back(std::move(c));
 }
 const std::vector<CompletedDownload> &CompletedDownloads::All() { return g_list; }

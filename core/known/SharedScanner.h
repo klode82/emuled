@@ -1,5 +1,5 @@
-// LINUX (codice nuovo): elenco dei file da condividere. Equivale a CSharedFileList::AddFilesFromDirectory + CheckAndAddSingleFile.
-// Ogni cartella e' letta SENZA scendere nelle sottocartelle (come eMule: ogni sottocartella condivisa e' una voce di shareddir.dat).
+// LINUX (new code): list of files to share. Equivalent to CSharedFileList::AddFilesFromDirectory + CheckAndAddSingleFile.
+// Each folder is read WITHOUT descending into subfolders (like eMule: each shared subfolder is an entry of shareddir.dat).
 #pragma once
 #include "known/KnownFile.h"
 #include <string>
@@ -9,15 +9,15 @@ namespace emule::known {
 
 struct ShareOptions {
 	std::vector<std::string> dirs;
-	std::vector<std::string> files;		// file scelti uno a uno (sharedfiles.dat): niente esclusioni per nome, restano i controlli su dimensione e tipo
-	// Glob sul nome (senza distinzione di maiuscole). Il valore predefinito esclude i residui Windows e i file di lavoro.
+	std::vector<std::string> files;		// files chosen one by one (sharedfiles.dat): no exclusions by name, the size and type checks remain
+	// Glob on the name (case-insensitive). The default value excludes Windows leftovers and work files.
 	std::vector<std::string> ignore = {"*:Zone.Identifier", "*.part", "*.part.met", "*.part.met.bak", "*.part.met.tmp", "*.part.met.corrupt", "thumbs.db", ".*"};
 };
 
 struct Candidate { std::string path, name; uint64_t size = 0; uint32_t mtime = 0; };
 
 struct ScanResult {
-	std::vector<Candidate> known;		// gia' in known.met (nome, dimensione e data coincidono): si condividono subito
+	std::vector<Candidate> known;		// already in known.met (name, size and date match): shared immediately
 	std::vector<Candidate> to_hash;		// da calcolare
 	std::vector<std::string> missing_dirs;
 	std::vector<std::string> errors;

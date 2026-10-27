@@ -27,18 +27,18 @@ export const useSearch = defineStore('search', () => {
     const i = list.value.findIndex((x) => x.id === c.id)
     if (i >= 0) list.value[i] = head; else list.value.unshift(head)
   }
-  // il demone ricorda le ultime ricerche: al primo ingresso si riprendono, la piu' recente resta aperta
+  // the daemon remembers the latest searches: on first entry they are resumed, the most recent stays open
   async function load() {
     try {
       list.value = await api().searches()
       if (!current.value && list.value.length) await select(list.value[0].id)
-    } catch { /* senza elenco si parte da zero */ }
+    } catch { /* without a list, start from scratch */ }
   }
   async function select(id: number) {
     stopPoll()
     try {
       current.value = await api().search(id)
-      form.value = { ...form.value, query: current.value.query, scope: current.value.scope }		// il modulo mostra la ricerca della scheda
+      form.value = { ...form.value, query: current.value.query, scope: current.value.scope }		// the form shows the tab's search
       if (current.value.state === 'running') { timer = setInterval(() => void poll(), 1000) }
     } catch (e) { useToasts().error(errText(e)) }
   }
@@ -51,7 +51,7 @@ export const useSearch = defineStore('search', () => {
     if (params) form.value = { ...params }
     const f = { ...form.value, query: form.value.query.trim() }
     if (!f.query) return
-    // campi opzionali vuoti non si mandano
+    // empty optional fields are not sent
     for (const k of ['ext', 'type'] as const) if (!f[k]) delete f[k]
     for (const k of ['min_size', 'max_size', 'min_sources', 'min_complete'] as const) if (!f[k]) delete f[k]
     starting.value = true
@@ -60,7 +60,7 @@ export const useSearch = defineStore('search', () => {
       stopPoll(); upsert(current.value); timer = setInterval(() => void poll(), 1000); void poll()
     } catch (e) { useToasts().error(errText(e)) } finally { starting.value = false }
   }
-  // "Aggiorna": rifa la stessa ricerca (parola, dove e filtri) nella stessa scheda
+  // "Refresh": redoes the same search (word, where and filters) in the same tab
   async function refresh() {
     const c = current.value
     if (!c) return
@@ -74,7 +74,7 @@ export const useSearch = defineStore('search', () => {
     try { current.value = await api().cancelSearch(current.value.id); stopPoll(); await poll() } catch (e) { useToasts().error(errText(e)) }
   }
   function apply(e: ServerEvent) {
-    // l'evento porta solo lo stato: i risultati si leggono con il sondaggio
+    // the event carries only the state: results are read by polling
     if (e.type === 'search.results' && current.value && e.data.id === current.value.id) {
       current.value = { ...current.value, state: e.data.state, result_count: e.data.result_count, elapsed_s: e.data.elapsed_s }
       upsert(current.value)

@@ -109,7 +109,7 @@ CEMSocket::CEMSocket()
 	, m_bBusy()
 	, m_hasSent()
 	, m_bUseBigSendBuffers()
-	, m_bUseOverlappedSend(false)		// LINUX: l'overlapped I/O e' di Windows; qui si usa sempre l'invio normale (SendStd)
+	, m_bUseOverlappedSend(false)		// LINUX: overlapped I/O is a Windows thing; here the plain send (SendStd) is always used
 	, m_bPendingSendOv()
 {
 	lastCalledSend = timeGetTime();
@@ -343,7 +343,7 @@ void CEMSocket::OnReceive(int nErrorCode)
 				break;
 			default:
 				EMTrace("CEMSocket::OnReceive ERROR Wrong header");
-				if (thePrefs.GetVerbose())	// LINUX: diagnosi di un flusso fuori sincronia (byte attorno all'errore, stato dello strato cifrato)
+				if (thePrefs.GetVerbose())	// LINUX: diagnosis of an out-of-sync stream (bytes around the error, state of the encryption layer)
 					DebugLogError(_T("EMSocket: wrong header: first bytes %s (offset %d of %d read, obfuscated=%d, last opcode 0x%02x prot 0x%02x)")
 						, (LPCTSTR)DbgGetHexDump((const uint8*)rptr, (UINT)std::min<size_t>(32, (size_t)(rend - rptr))), (int)(rptr - GlobalReadBuffer), (int)(rend - GlobalReadBuffer), (int)IsObfusicating(), (unsigned)m_dbgLastOpcode, (unsigned)m_dbgLastProt);
 				OnError(ERR_WRONGHEADER);
@@ -504,8 +504,8 @@ void CEMSocket::OnSend(int nErrorCode)
 
 	byConnected = EMS_CONNECTED;
 
-	// LINUX: l'originale legge queste variabili senza lock mentre il thread del throttler le scrive in SendStd (race trovata da TSan).
-	// Si leggono sotto sendLocker; il throttler si chiama DOPO aver rilasciato il lock (il suo thread prende prima il proprio, poi questo).
+	// LINUX: the original reads these variables without a lock while the throttler thread writes them in SendStd (race found by TSan).
+	// They are read under sendLocker; the throttler is called AFTER releasing the lock (its thread takes its own lock first, then this one).
 	bool bControl, bData;
 	{
 		CSingleLock lock(&sendLocker, TRUE);
@@ -825,7 +825,7 @@ SocketSentBytes CEMSocket::SendOv(uint32 maxNumberOfBytesToSend, uint32 minFragS
 
 			if (m_aBufferSend.GetCount() > 0) {
 				// all right, prepare to send our collected buffers
-				memset(&m_PendingSendOperation, 0, sizeof(WSAOVERLAPPED));		// LINUX: sizeof con le parentesi (codice che su Linux non gira mai)
+				memset(&m_PendingSendOperation, 0, sizeof(WSAOVERLAPPED));		// LINUX: sizeof with parentheses (code that never runs on Linux)
 				m_PendingSendOperation.hEvent = theApp.uploadBandwidthThrottler->GetSocketAvailableEvent();
 				m_bPendingSendOv = true;
 				if (CEncryptedStreamSocket::SendOv(m_aBufferSend, &m_PendingSendOperation) == 0)
@@ -1147,7 +1147,7 @@ bool CEMSocket::IsBusyExtensiveCheck()
 // and thread related errors) but doesn't need locks or function calls
 bool CEMSocket::IsBusyQuickCheck() const
 {
-	return m_bUseOverlappedSend ? m_bPendingSendOv : (bool)m_bBusy;		// LINUX: m_bBusy e' atomico
+	return m_bUseOverlappedSend ? m_bPendingSendOv : (bool)m_bBusy;		// LINUX: m_bBusy is atomic
 }
 
 //sendLock must be locked by the caller!
@@ -1173,14 +1173,14 @@ void CEMSocket::CleanUpOverlappedSendOperation(bool bCancel)
 
 bool CEMSocket::HasQueues(bool bOnlyStandardPackets) const
 {
-	// LINUX: si prende sendLocker: le code sono modificate dall'altro thread e leggerle senza lock e' una corsa (e IsLowOnFileDataQueued le scorre)
+	// LINUX: take sendLocker: the queues are modified by the other thread and reading them without a lock is a race (and IsLowOnFileDataQueued walks them)
 	CSingleLock lock(&sendLocker, true);
 	return sendbuffer != NULL || !standardpacket_queue.IsEmpty() || (!controlpacket_queue.IsEmpty() && !bOnlyStandardPackets);
 }
 
 bool CEMSocket::IsLowOnFileDataQueued(uint32 nMinFilePayloadBytes) const
 {
-	CSingleLock lock(&sendLocker, true);		// LINUX: scorre la coda: serve il lock
+	CSingleLock lock(&sendLocker, true);		// LINUX: walks the queue: needs the lock
 	// check we have at least nMinFilePayloadBytes Payload data in our standardqueue
 	for (POSITION pos = standardpacket_queue.GetHeadPosition(); pos != NULL;) {
 		uint32 actualsize = standardpacket_queue.GetNext(pos).actualPayloadSize;

@@ -1,4 +1,4 @@
-// LINUX (codice nuovo): vedi SharedScanner.h
+// LINUX (new code): see SharedScanner.h
 #include "StdAfx.h"
 #include "known/SharedScanner.h"
 #include "Opcodes.h"
@@ -22,7 +22,7 @@ ScanResult ScanShared(const ShareOptions &opt, const KnownFileList &known)
 	std::vector<std::string> seen_dirs;
 	for (std::string dir : opt.dirs) {
 		while (dir.size() > 1 && dir.back() == '/') dir.pop_back();
-		if (std::find(seen_dirs.begin(), seen_dirs.end(), dir) != seen_dirs.end()) continue;	// stessa cartella due volte (es. Incoming e shareddir.dat)
+		if (std::find(seen_dirs.begin(), seen_dirs.end(), dir) != seen_dirs.end()) continue;	// same folder twice (e.g. Incoming and shareddir.dat)
 		seen_dirs.push_back(dir);
 		DIR *d = ::opendir(dir.c_str());
 		if (!d) { if (errno == ENOENT || errno == ENOTDIR) r.missing_dirs.push_back(dir); else r.errors.push_back(dir + ": " + strerror(errno)); continue; }
@@ -33,7 +33,7 @@ ScanResult ScanShared(const ShareOptions &opt, const KnownFileList &known)
 		for (auto &n : names) {
 			std::string path = dir + "/" + n;
 			struct stat st;
-			if (::stat(path.c_str(), &st) != 0) { ++r.not_regular; continue; }		// stat segue i symlink: un link a un file regolare si condivide
+			if (::stat(path.c_str(), &st) != 0) { ++r.not_regular; continue; }		// stat follows symlinks: a link to a regular file is shared
 			if (S_ISDIR(st.st_mode)) { ++r.subdirs; continue; }
 			if (!S_ISREG(st.st_mode)) { ++r.not_regular; continue; }
 			if (MatchesIgnore(n, opt.ignore)) { ++r.ignored; continue; }
@@ -44,7 +44,7 @@ ScanResult ScanShared(const ShareOptions &opt, const KnownFileList &known)
 			else { r.to_hash_bytes += c.size; r.to_hash.push_back(std::move(c)); }
 		}
 	}
-	// file singoli: eMule li condivide anche se la cartella non lo e'
+	// single files: eMule shares them even if the folder is not shared
 	for (auto &path : opt.files) {
 		struct stat st;
 		if (::stat(path.c_str(), &st) != 0) { r.errors.push_back(path + ": " + strerror(errno)); continue; }
@@ -54,7 +54,7 @@ ScanResult ScanShared(const ShareOptions &opt, const KnownFileList &known)
 		size_t sl = path.rfind('/');
 		Candidate c{path, sl == std::string::npos ? path : path.substr(sl + 1), (uint64_t)st.st_size, (uint32_t)st.st_mtime};
 		auto dup = [&](const std::vector<Candidate> &v) { for (auto &x : v) if (x.path == c.path) return true; return false; };
-		if (dup(r.known) || dup(r.to_hash)) continue;		// gia' presa dalla cartella
+		if (dup(r.known) || dup(r.to_hash)) continue;		// already taken from the folder
 		if (known.Find(c.name, c.mtime, c.size)) { r.known_bytes += c.size; r.known.push_back(std::move(c)); }
 		else { r.to_hash_bytes += c.size; r.to_hash.push_back(std::move(c)); }
 	}

@@ -1,4 +1,4 @@
-// Client dell'API REST di emuled. Il token e' un Bearer; con 401 si avvisa chi ascolta (la sessione torna alla schermata di accesso).
+// emuled REST API client. The token is a Bearer; on 401 listeners are notified (the session goes back to the login screen).
 import { t } from '@/i18n'
 import type { ImportRule, ImportScan, FsList, PortsCheck, LogPage, Category, Directories, Download, Parts, Source, ServerPriority, NewSearch, Preferences, PrefsPatchResult, Search, Server, Shared, Status, Uploads, KadState, Priority, ServerUpdate, KadBootstrap, Details, Content, FileNames, FileComments, StreamLink, TemplateList, Blocks } from '@/types'
 
@@ -9,7 +9,7 @@ export class ApiError extends Error {
 type Json = Record<string, unknown> | unknown[]
 const base = '/api/v1'
 
-// Account dell'interfaccia (nome utente + password): queste tre chiamate sono pubbliche, non mandano il Bearer.
+// Interface account (username + password): these three calls are public, they do not send the Bearer.
 export interface AuthStatus { configured: boolean; setup_required: boolean }
 export interface AuthSession { token: string; username: string; expires_in: number }
 async function authReq<T>(method: string, path: string, body?: Json): Promise<T> {
@@ -21,7 +21,7 @@ async function authReq<T>(method: string, path: string, body?: Json): Promise<T>
   }
   const text = await res.text()
   let data: unknown = null
-  if (text) { try { data = JSON.parse(text) } catch { /* risposta non JSON */ } }
+  if (text) { try { data = JSON.parse(text) } catch { /* non-JSON response */ } }
   if (!res.ok) { const d = data as { error?: string; code?: string } | null; throw new ApiError(res.status, d?.error ?? (text || `Errore ${res.status}`), d?.code ?? '') }
   return data as T
 }
@@ -46,7 +46,7 @@ export class Api {
     }
     const text = await res.text()
     let data: unknown = null
-    if (text) { try { data = JSON.parse(text) } catch { /* risposta non JSON: si usa il testo */ } }
+    if (text) { try { data = JSON.parse(text) } catch { /* non-JSON response: the text is used */ } }
     if (res.status === 401) this.onUnauthorized()
     if (!res.ok) { const d = data as { error?: string; code?: string } | null; throw new ApiError(res.status, d?.error ?? (text || `Errore ${res.status}`), d?.code ?? '') }
     return data as T

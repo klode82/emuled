@@ -1,12 +1,12 @@
-// LINUX: argomento "crittografia semplice" di OtherFunctions.h: RC4 usato dall'obfuscation del protocollo.
+// LINUX: the "simple cryptography" topic of OtherFunctions.h: RC4 used by the protocol obfuscation.
 // Origine: srchybrid/OtherFunctions.h righe 519-530 e OtherFunctions.cpp righe 3670-3726 (RC4CreateKey, RC4Crypt, swap_byte).
-// Nota: eMule usa RC4 per MASCHERARE il traffico, non per proteggerlo (le chiavi non sono segrete).
+// Note: eMule uses RC4 to MASK the traffic, not to protect it (the keys are not secret).
 #pragma once
 #include "StdAfx.h"
 #include <cryptopp/integer.h>
 #include <cryptopp/modarith.h>
 
-// Crypto++ 8.9 non ha piu' CryptoPP::a_exp_b_mod_c (usata dall'accordo Diffie-Hellman dell'obfuscation): stessa funzione con ModularArithmetic.
+// Crypto++ 8.9 no longer has CryptoPP::a_exp_b_mod_c (used by the obfuscation Diffie-Hellman agreement): same function with ModularArithmetic.
 namespace CryptoPP {
 inline Integer a_exp_b_mod_c(const Integer &x, const Integer &e, const Integer &m) { return ModularArithmetic(m).Exponentiate(x, e); }
 }

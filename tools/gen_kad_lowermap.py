@@ -7,9 +7,9 @@ root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 d = open(os.path.join(SRCHYBRID, "res", "WideCharLowerMap.bin"), "rb").read()
 m = struct.unpack("<65536H", d)
 diffs = [(i, v) for i, v in enumerate(m) if i != v]
-out = ["// GENERATO da srchybrid/res/WideCharLowerMap.bin (la mappa Unicode -> minuscolo che TUTTI i nodi Kad devono usare identica).",
-       "// Solo le differenze (carattere, minuscolo): tutti gli altri caratteri restano uguali. %d voci, ordinate. Non modificare a mano." % len(diffs),
-       "// Rigenerare: python3 tools/gen_kad_lowermap.py", "static const uint16_t kKadLowerDiffs[][2] = {"]
+out = ["// GENERATED from srchybrid/res/WideCharLowerMap.bin (the Unicode -> lowercase map that ALL Kad nodes must use identically).",
+       "// Differences only (character, lowercase): every other character stays the same. %d entries, sorted. Do not edit by hand." % len(diffs),
+       "// Regenerate: python3 tools/gen_kad_lowermap.py", "static const uint16_t kKadLowerDiffs[][2] = {"]
 for k in range(0, len(diffs), 8):
     out.append("\t" + ",".join("{0x%04X,0x%04X}" % p for p in diffs[k:k + 8]) + ",")
 out.append("};")

@@ -1,5 +1,5 @@
-// LINUX: versione ridotta di OtherFunctions.h. L'originale (529 righe) è un hub di funzioni MFC/Win32
-// (CImageList, HICON, ...). Qui si porta solo ciò che i file già portati usano; cresce con il porting.
+// LINUX: reduced version of OtherFunctions.h. The original (529 lines) is a hub of MFC/Win32 functions
+// (CImageList, HICON, ...). Here we only port what the already ported files use; it grows with the porting.
 // Origine: srchybrid/OtherFunctions.h, sezione "MD4/MD5 helpers".
 #pragma once
 #include "StdAfx.h"
@@ -47,5 +47,5 @@ void md4str(const byte *hash, TCHAR *pszHash);
 bool strmd4(const char *pszHash, byte *hash);
 
 CString EncodeBase16(const unsigned char *buffer, unsigned int bufLen);
-CString EncodeBase32(const unsigned char *buffer, unsigned int bufLen);			// alfabeto A-Z2-7, come i link ed2k/AICH
-uint32 DecodeBase32(LPCTSTR pszInput, uchar *paucOutput, uint32 nBufferLen);	// 0 = errore; con buffer nullo restituisce la lunghezza
+CString EncodeBase32(const unsigned char *buffer, unsigned int bufLen);			// alphabet A-Z2-7, as in ed2k/AICH links
+uint32 DecodeBase32(LPCTSTR pszInput, uchar *paucOutput, uint32 nBufferLen);	// 0 = error; with a null buffer returns the length

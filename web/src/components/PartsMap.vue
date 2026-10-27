@@ -1,5 +1,5 @@
-<!-- Mappa dei blocchi (chunk) di un download: una cella per blocco. Pieno = presente (a meta' tinta = completo ma non verificabile), riempito a meta' = parziale, vuoto = mancante;
-     sfondo giallo = raro (1-2 fonti), bordo grigio = senza fonti, rosso = da riscaricare; riquadro arancione = in scarico adesso (pieno = in ricezione, chiaro = richiesto). Tutto spiegato nella legenda. -->
+<!-- Block (chunk) map of a download: one cell per block. Full = present (half tint = complete but not verifiable), half filled = partial, empty = missing;
+     yellow background = rare (1-2 sources), gray border = no sources, red = to re-download; orange frame = downloading now (full = receiving, light = requested). All explained in the legend. -->
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -11,7 +11,7 @@ const props = defineProps<{ parts: Parts; active?: { part: number; receiving: bo
 type Kind = 'complete' | 'unverified' | 'partial' | 'empty' | 'corrupted'
 type Avail = 'ok' | 'rare' | 'none'
 const kindOf = (p: Part): Kind => (p.state === 'corrupted' ? 'corrupted' : p.state === 'complete' ? (p.verified === false ? 'unverified' : 'complete') : p.state === 'partial' ? 'partial' : 'empty')
-// disponibilita' (solo per i blocchi che mancano): nessuna fonte, una o due (raro), altrimenti normale
+// availability (only for missing blocks): no source, one or two (rare), otherwise normal
 const availOf = (p: Part): Avail => (p.state === 'complete' || p.state === 'corrupted' ? 'ok' : p.sources === 0 ? 'none' : p.sources <= 2 ? 'rare' : 'ok')
 const act = computed(() => new Map((props.active ?? []).map((a) => [a.part, a.receiving])))
 const cells = computed(() => props.parts.parts.map((p) => {
@@ -19,7 +19,7 @@ const cells = computed(() => props.parts.parts.map((p) => {
   const tags = [now === undefined ? '' : t(now ? 'parts.tag.receiving' : 'parts.tag.requested'), kind === 'corrupted' ? t('parts.tag.corrupted') : kind === 'unverified' ? t('parts.tag.unverified') : '', avail === 'none' ? t('parts.tag.noSources') : avail === 'rare' ? t('parts.tag.rare') : ''].filter(Boolean)
   return { p, done, kind, avail, now, title: [`${t('parts.block', { n: p.index + 1 })} · ${bytes(p.size)} · ${percent(done)} · ${t('parts.sources', p.sources)}`, ...tags].join(' · ') }
 }))
-// riempimento a gradini di 1/8: classi Tailwind scritte per intero (cosi' il compilatore le genera), niente stile in linea
+// fill in steps of 1/8: Tailwind classes written in full (so the compiler generates them), no inline style
 const FILL = ['h-0', 'h-[12.5%]', 'h-1/4', 'h-[37.5%]', 'h-1/2', 'h-[62.5%]', 'h-3/4', 'h-[87.5%]', 'h-full']
 const fill = (done: number) => FILL[done >= 100 ? 8 : done <= 0 ? 0 : Math.max(1, Math.round(done / 12.5))]
 const n = computed(() => ({
@@ -34,7 +34,7 @@ const n = computed(() => ({
     <div class="grid grid-cols-[repeat(auto-fill,minmax(10px,18px))] gap-[2px]" role="img" :aria-label="t('parts.aria', { complete: n.complete + n.unverified, total: parts.count })">
       <span v-for="c in cells" :key="c.p.index" :title="c.title" class="relative aspect-square overflow-hidden rounded-[2px]"
         :class="c.kind === 'corrupted' ? 'bg-bad' : 'bg-sunk'">
-        <!-- i colori sono variabili CSS: la trasparenza si fa con `opacity` su strati sovrapposti, non con /50 -->
+        <!-- colors are CSS variables: transparency is done with `opacity` on stacked layers, not with /50 -->
         <span v-if="c.avail === 'rare'" class="absolute inset-0 bg-warn opacity-25" />
         <span v-if="c.avail === 'none'" class="absolute inset-0 rounded-[2px] ring-1 ring-inset ring-mute opacity-60" />
         <span v-if="c.kind !== 'corrupted'" class="absolute inset-x-0 bottom-0 bg-accent" :class="[c.kind === 'unverified' ? 'opacity-50' : '', fill(c.done)]" />

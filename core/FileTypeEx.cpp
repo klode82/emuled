@@ -1,4 +1,4 @@
-// LINUX: riconoscimento del tipo di file dall'intestazione e dall'estensione. Origine: OtherFunctions.cpp:3728-3925.
+// LINUX: file type recognition from header and extension. Origin: OtherFunctions.cpp:3728-3925.
 #include "StdAfx.h"
 #include "util/FileTypes.h"
 #include "FileTypeEx.h"

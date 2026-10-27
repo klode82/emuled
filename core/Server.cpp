@@ -248,8 +248,8 @@ bool CServer::AddTagFromFile(CFileDataIO &servermet)
 
 LPCTSTR CServer::GetAddress() const
 {
-	// LINUX: i due rami devono avere lo stesso tipo. Con "ipfull : m_strDynIP" il compilatore convertiva ipfull in un CString temporaneo e restituiva
-	// un puntatore a un oggetto gia' distrutto (use-after-return trovato da ASan).
+	// LINUX: the two branches must have the same type. With "ipfull : m_strDynIP" the compiler converted ipfull to a temporary CString and returned
+	// a pointer to an already destroyed object (use-after-return found by ASan).
 	return m_strDynIP.IsEmpty() ? (LPCTSTR)ipfull : (LPCTSTR)m_strDynIP;
 }
 

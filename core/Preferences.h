@@ -159,7 +159,7 @@ public:
 	// ZZ:UploadSpeedSense -->
 	static uint32	m_minupload;
 	// ZZ:UploadSpeedSense <--
-	static std::atomic<uint32>	m_maxupload;		// LINUX: lo legge il thread del throttler, lo scrive l'API
+	static std::atomic<uint32>	m_maxupload;		// LINUX: read by the throttler thread, written by the API
 	static std::atomic<uint32>	m_maxdownload;
 	static CStringA m_strBindAddrA;
 	static CStringW m_strBindAddrW;
@@ -443,7 +443,7 @@ public:
 	static bool		m_bImportParts;
 	static CString	m_strYourHostname;
 	static bool		m_bEnableVerboseOptions;
-	static std::atomic<bool> m_bVerbose;	// LINUX: lo legge ogni thread che scrive nel registro, lo scrive l'API
+	static std::atomic<bool> m_bVerbose;	// LINUX: read by every thread that writes to the log, written by the API
 	static bool		m_bFullVerbose;
 	static int		m_byLogLevel;
 	static bool		m_bDebugSourceExchange; // Sony April 23. 2003, button to keep source exchange msg out of verbose log
@@ -1397,7 +1397,7 @@ public:
 	static bool		IsCryptLayerEnabled()				{ return m_bCryptLayerSupported; }
 	static bool		IsCryptLayerPreferred()				{ return IsCryptLayerEnabled() && m_bCryptLayerRequested; }
 	static bool		IsCryptLayerRequired()				{ return IsCryptLayerPreferred() && m_bCryptLayerRequired; }
-	static bool		IsCryptLayerRequiredStrict()			{ return m_bCryptLayerRequiredStrict; } // not even incoming test connections will be answered (in eMule always false; LINUX: forzabile per le prove)
+	static bool		IsCryptLayerRequiredStrict()			{ return m_bCryptLayerRequiredStrict; } // not even incoming test connections will be answered (in eMule always false; LINUX: can be forced for tests)
 	static uint32	GetKadUDPKey()						{ return m_dwKadUDPKey; }
 	static uint8	GetCryptTCPPaddingLength()			{ return m_byCryptTCPPaddingLength; }
 
@@ -1429,11 +1429,11 @@ public:
 	static void		SetDidBetaNagging()					{ m_bBetaNaggingDone = true; }
 #endif
 	static void		SetConfigDir(const CString &strConfigDir);
-	// LINUX: un profilo nato su Windows ha percorsi come "Y:\eMule\Incoming\": su Linux sarebbero cartelle relative. Un percorso che non comincia per '/' passa dal mappatore
-	// (regole --pathmap); senza mappatore o senza regola vale "" e il chiamante usa la cartella predefinita o salta la voce.
+	// LINUX: a profile born on Windows has paths like "Y:\eMule\Incoming\": on Linux they would be relative folders. A path not starting with '/' goes through the mapper
+	// (--pathmap rules); with no mapper or no rule it is "" and the caller uses the default folder or skips the entry.
 	static CString	MapForeignPath(const CString &strPath);
-	static void		SetPathMapper(std::function<CString(const CString&)> fn);	// LINUX: cartella di configurazione (profilo); vedi Preferences.cpp
-	// --- LINUX: impostazioni che nell'originale cambia la finestra delle opzioni o MFC; il daemon e le prove le impostano da codice ---
+	static void		SetPathMapper(std::function<CString(const CString&)> fn);	// LINUX: configuration folder (profile); see Preferences.cpp
+	// --- LINUX: settings that in the original are changed by the options window or MFC; the daemon and tests set them from code ---
 	static void		SetUserHash(const uchar *h)			{ memcpy(userhash, h, 16); }
 	static void		SetPort(uint16 v)					{ port = v; }
 	static void		SetUDPPort(uint16 v)				{ udpport = v; }
@@ -1451,7 +1451,7 @@ public:
 	static void		SetCryptLayer(bool bSupported, bool bRequired, bool bStrict)	{ m_bCryptLayerSupported = bSupported; m_bCryptLayerRequired = bRequired; m_bCryptLayerRequested = m_bCryptLayerRequested || bRequired; m_bCryptLayerRequiredStrict = bStrict; }
 	static void		SetCryptLayerRequested(bool v)		{ m_bCryptLayerRequested = v; }
 	static void		SetCryptTCPPaddingLength(uint8 v)	{ m_byCryptTCPPaddingLength = v; }
-	// API delle preferenze: nell'originale le toccano direttamente le schede del dialogo
+	// preferences API: in the original the dialog pages touch them directly
 	static void		SetIncomingDir(const CString &d)	{ m_strIncomingDir = d; }
 	static CStringList &SharedDirs()					{ return shareddir_list; }
 	static CStringArray &TempDirs()						{ return tempdir; }

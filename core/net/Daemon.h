@@ -1,8 +1,8 @@
-// LINUX (codice nuovo): il demone. Un processo che resta acceso: carica il profilo (cartella di configurazione di eMule), crea una volta sola gli
-// oggetti dell'applicazione, riprende i download in Temp/, ascolta, si collega a un server (e a Kad) e lavora finche' non riceve SIGINT/SIGTERM;
-// poi chiude nello stesso ordine di eMule e salva. Passo 1 della Fase 6: nessuna API ancora, i download si aggiungono con --add.
+// LINUX (new code): the daemon. A process that stays up: loads the profile (eMule configuration folder), creates the application objects once,
+// resumes the downloads in Temp/, listens, connects to a server (and to Kad) and works until it receives SIGINT/SIGTERM;
+// then shuts down in the same order as eMule and saves. Step 1 of Phase 6: no API yet, downloads are added with --add.
 //
-// Rete verso l'esterno: parte solo su comando esplicito (emuled --run ...).
+// Network towards the outside: starts only on explicit command (emuled --run ...).
 #pragma once
 #include <cstdint>
 #include <string>
@@ -13,29 +13,29 @@ namespace emule::net {
 
 struct DaemonOptions
 {
-	std::string config_dir;					// cartella di configurazione del profilo (quella con preferences.ini): percorso ASSOLUTO
-	std::vector<std::pair<std::string, std::string>> pathmaps;		// regole "Y:\eMule" -> "/home/utente/eMule" per i percorsi del profilo nati su Windows
-	uint16_t tcp_port = 0, udp_port = 0;	// 0 = quelle del profilo (preferences.ini)
-	bool offline = false;					// niente connessioni a server e a Kad (per le prove)
-	bool kad = true;						// collegarsi anche a Kad (serve nodes.dat nel profilo)
-	std::string server_address;				// "ip:porta": collegarsi a quel server; vuoto = uno qualsiasi della lista (come eMule)
-	bool fake_profile = false;				// true = profilo "finto": hash utente e nome TEMPORANEI e preferenze non salvate (prove, copie di profili altrui). Predefinito: identita' e preferenze del profilo
-	std::vector<std::string> add_links;		// link ed2k://|file|...| da mettere in download all'avvio
-	int status_interval_s = 30;				// riga di stato periodica; 0 = nessuna
-	int max_seconds = 0;					// 0 = senza limite
+	std::string config_dir;					// configuration folder of the profile (the one with preferences.ini): ABSOLUTE path
+	std::vector<std::pair<std::string, std::string>> pathmaps;		// rules "Y:\eMule" -> "/home/user/eMule" for profile paths born on Windows
+	uint16_t tcp_port = 0, udp_port = 0;	// 0 = those of the profile (preferences.ini)
+	bool offline = false;					// no connections to servers and Kad (for tests)
+	bool kad = true;						// also connect to Kad (needs nodes.dat in the profile)
+	std::string server_address;				// "ip:port": connect to that server; empty = any one of the list (like eMule)
+	bool fake_profile = false;				// true = "fake" profile: TEMPORARY user hash and name and preferences not saved (tests, copies of other people's profiles). Default: identity and preferences of the profile
+	std::vector<std::string> add_links;		// ed2k://|file|...| links to download at startup
+	int status_interval_s = 30;				// periodic status line; 0 = none
+	int max_seconds = 0;					// 0 = no limit
 	bool verbose = false;
-	std::string mediainfo;					// percorso del programma mediainfo (vuoto = cercarlo in PATH)
-	std::string guardian_dir;				// dove il guardiano tiene i backup dei .part.met (per hash); vuoto = cartella "guardian" accanto al profilo
-	// API REST/JSON e WebSocket (e interfaccia web), nello stesso processo
+	std::string mediainfo;					// path of the mediainfo program (empty = look it up in PATH)
+	std::string guardian_dir;				// where the guardian keeps the backups of the .part.met (by hash); empty = "guardian" folder next to the profile
+	// REST/JSON API and WebSocket (and web interface), in the same process
 	bool api = true;
-	std::string api_bind = "127.0.0.1";		// solo la macchina stessa; aprire ad altri indirizzi e' una scelta esplicita
+	std::string api_bind = "127.0.0.1";		// the machine itself only; opening to other addresses is an explicit choice
 	uint16_t api_port = 8765;
-	std::string api_token;					// vuoto: si legge/crea <profilo>/emuled.token (permessi 0600)
-	std::string web_dir;					// file statici della web UI (vuoto = nessuna): un'interfaccia singola, come prima dei template
-	std::string templates_dir;				// cartella in piu' dove cercare template d'interfaccia (sviluppo, Docker); vuoto = solo quelle standard
+	std::string api_token;					// empty: read/created from <profile>/emuled.token (permissions 0600)
+	std::string web_dir;					// static files of the web UI (empty = none): a single interface, as before the templates
+	std::string templates_dir;				// extra folder where to look for UI templates (development, Docker); empty = only the standard ones
 };
 
-constexpr int kRestartExit = 75;			// RunDaemon ritorna questo valore se il demone ha chiesto di essere riavviato: chi lo ha lanciato rilancia il programma
-int RunDaemon(const DaemonOptions &opt);	// ritorna il codice di uscita del processo
+constexpr int kRestartExit = 75;			// RunDaemon returns this value if the daemon asked to be restarted: whoever launched it relaunches the program
+int RunDaemon(const DaemonOptions &opt);	// returns the exit code of the process
 
 } // namespace emule::net

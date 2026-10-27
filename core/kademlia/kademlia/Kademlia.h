@@ -49,7 +49,7 @@ namespace Kademlia
 	public:
 		CKademlia();
 
-		static void SetConfigDir(LPCTSTR szDir);		// LINUX: cartella dei file di Kad (con "/" finale); da chiamare prima di Start
+		static void SetConfigDir(LPCTSTR szDir);		// LINUX: Kad files folder (with trailing "/"); to be called before Start
 		static void Start();
 		static void	Start(CPrefs *pPrefs);
 		static void	Stop();

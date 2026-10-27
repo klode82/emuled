@@ -1,4 +1,4 @@
-// LINUX (codice nuovo): vedi Daemon.h
+// LINUX (new code): see Daemon.h
 #include "StdAfx.h"
 #include "net/Daemon.h"
 #include "EventLog.h"
@@ -50,11 +50,11 @@ namespace emule::net {
 
 static std::atomic<bool> g_stop{false};
 static std::atomic<bool> g_restart{false};
-static std::atomic<double> g_restart_at{0};		// istante in cui riavviare (un attimo dopo, cosi' la risposta dell'API parte)
+static std::atomic<double> g_restart_at{0};		// moment at which to restart (a moment later, so the API response goes out)
 static void OnSignal(int) { g_stop = true; }
 static std::atomic<bool> g_hup{false};
-static void OnHup(int) { g_hup = true; }		// SIGHUP: ricontrolla le cartelle condivise (come premere "Ricontrolla")
-// token dell'API: dalla riga di comando, altrimenti dal file <profilo>/emuled.token; se manca lo crea (32 byte casuali in esadecimale, permessi 0600)
+static void OnHup(int) { g_hup = true; }		// SIGHUP: rescan the shared folders (like pressing "Rescan")
+// API token: from the command line, otherwise from the file <profile>/emuled.token; if missing it is created (32 random bytes in hex, permissions 0600)
 static std::string LoadOrCreateToken(const std::string &cfg, const std::string &given, std::string &created_path)
 {
 	if (!given.empty()) return given;
@@ -67,8 +67,8 @@ static std::string LoadOrCreateToken(const std::string &cfg, const std::string &
 	return t;
 }
 
-// Chi sta usando la porta TCP (qualunque stato, anche una connessione in uscita che ha preso quel numero come porta locale): "nome (pid N)" o vuoto.
-// Le porte inoltrate sul router (es. 55662) cadono nell'intervallo delle porte temporanee di Linux (32768-60999), che i programmi usano per le connessioni in uscita.
+// Who is using the TCP port (any state, even an outgoing connection that took that number as its local port): "name (pid N)" or empty.
+// Ports forwarded on the router (e.g. 55662) fall in the Linux ephemeral port range (32768-60999), which programs use for outgoing connections.
 static std::string PortHolder(uint16_t port)
 {
 	char want[16]; snprintf(want, sizeof want, ":%04X", (unsigned)port);
@@ -94,10 +94,10 @@ int RunDaemon(const DaemonOptions &opt)
 {
 	std::error_code ec;
 	std::string cfg = opt.config_dir;
-	if (cfg.empty() || cfg[0] != '/' || !fs::is_directory(cfg, ec)) { std::fprintf(stderr, "emuled: la cartella di configurazione '%s' non esiste o non e' assoluta\n", cfg.c_str()); return 2; }
+	if (cfg.empty() || cfg[0] != '/' || !fs::is_directory(cfg, ec)) { std::fprintf(stderr, "emuled: the configuration folder '%s' does not exist or is not an absolute path\n", cfg.c_str()); return 2; }
 	if (cfg.back() != '/') cfg += '/';
 
-	// un solo demone per profilo: stesso blocco usato dai comandi che scrivono
+	// one daemon per profile: same lock used by the commands that write
 	std::string lockErr;
 	auto lock = profile::ProfileLock::Acquire(cfg, lockErr);
 	if (!lock) { std::fprintf(stderr, "emuled: %s\n", lockErr.c_str()); return 2; }
@@ -107,30 +107,30 @@ int RunDaemon(const DaemonOptions &opt)
 	int rc = 0;
 	{
 		EventLoop loop; ScopedLoop sl(loop);
-		emule::EventLog::Instance().Attach();		// il registro degli eventi raccoglie tutto cio' che eMule scrive
+		emule::EventLog::Instance().Attach();		// the event log collects everything eMule writes
 		if (opt.verbose) emule::log::SetSink([](emule::log::Level, const std::string &t) { std::printf("[log] %s\n", t.c_str()); std::fflush(stdout); });
 
-		if (!opt.fake_profile) { std::string il; if (profile::ApplyStagedImport(cfg, il)) std::printf("%s", il.c_str()); }		// importazione preparata prima del riavvio (Bench 875): PRIMA di leggere il profilo
-		// regole di mappatura dei percorsi di Windows e preferenze del profilo
+		if (!opt.fake_profile) { std::string il; if (profile::ApplyStagedImport(cfg, il)) std::printf("%s", il.c_str()); }		// import staged before the restart (Bench 875): BEFORE reading the profile
+		// Windows path mapping rules and profile preferences
 		profile::PathMap pm; for (auto &r : opt.pathmaps) pm.Add(r.first, r.second);
 		thePrefs.SetPathMapper([pm](const CString &p) -> CString { bool mapped = false; std::string s = pm.ToLinux((LPCTSTR)p, &mapped); return mapped ? CString(s.c_str()) : CString(); });
 		thePrefs.SetConfigDir(CString(cfg.c_str()));
-		// Prima di leggere qualsiasi file del profilo: validazione e, se un file e' danneggiato, ripristino dal suo .bak (Bench 626/629). Con --fake-profile non si tocca niente.
+		// Before reading any profile file: validation and, if a file is damaged, restore from its .bak (Bench 626/629). With --fake-profile nothing is touched.
 		auto profileLog = [](const std::string &l) {
-			if (l.rfind("  OK", 0) == 0 || l.rfind("  assente", 0) == 0 || l.rfind("            ", 0) == 0 || l.rfind("Download in corso", 0) == 0) return;		// i file sani non fanno rumore
-			if (l.find("PERSO") != std::string::npos) LogError(_T("Profilo: %s"), l.c_str()); else LogWarning(_T("Profilo: %s"), l.c_str());
+			if (l.rfind("  OK", 0) == 0 || l.rfind("  absent", 0) == 0 || l.rfind("            ", 0) == 0 || l.rfind("Downloads in progress", 0) == 0) return;		// healthy files make no noise
+			if (l.find("LOST") != std::string::npos) LogError(_T("Profile: %s"), l.c_str()); else LogWarning(_T("Profile: %s"), l.c_str());
 		};
-		if (!opt.fake_profile) { profile::CheckTally t; profile::CheckConfigFiles(cfg, true, t, profileLog, true); if (t.recovered || t.bad_lost) AddLogLine(true, _T("Profilo: %d file ripristinati dal .bak, %d persi"), t.recovered, t.bad_lost); }
+		if (!opt.fake_profile) { profile::CheckTally t; profile::CheckConfigFiles(cfg, true, t, profileLog, true); if (t.recovered || t.bad_lost) AddLogLine(true, _T("Profile: %d files restored from .bak, %d lost"), t.recovered, t.bad_lost); }
 		thePrefs.Init();
 		const uint16_t origServerUdp = thePrefs.GetServerUDPPort();
-		thePrefs.SetServerUDPPort(0);									// niente UDP verso i server finche' non lo si decide
+		thePrefs.SetServerUDPPort(0);									// no UDP towards the servers until it is decided
 		if (opt.tcp_port) thePrefs.SetPort(opt.tcp_port);
 		if (opt.udp_port) thePrefs.SetUDPPort(opt.udp_port);
 		if (opt.fake_profile) {
 			uint8_t h[16]; MakeTempUserHash(h); thePrefs.SetUserHash(h);
 			thePrefs.SetUserNick(CString("eMuleLinux"));
 		}
-		// i download: prima il guardiano (copie per hash: ripristina dalla copia piu' avanzata tra .bak e backup), poi lo stesso controllo dei file di configurazione sui .part.met
+		// downloads: first the guardian (copies by hash: restores from the most advanced copy between .bak and backup), then the same check of the configuration files on the .part.met
 		std::vector<std::string> tempDirs;
 		for (INT_PTR i = 0; i < thePrefs.TempDirs().GetCount(); ++i) tempDirs.push_back((LPCTSTR)thePrefs.TempDirs()[i]);
 		if (tempDirs.empty()) tempDirs.push_back((LPCTSTR)thePrefs.GetMuleDirectory(EMULE_TEMPDIR));
@@ -138,11 +138,11 @@ int RunDaemon(const DaemonOptions &opt)
 		auto guardianRound = [&guardians] {
 			for (auto &g : guardians) {
 				for (auto &e : g->Scan(time(nullptr))) {
-					if (e.to == guardian::State::Damaged) LogError(_T("Guardiano: il download %s e' danneggiato (%s)"), e.slot.c_str(), e.detail.c_str());
+					if (e.to == guardian::State::Damaged) LogError(_T("Guardian: download %s is damaged (%s)"), e.slot.c_str(), e.detail.c_str());
 					else if (e.to == guardian::State::Pending) continue;
-					else AddLogLine(false, _T("Guardiano: download %s: %s"), e.slot.c_str(), guardian::StateName(e.to));
+					else AddLogLine(false, _T("Guardian: download %s: %s"), e.slot.c_str(), guardian::StateName(e.to));
 				}
-				std::string err; if (!g->Save(err)) LogWarning(_T("Guardiano: stato non salvato: %s"), err.c_str());
+				std::string err; if (!g->Save(err)) LogWarning(_T("Guardian: state not saved: %s"), err.c_str());
 			}
 		};
 		if (!opt.fake_profile) {
@@ -153,41 +153,41 @@ int RunDaemon(const DaemonOptions &opt)
 				go.backup_dir = (i == 0 ? root : root / ("temp" + std::to_string(i))).string(); go.state_file = go.backup_dir + "/guardian.state";
 				fs::create_directories(go.backup_dir, ec);
 				auto g = std::make_unique<guardian::Guardian>(go); std::string err;
-				if (ec || !g->Load(err)) { LogWarning(_T("Guardiano: non parte per %s: %s"), go.temp_dir.c_str(), ec ? ec.message().c_str() : err.c_str()); ec.clear(); continue; }
-				// un .part.met danneggiato senza .bak torna dalla copia per hash, prima che eMule lo legga
+				if (ec || !g->Load(err)) { LogWarning(_T("Guardian: cannot start for %s: %s"), go.temp_dir.c_str(), ec ? ec.message().c_str() : err.c_str()); ec.clear(); continue; }
+				// a damaged .part.met without a .bak comes back from the copy by hash, before eMule reads it
 				for (auto &e : g->Scan(time(nullptr))) {
 					if (e.to != guardian::State::Damaged) continue;
-					auto rr = g->Restore(e.slot, false); if (rr.ok) AddLogLine(true, _T("Guardiano: download %s ripristinato da %s"), e.slot.c_str(), rr.from.c_str()); else LogError(_T("Guardiano: download %s non ripristinato: %s"), e.slot.c_str(), rr.error.c_str());
+					auto rr = g->Restore(e.slot, false); if (rr.ok) AddLogLine(true, _T("Guardian: download %s restored from %s"), e.slot.c_str(), rr.from.c_str()); else LogError(_T("Guardian: download %s not restored: %s"), e.slot.c_str(), rr.error.c_str());
 				}
-				g->Save(err); AddLogLine(false, _T("Guardiano: %u download sotto protezione in %s"), (unsigned)g->active().size(), go.backup_dir.c_str()); guardians.push_back(std::move(g));
+				g->Save(err); AddLogLine(false, _T("Guardian: %u downloads under protection in %s"), (unsigned)g->active().size(), go.backup_dir.c_str()); guardians.push_back(std::move(g));
 			}
 		}
-		if (!opt.fake_profile) { profile::CheckTally t; profile::CheckPartFiles(tempDirs, true, t, profileLog); if (t.recovered || t.bad_lost) AddLogLine(true, _T("Profilo: download: %d .part.met ripristinati dal .bak, %d persi"), t.recovered, t.bad_lost); }
+		if (!opt.fake_profile) { profile::CheckTally t; profile::CheckPartFiles(tempDirs, true, t, profileLog); if (t.recovered || t.bad_lost) AddLogLine(true, _T("Profile: downloads: %d .part.met restored from .bak, %d lost"), t.recovered, t.bad_lost); }
 		theApp.CreateObjects();
 		theApp.emuledlg->SetMainLoop(&loop);
 		UploadBandwidthThrottler thr; theApp.uploadBandwidthThrottler = &thr;
-		theApp.downloadqueue->Init();									// riprende i .part.met di Temp/ (come CemuleDlg::OnInitDialog)
+		theApp.downloadqueue->Init();									// resumes the .part.met files of Temp/ (like CemuleDlg::OnInitDialog)
 		theApp.serverlist->Init();
 
-		std::printf("emuled: profilo %s\n", cfg.c_str());
-		std::printf("  nick %s, TCP %u, UDP %u, identita' %s; server in lista: %d; download ripresi: %u\n", (LPCTSTR)thePrefs.GetUserNick(), (unsigned)thePrefs.GetPort(), (unsigned)thePrefs.GetUDPPort()
-			, opt.fake_profile ? "temporanea (--fake-profile)" : "del profilo", (int)theApp.serverlist->GetServerCount(), (unsigned)theApp.downloadqueue->GetFileCount());
+		std::printf("emuled: profile %s\n", cfg.c_str());
+		std::printf("  nick %s, TCP %u, UDP %u, %s identity; servers in list: %d; downloads resumed: %u\n", (LPCTSTR)thePrefs.GetUserNick(), (unsigned)thePrefs.GetPort(), (unsigned)thePrefs.GetUDPPort()
+			, opt.fake_profile ? "temporary (--fake-profile)" : "profile", (int)theApp.serverlist->GetServerCount(), (unsigned)theApp.downloadqueue->GetFileCount());
 		std::fflush(stdout);
 		AddLogLine(false, _T("emuled started: profile %s, TCP port %u, UDP port %u, %s identity, %d servers, %u downloads resumed"), cfg.c_str(), (unsigned)thePrefs.GetPort(), (unsigned)thePrefs.GetUDPPort(),
 			opt.fake_profile ? "temporary" : "profile", (int)theApp.serverlist->GetServerCount(), (unsigned)theApp.downloadqueue->GetFileCount());
 
 		bool ok = true;
 		if (thePrefs.GetPort() && !theApp.listensocket->StartListening()) {
-			// La porta puo' essere occupata per poco (una connessione in uscita di un altro programma che ha preso proprio quel numero): si riprova per 2 minuti
+			// The port may be busy for a short time (an outgoing connection of another program that took exactly that number): retry for 2 minutes
 			const std::string who = PortHolder(thePrefs.GetPort());
-			std::printf("  la porta TCP %u e' occupata%s: riprovo per 2 minuti\n", (unsigned)thePrefs.GetPort(), who.empty() ? "" : (" da " + who).c_str()); std::fflush(stdout);
-			AddLogLine(true, _T("La porta TCP %u e' occupata%s: riprovo per 2 minuti"), (unsigned)thePrefs.GetPort(), who.empty() ? "" : (" da " + who).c_str());
+			std::printf("  TCP port %u is in use%s: retrying for 2 minutes\n", (unsigned)thePrefs.GetPort(), who.empty() ? "" : (" by " + who).c_str()); std::fflush(stdout);
+			AddLogLine(true, _T("TCP port %u is in use%s: retrying for 2 minutes"), (unsigned)thePrefs.GetPort(), who.empty() ? "" : (" by " + who).c_str());
 			bool got = false;
 			for (int i = 0; i < 24 && !g_stop && !got; ++i) { std::this_thread::sleep_for(std::chrono::seconds(5)); got = theApp.listensocket->StartListening(); }
 			if (!got) {
-				std::printf("  errore: porta TCP %u non disponibile in ascolto\n  Suggerimento: le porte da 32768 in su servono ai programmi per le connessioni in uscita. Riservale a emuled con:\n    sudo sysctl -w net.ipv4.ip_local_reserved_ports=%u,%u\n  (per renderlo permanente: la stessa riga, senza -w e con un file in /etc/sysctl.d/), oppure usa porte sotto 32768 anche sul router.\n", (unsigned)thePrefs.GetPort(), (unsigned)thePrefs.GetPort(), (unsigned)thePrefs.GetUDPPort());
+				std::printf("  error: TCP port %u cannot be listened on\n  Hint: ports from 32768 up are used by programs for outgoing connections. Reserve them for emuled with:\n    sudo sysctl -w net.ipv4.ip_local_reserved_ports=%u,%u\n  (to make it permanent: the same line, without -w, in a file in /etc/sysctl.d/), or use ports below 32768 on the router too.\n", (unsigned)thePrefs.GetPort(), (unsigned)thePrefs.GetPort(), (unsigned)thePrefs.GetUDPPort());
 				ok = false; rc = 1;
-			} else AddLogLine(true, _T("Porta TCP %u libera: in ascolto"), (unsigned)thePrefs.GetPort());
+			} else AddLogLine(true, _T("TCP port %u is free: listening"), (unsigned)thePrefs.GetPort());
 		}
 
 		std::unique_ptr<CClientUDPSocket> udp; uint64_t kadTimer = 0;
@@ -201,23 +201,23 @@ int RunDaemon(const DaemonOptions &opt)
 		const bool kadPossible = ok && !opt.offline && thePrefs.GetUDPPort();
 		if (kadPossible) {
 			udp = std::make_unique<CClientUDPSocket>(); theApp.clientudp = udp.get();
-			if (!udp->Create()) { std::printf("  avviso: porta UDP %u non disponibile: Kad non parte\n", (unsigned)thePrefs.GetUDPPort()); theApp.clientudp = nullptr; udp.reset(); }
-			else if (opt.kad && thePrefs.GetNetworkKademlia()) kadStart();		// come eMule: parte da solo se il profilo lo vuole (NetworkKademlia) e non c'e' --no-kad; altrimenti a comando (API)
+			if (!udp->Create()) { std::printf("  warning: UDP port %u not available: Kad will not start\n", (unsigned)thePrefs.GetUDPPort()); theApp.clientudp = nullptr; udp.reset(); }
+			else if (opt.kad && thePrefs.GetNetworkKademlia()) kadStart();		// like eMule: starts by itself if the profile wants it (NetworkKademlia) and there is no --no-kad; otherwise on command (API)
 		}
 		emule::api::DaemonHooks hooks; hooks.mediainfo = opt.mediainfo;
 		hooks.restart = [] { g_restart_at = NowS() + 0.8; };
-		// UPnP (miniupnpc): chiede al router di inoltrare le porte TCP e UDP. Parte da solo se la preferenza e' accesa, e si accende/spegne da API senza riavvio.
-		std::unique_ptr<CUPnPImplMiniLib> upnp; uint64_t upnpTimer = 0; std::atomic<int> upnpResult{-1};		// -1 in corso/spento, 0 ok, 1 fallito
+		// UPnP (miniupnpc): asks the router to forward the TCP and UDP ports. Starts by itself if the preference is on, and is turned on/off from the API without a restart.
+		std::unique_ptr<CUPnPImplMiniLib> upnp; uint64_t upnpTimer = 0; std::atomic<int> upnpResult{-1};		// -1 in progress/off, 0 ok, 1 failed
 		auto upnpStart = [&] {
 			if (opt.offline || upnp) return;
 			upnp = std::make_unique<CUPnPImplMiniLib>(); upnpResult = -1;
 			upnp->SetOnResult([&upnpResult](int r, bool) {
 				upnpResult = r == CUPnPImpl::UPNP_OK ? 0 : 1;
-				AddLogLine(false, r == CUPnPImpl::UPNP_OK ? _T("UPnP: porte inoltrate sul router (TCP %u, UDP %u)") : _T("UPnP: il router non ha inoltrato le porte (TCP %u, UDP %u)"), (unsigned)thePrefs.GetPort(), (unsigned)thePrefs.GetUDPPort());
+				AddLogLine(false, r == CUPnPImpl::UPNP_OK ? _T("UPnP: ports forwarded on the router (TCP %u, UDP %u)") : _T("UPnP: the router did not forward the ports (TCP %u, UDP %u)"), (unsigned)thePrefs.GetPort(), (unsigned)thePrefs.GetUDPPort());
 			});
-			AddLogLine(false, _T("UPnP: cerco il router..."));
+			AddLogLine(false, _T("UPnP: looking for the router..."));
 			upnp->StartDiscovery(thePrefs.GetPort(), thePrefs.GetUDPPort(), 0);
-			upnpTimer = loop.AddTimer(30 * 60 * 1000, [&] { if (upnp) upnp->CheckAndRefresh(); }, true);		// rinnova i mapping a scadenza, come RefreshUPnP
+			upnpTimer = loop.AddTimer(30 * 60 * 1000, [&] { if (upnp) upnp->CheckAndRefresh(); }, true);		// renews expiring mappings, like RefreshUPnP
 		};
 		auto upnpStop = [&] {
 			if (!upnp) return;
@@ -225,16 +225,16 @@ int RunDaemon(const DaemonOptions &opt)
 			upnp->StopAsyncFind();
 			if (thePrefs.CloseUPnPOnExit()) upnp->DeletePorts();
 			upnp.reset(); upnpResult = -1;
-			AddLogLine(false, _T("UPnP: spento"));
+			AddLogLine(false, _T("UPnP: off"));
 		};
-		// cartelle condivise: inotify le guarda e dopo 10 secondi di quiete le ricontrolla (un file copiato dentro compare da solo); SIGHUP fa lo stesso a comando
+		// shared folders: inotify watches them and after 10 seconds of quiet rescans them (a file copied in shows up by itself); SIGHUP does the same on command
 		auto sharedDirs = [] { std::vector<std::string> v; for (POSITION p = thePrefs.SharedDirs().GetHeadPosition(); p;) v.push_back((LPCTSTR)thePrefs.SharedDirs().GetNext(p)); v.push_back((LPCTSTR)thePrefs.GetMuleDirectory(EMULE_INCOMINGDIR)); return v; };
 		std::unique_ptr<DirWatcher> watcher;
-		auto rescan = [&](const char *why) { AddLogLine(false, _T("Condivisi: ricontrollo delle cartelle (%s)"), why); theApp.sharedfiles->Reload(); watcher->Set(sharedDirs()); };
-		watcher = std::make_unique<DirWatcher>(loop, [&] { rescan("cambiamenti rilevati"); }, 10000);
+		auto rescan = [&](const char *why) { AddLogLine(false, _T("Shared: rechecking the folders (%s)"), why); theApp.sharedfiles->Reload(); watcher->Set(sharedDirs()); };
+		watcher = std::make_unique<DirWatcher>(loop, [&] { rescan("changes detected"); }, 10000);
 		watcher->Set(sharedDirs());
 		hooks.shared_changed = [&] { watcher->Set(sharedDirs()); };
-		// download fermi a 0 fonti: ogni minuto si guarda; dopo 10 minuti si richiedono le fonti subito, dopo 30 si ritenta anche il server (SourceWatchdog, Bench 677)
+		// downloads stuck at 0 sources: checked every minute; after 10 minutes sources are requested right away, after 30 the server is retried too (SourceWatchdog, Bench 677)
 		SourceWatchdog watchdog; uint64_t watchdogTimer = 0;
 		if (!opt.offline) watchdogTimer = loop.AddTimer(60 * 1000, [&] {
 			std::vector<SourceWatchdog::File> files; std::map<std::string, CPartFile *> byHash;
@@ -245,20 +245,20 @@ int RunDaemon(const DaemonOptions &opt)
 				files.push_back({h, (unsigned)f->GetSourceCount(), active}); byHash[h] = f;
 			}
 			auto act = watchdog.Tick(NowS(), files, theApp.serverconnect->IsConnected());
-			for (auto &h : act.reask) { CPartFile *f = byHash[h]; f->ForceSourceSearch(); AddLogLine(false, _T("Fonti: \"%s\" e' senza fonti da un po': le richiedo di nuovo"), (LPCTSTR)f->GetFileName()); }
-			if (act.reconnect) { AddLogLine(true, _T("Fonti: nessuna fonte da 30 minuti per almeno un download: ritento la connessione ai server")); theApp.serverconnect->Disconnect(); theApp.serverconnect->ConnectToAnyServer(); }
+			for (auto &h : act.reask) { CPartFile *f = byHash[h]; f->ForceSourceSearch(); AddLogLine(false, _T("Sources: \"%s\" has had no sources for a while: asking again"), (LPCTSTR)f->GetFileName()); }
+			if (act.reconnect) { AddLogLine(true, _T("Sources: no sources for 30 minutes on at least one download: reconnecting to the servers")); theApp.serverconnect->Disconnect(); theApp.serverconnect->ConnectToAnyServer(); }
 		}, true);
-		uint64_t guardianTimer = guardians.empty() ? 0 : loop.AddTimer(5 * 60 * 1000, guardianRound, true);		// ogni 5 minuti: salva i .part.met sani, avvisa dei danneggiati
+		uint64_t guardianTimer = guardians.empty() ? 0 : loop.AddTimer(5 * 60 * 1000, guardianRound, true);		// every 5 minutes: saves the healthy .part.met, warns about the damaged ones
 		hooks.upnp_apply = [&](bool on) { if (on) upnpStart(); else upnpStop(); };
 		hooks.upnp_state = [&] { return nlohmann::json{{"enabled", thePrefs.IsUPnPEnabled()}, {"state", !upnp ? (opt.offline ? "offline" : "off") : upnpResult == 0 ? "forwarded" : upnpResult == 1 ? "failed" : "pending"}}; };
 		if (thePrefs.IsUPnPEnabled()) upnpStart();
-		// le preferenze si salvano nel profilo solo se identita' e porte sono quelle del profilo; ServerUDPPort e' sempre stato forzato a 0: si rimette quello vero solo per il tempo del salvataggio
+		// preferences are saved to the profile only if identity and ports are the profile's; ServerUDPPort has always been forced to 0: the real one is restored only for the duration of the save
 		if (!opt.fake_profile && !opt.tcp_port && !opt.udp_port)
-			hooks.save_prefs = [origServerUdp] { thePrefs.SetServerUDPPort(origServerUdp); bool failed = thePrefs.Save(); thePrefs.SetServerUDPPort(0); return !failed; };		// Save() ritorna true se c'e' stato un errore
+			hooks.save_prefs = [origServerUdp] { thePrefs.SetServerUDPPort(origServerUdp); bool failed = thePrefs.Save(); thePrefs.SetServerUDPPort(0); return !failed; };		// Save() returns true if there was an error
 		if (udp) { hooks.kad_start = kadStart; hooks.kad_stop = kadStop; }
 
-		emule::templates::Registry templates;		// i template d'interfaccia (cartelle con template.yaml); deve vivere quanto il server HTTP
-		std::unique_ptr<emule::api::Auth> auth;		// account dell'interfaccia web (nome utente + password), vedi api/Auth.h; dichiarato PRIMA di api: api lo usa finche' vive
+		emule::templates::Registry templates;		// the UI templates (folders with template.yaml); must live as long as the HTTP server
+		std::unique_ptr<emule::api::Auth> auth;		// web interface account (user name + password), see api/Auth.h; declared BEFORE api: api uses it as long as it lives
 		emule::api::HttpServer api;
 		std::unique_ptr<emule::api::EventPublisher> events;
 		if (ok && opt.api) {
@@ -279,10 +279,10 @@ int RunDaemon(const DaemonOptions &opt)
 				}
 				return nlohmann::json{{"templates", a}, {"api_version", emule::templates::kApiVersion}, {"dirs", {{"system", td.system}, {"user", td.user}, {"extra", td.extra}}}};
 			};
-			{	// template d'interfaccia: sistema, utente (~/.emuled/templates) ed extra; la pagina "/" porta al template scelto, salvo che sia indicata una cartella web_dir (un'interfaccia sola)
+			{	// UI templates: system, user (~/.emuled/templates) and extra; the "/" page leads to the chosen template, unless a web_dir folder is given (a single interface)
 				const char *home = std::getenv("HOME");
 				emule::templates::Dirs td = emule::templates::DefaultDirs(home ? home : ""); td.extra = opt.templates_dir;
-				if (emule::templates::EnsureUserDir(td.user)) AddLogLine(false, _T("Template: creata la cartella dei tuoi template %s"), td.user.c_str());
+				if (emule::templates::EnsureUserDir(td.user)) AddLogLine(false, _T("Template: created the folder for your templates %s"), td.user.c_str());
 				templates.Scan(td);
 				api.SetTemplates([&templates](const std::string &id, emule::api::TemplateTarget &t) {
 					const auto *e = templates.Find(id); if (!e) return false;
@@ -293,30 +293,30 @@ int RunDaemon(const DaemonOptions &opt)
 			auth = std::make_unique<emule::api::Auth>(cfg);
 			emule::api::RegisterAuthRoutes(api, *auth, token);
 			emule::api::RegisterImportRoutes(api, *auth, cfg, hooks.restart);
-			if (!api.Start(opt.api_bind, opt.api_port)) { std::printf("  errore: API non avviata: %s\n  (se la porta e' occupata da un altro programma: cambia api_port in ~/.emuled/config.yaml, oppure lancia 'emuled --setup' da un terminale, poi riavvia)\n", api.LastError().c_str()); ok = false; rc = 1; }
+			if (!api.Start(opt.api_bind, opt.api_port)) { std::printf("  error: API not started: %s\n  (if the port is used by another program: change api_port in ~/.emuled/config.yaml, or run 'emuled --setup' from a terminal, then restart)\n", api.LastError().c_str()); ok = false; rc = 1; }
 			else events = std::make_unique<emule::api::EventPublisher>(api, NowS(), hooks);
-			if (ok) std::printf("  API: http://%s:%u/api/v1/  (token in %s%s)\n", opt.api_bind.c_str(), (unsigned)api.port(), opt.api_token.empty() ? (cfg + "emuled.token").c_str() : "riga di comando", created.empty() ? "" : "; creato ora");
+			if (ok) std::printf("  API: http://%s:%u/api/v1/  (token in %s%s)\n", opt.api_bind.c_str(), (unsigned)api.port(), opt.api_token.empty() ? (cfg + "emuled.token").c_str() : "command line", created.empty() ? "" : "; created now");
 			if (ok && auth && !auth->Configured())
-				std::printf("  Primo avvio: apri l'interfaccia web e crea il tuo account. Codice di impostazione (serve una volta sola): %s\n", token.c_str());
+				std::printf("  First start: open the web interface and create your account. Setup code (needed only once): %s\n", token.c_str());
 			std::fflush(stdout);
 		}
 		if (ok) {
 			for (auto &l : opt.add_links) {
 				std::unique_ptr<CED2KLink> pLink;
-				try { pLink.reset(CED2KLink::CreateLinkFromUrl(CString(l.c_str()))); } catch (const CString &e) { std::printf("  link non valido (%s): %s\n", (LPCTSTR)e, l.c_str()); continue; }
-				if (pLink && pLink->GetKind() == CED2KLink::kFile) { theApp.downloadqueue->AddFileLinkToDownload(*pLink->GetFileLink()); std::printf("  aggiunto: %s\n", l.c_str()); }
-				else std::printf("  link non valido: %s\n", l.c_str());
+				try { pLink.reset(CED2KLink::CreateLinkFromUrl(CString(l.c_str()))); } catch (const CString &e) { std::printf("  invalid link (%s): %s\n", (LPCTSTR)e, l.c_str()); continue; }
+				if (pLink && pLink->GetKind() == CED2KLink::kFile) { theApp.downloadqueue->AddFileLinkToDownload(*pLink->GetFileLink()); std::printf("  added: %s\n", l.c_str()); }
+				else std::printf("  invalid link: %s\n", l.c_str());
 			}
 			CServer *srv = nullptr;
 			if (!opt.server_address.empty()) {
 				size_t col = opt.server_address.rfind(':');
 				if (col != std::string::npos) srv = theApp.serverlist->GetServerByAddress(opt.server_address.substr(0, col).c_str(), (uint16)std::atoi(opt.server_address.c_str() + col + 1));
-				if (!srv) std::printf("  avviso: server %s non trovato nella lista: ne uso uno qualsiasi\n", opt.server_address.c_str());
+				if (!srv) std::printf("  warning: server %s not found in the list: using any server\n", opt.server_address.c_str());
 			}
 			if (opt.offline) {}
 			else if (srv) theApp.serverconnect->ConnectToServer(srv);
 			else if (thePrefs.DoAutoConnect()) theApp.serverconnect->ConnectToAnyServer();
-			else AddLogLine(false, _T("Server: collegamento automatico spento (preferenza auto_connect): collegati dalla pagina Server"));
+			else AddLogLine(false, _T("Server: automatic connection is off (auto_connect preference): connect from the Server page"));
 
 			const double t0 = NowS(); double lastStatus = t0;
 			while (!g_stop && (opt.max_seconds <= 0 || NowS() - t0 < opt.max_seconds)) {
@@ -326,24 +326,24 @@ int RunDaemon(const DaemonOptions &opt)
 				if (opt.status_interval_s > 0 && NowS() - lastStatus >= opt.status_interval_s) {
 					lastStatus = NowS();
 					CServerConnect &sc = *theApp.serverconnect;
-					std::printf("[stato] server: %s%s; Kad: %s; download: %u, %.1f KB/s giu, %.1f KB/s su\n"
-						, sc.IsConnected() ? "connesso" : (sc.IsConnecting() ? "in connessione" : "NON connesso"), sc.IsConnected() ? (sc.IsLowID() ? " (ID basso)" : " (ID alto)") : ""
-						, udp ? (Kademlia::CKademlia::IsConnected() ? "connesso" : "in avvio") : "spento"
+					std::printf("[status] server: %s%s; Kad: %s; downloads: %u, %.1f KB/s down, %.1f KB/s up\n"
+						, sc.IsConnected() ? "connected" : (sc.IsConnecting() ? "connecting" : "NOT connected"), sc.IsConnected() ? (sc.IsLowID() ? " (LowID)" : " (HighID)") : ""
+						, udp ? (Kademlia::CKademlia::IsConnected() ? "connected" : "starting") : "off"
 						, (unsigned)theApp.downloadqueue->GetFileCount()
 						, theApp.downloadqueue->GetDatarate() / 1024.0, theApp.uploadqueue->GetDatarate() / 1024.0);
 					std::fflush(stdout);
 				}
 			}
 			AddLogLine(false, _T("emuled stopping%s"), g_stop ? " (signal)" : " (time limit)");
-			std::printf("emuled: arresto%s\n", g_stop ? " (segnale)" : " (tempo scaduto)"); std::fflush(stdout);
+			std::printf("emuled: stopping%s\n", g_stop ? " (signal)" : " (time limit)"); std::fflush(stdout);
 		}
 
-		// chiusura nell'ordine di CemuleDlg::OnClose; i socket registrati in questo ciclo vanno chiusi prima della sua fine
+		// shutdown in the order of CemuleDlg::OnClose; the sockets registered in this loop must be closed before its end
 		events.reset();
 		api.Stop();
 		upnpStop();
 		if (watchdogTimer) loop.CancelTimer(watchdogTimer);
-		if (guardianTimer) { loop.CancelTimer(guardianTimer); guardianRound(); }		// ultimo giro allo spegnimento
+		if (guardianTimer) { loop.CancelTimer(guardianTimer); guardianRound(); }		// last round at shutdown
 		if (kadTimer) loop.CancelTimer(kadTimer);
 		if (udp) { Kademlia::CKademlia::Stop(); theApp.clientudp = nullptr; udp.reset(); }
 		thr.EndThread();

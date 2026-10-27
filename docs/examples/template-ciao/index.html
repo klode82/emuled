@@ -1,32 +1,32 @@
 <!doctype html>
-<html lang="it">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="light dark">
-<title>Ciao mondo - emuled</title>
+<title>Hello world - emuled</title>
 </head>
 <body>
-<h1>Ciao mondo</h1>
+<h1>Hello world</h1>
 
-<!-- Accesso: il codice (token) sta nel browser alla chiave emuled.token, la stessa per tutti i template: se c'e' gia', non si chiede di nuovo -->
+<!-- Login: the code (token) lives in the browser under the key emuled.token, the same for all templates: if it is already there, it is not asked for again -->
 <form id="login" hidden>
-  <p>Incolla il token (il file <code>emuled.token</code> nella cartella del profilo).</p>
+  <p>Paste the token (the <code>emuled.token</code> file in the profile folder).</p>
   <input id="token" type="password" autocomplete="off" aria-label="Token">
-  <button>Entra</button>
+  <button>Sign in</button>
   <p id="errore" role="alert"></p>
 </form>
 
 <section id="main" hidden>
   <p id="stato">...</p>
-  <h2>Download</h2>
+  <h2>Downloads</h2>
   <ul id="lista"></ul>
-  <!-- Ogni template deve dare un modo per cambiare aspetto: /?template=console porta ad A, dove si sceglie dalle Preferenze -->
-  <p><a href="/?template=console">Cambia aspetto</a> &middot; <button id="esci">Esci</button></p>
+  <!-- Every template must give a way to change the look: /?template=console leads to A, where it is chosen in Preferences -->
+  <p><a href="/?template=console">Change look</a> &middot; <button id="esci">Sign out</button></p>
 </section>
 
 <script>
-// Indirizzi RELATIVI al template (non cominciano con /): il template sta in /t/<id>/, ma l'API e' sempre a /api/v1/ (qui si scrive assoluto perche' e' del demone)
+// Addresses RELATIVE to the template (they do not start with /): the template lives in /t/<id>/, but the API is always at /api/v1/ (written absolute here because it belongs to the daemon)
 var KEY = 'emuled.token';
 function token() { try { return localStorage.getItem(KEY) || ''; } catch (e) { return ''; } }
 function api(path) {
@@ -39,15 +39,15 @@ function show(logged) { document.getElementById('login').hidden = logged; docume
 function aggiorna() {
   Promise.all([api('/status'), api('/downloads')]).then(function (x) {
     var s = x[0], d = x[1];
-    // textContent, mai innerHTML con dati del demone: i nomi dei file li decide chi li condivide
-    document.getElementById('stato').textContent = 'Scarico a ' + Math.round(s.transfers.download_speed / 1024) + ' KB/s, invio a ' + Math.round(s.transfers.upload_speed / 1024) + ' KB/s';
+    // textContent, never innerHTML with daemon data: file names are decided by whoever shares them
+    document.getElementById('stato').textContent = 'Downloading at ' + Math.round(s.transfers.download_speed / 1024) + ' KB/s, uploading at ' + Math.round(s.transfers.upload_speed / 1024) + ' KB/s';
     var ul = document.getElementById('lista'); ul.textContent = '';
     d.forEach(function (f) { var li = document.createElement('li'); li.textContent = f.name + ' - ' + Math.floor(f.percent) + '%'; ul.appendChild(li); });
   }).catch(function (e) {
     if (String(e.message) === '401') {
       try { localStorage.removeItem(KEY); } catch (z) {}
       document.getElementById('token').value = '';
-      document.getElementById('errore').textContent = 'Token non valido: riprova.';
+      document.getElementById('errore').textContent = 'Invalid token: try again.';
       clearInterval(timer); show(false);
     }
   });
@@ -63,7 +63,7 @@ var timer;
 function start() {
   clearInterval(timer);
   if (!token()) { show(false); return; }
-  show(true); aggiorna(); timer = setInterval(aggiorna, 3000);	// semplice: si rilegge ogni 3 secondi (il WebSocket /api/v1/events?token=... evita di interrogare)
+  show(true); aggiorna(); timer = setInterval(aggiorna, 3000);	// simple: it reads again every 3 seconds (the WebSocket /api/v1/events?token=... avoids polling)
 }
 start();
 </script>

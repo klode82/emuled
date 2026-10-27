@@ -3,7 +3,7 @@
   "info": {
     "title": "emuled",
     "version": "1.0.0",
-    "description": "API REST/JSON del demone eMule per Linux. Ascolta di default solo su 127.0.0.1; ogni chiamata (tranne /ping e /openapi.json) richiede \"Authorization: Bearer TOKEN\"."
+    "description": "REST/JSON API of the eMule daemon for Linux. By default it listens only on 127.0.0.1; every call (except /ping and /openapi.json) requires \"Authorization: Bearer TOKEN\"."
   },
   "servers": [
     {
@@ -12,37 +12,37 @@
   ],
   "tags": [
     {
-      "name": "Stato"
+      "name": "Status"
     },
     {
       "name": "Account"
     },
     {
-      "name": "Download"
+      "name": "Downloads"
     },
     {
       "name": "Server"
     },
     {
-      "name": "Ricerca"
+      "name": "Search"
     },
     {
-      "name": "Condivisione"
+      "name": "Sharing"
     },
     {
       "name": "Kad"
     },
     {
-      "name": "Preferenze"
+      "name": "Preferences"
     },
     {
-      "name": "Cartelle"
+      "name": "Folders"
     },
     {
-      "name": "Registro"
+      "name": "Log"
     },
     {
-      "name": "Categorie"
+      "name": "Categories"
     }
   ],
   "components": {
@@ -58,11 +58,11 @@
         "properties": {
           "error": {
             "type": "string",
-            "description": "Spiegazione in italiano"
+            "description": "Explanation in English"
           },
           "code": {
             "type": "string",
-            "description": "Codice stabile (per esempio not_found, bad_hash, kad_unavailable): non cambia con la lingua ne' con il testo; l'interfaccia lo traduce"
+            "description": "Stable code (for example not_found, bad_hash, kad_unavailable): it does not change with the language or with the text; the interface translates it"
           }
         },
         "required": [
@@ -72,7 +72,7 @@
       },
       "NewDownload": {
         "type": "object",
-        "description": "Una delle due forme: link, oppure hash+name+size",
+        "description": "One of the two forms: link, or hash+name+size",
         "properties": {
           "link": {
             "type": "string",
@@ -91,7 +91,7 @@
           "category": {
             "type": "integer",
             "default": 0,
-            "description": "id di una categoria"
+            "description": "id of a category"
           }
         }
       },
@@ -100,7 +100,7 @@
         "properties": {
           "hash": {
             "type": "string",
-            "description": "MD4 maiuscolo"
+            "description": "uppercase MD4"
           },
           "name": {
             "type": "string"
@@ -108,12 +108,12 @@
           "size": {
             "type": "integer",
             "format": "int64",
-            "description": "byte"
+            "description": "bytes"
           },
           "completed": {
             "type": "integer",
             "format": "int64",
-            "description": "byte validi scaricati"
+            "description": "valid bytes downloaded"
           },
           "percent": {
             "type": "number"
@@ -141,14 +141,14 @@
           },
           "sources_other_files": {
             "type": "integer",
-            "description": "utenti che hanno anche questo file ma che eMule sta usando per un altro download (A4AF): non contano in sources"
+            "description": "users who also have this file but whom eMule is using for another download (A4AF): they do not count in sources"
           },
           "sources_transferring": {
             "type": "integer"
           },
           "best_queue_rank": {
             "type": "integer",
-            "description": "posizione in coda piu' vicina tra tutte le fonti; 0 = nessuna fonte in coda"
+            "description": "closest queue position among all sources; 0 = no source in queue"
           },
           "file_op": {
             "type": "string",
@@ -159,15 +159,15 @@
               "uncompressing",
               "import_parts"
             ],
-            "description": "operazione in corso sul file: verifica degli hash, copia, decompressione, importazione di parti"
+            "description": "operation in progress on the file: hash verification, copy, decompression, import of parts"
           },
           "file_op_percent": {
             "type": "integer",
-            "description": "avanzamento dell'operazione, 0-100 (0 se file_op e' none)"
+            "description": "progress of the operation, 0-100 (0 if file_op is none)"
           },
           "speed": {
             "type": "integer",
-            "description": "byte al secondo"
+            "description": "bytes per second"
           },
           "priority": {
             "type": "string",
@@ -185,15 +185,15 @@
           },
           "completed_at": {
             "type": "integer",
-            "description": "solo per i completati: istante (secondi Unix)"
+            "description": "only for completed ones: time (Unix seconds)"
           },
           "path": {
             "type": "string",
-            "description": "solo per i completati: dove e' il file"
+            "description": "only for completed ones: where the file is"
           },
           "part_file": {
             "type": "string",
-            "description": "nome del .part.met in Temp/"
+            "description": "name of the .part.met in Temp/"
           }
         }
       },
@@ -205,7 +205,7 @@
         "properties": {
           "query": {
             "type": "string",
-            "description": "Stessa sintassi del campo di ricerca di eMule (virgolette, OR, NOT, ...)",
+            "description": "Same syntax as eMule's search field (quotes, OR, NOT, ...)",
             "example": "ubuntu iso"
           },
           "scope": {
@@ -219,7 +219,7 @@
           },
           "ext": {
             "type": "string",
-            "description": "estensione senza punto"
+            "description": "extension without the dot"
           },
           "type": {
             "type": "string",
@@ -267,14 +267,14 @@
           },
           "sources": {
             "type": "integer",
-            "description": "il valore piu' alto dichiarato"
+            "description": "the highest value declared"
           },
           "complete_sources": {
             "type": "integer"
           },
           "answers": {
             "type": "integer",
-            "description": "da quanti server/nodi e' arrivato"
+            "description": "how many servers/nodes it came from"
           }
         }
       },
@@ -303,7 +303,7 @@
           },
           "result_count": {
             "type": "integer",
-            "description": "risposte grezze (un file puo' contarsi piu' volte)"
+            "description": "raw answers (one file can be counted several times)"
           },
           "servers_asked": {
             "type": "integer"
@@ -316,7 +316,7 @@
             "items": {
               "$ref": "#/components/schemas/SearchResult"
             },
-            "description": "solo in GET"
+            "description": "only in GET"
           }
         }
       },
@@ -338,7 +338,7 @@
           },
           "part_file": {
             "type": "boolean",
-            "description": "e' un download ancora in corso"
+            "description": "it is a download still in progress"
           },
           "priority": {
             "type": "string",
@@ -373,7 +373,7 @@
           },
           "queued": {
             "type": "integer",
-            "description": "client in coda per questo file"
+            "description": "clients in the queue for this file"
           }
         }
       },
@@ -403,7 +403,7 @@
           },
           "speed": {
             "type": "integer",
-            "description": "byte al secondo"
+            "description": "bytes per second"
           },
           "session_uploaded": {
             "type": "integer",
@@ -439,7 +439,7 @@
         "properties": {
           "indexed": {
             "type": "object",
-            "description": "indici di Kad ospitati da noi (con Kad in funzione)",
+            "description": "Kad indexes hosted by us (with Kad running)",
             "properties": {
               "keywords": {
                 "type": "integer"
@@ -454,19 +454,19 @@
           },
           "published": {
             "type": "object",
-            "description": "file condivisi annunciati a Kad almeno una volta (con Kad in funzione)",
+            "description": "shared files announced to Kad at least once (with Kad running)",
             "properties": {
               "files": {
                 "type": "integer",
-                "description": "file condivisi in tutto"
+                "description": "shared files overall"
               },
               "sources": {
                 "type": "integer",
-                "description": "annunciati come fonte"
+                "description": "announced as a source"
               },
               "notes": {
                 "type": "integer",
-                "description": "con il commento/voto annunciato"
+                "description": "with the comment/rating announced"
               }
             }
           },
@@ -495,7 +495,7 @@
       },
       "Preferences": {
         "type": "object",
-        "description": "Chiavi: nick, tcp_port, udp_port, max_download_kbps, max_upload_kbps (0 = illimitato), max_connections, max_connections_per_5s, max_sources_per_file, network_ed2k, network_kademlia, auto_connect, reconnect, add_servers_from_server, add_servers_from_clients, use_server_priorities, safe_server_connect, static_servers_only, dead_server_retries, crypt_supported, crypt_requested, crypt_required, secure_ident, credit_system, add_new_downloads_paused, auto_up_priority, auto_down_priority, transfer_full_chunks, remove_finished_downloads, verbose_log, save_log_to_disk, save_debug_to_disk, comment_filter (testo: parole separate da |, in minuscolo; i commenti che le contengono si scartano)",
+        "description": "Keys: nick, tcp_port, udp_port, max_download_kbps, max_upload_kbps (0 = unlimited), max_connections, max_connections_per_5s, max_sources_per_file, network_ed2k, network_kademlia, auto_connect, reconnect, add_servers_from_server, add_servers_from_clients, use_server_priorities, safe_server_connect, static_servers_only, dead_server_retries, crypt_supported, crypt_requested, crypt_required, secure_ident, credit_system, add_new_downloads_paused, auto_up_priority, auto_down_priority, transfer_full_chunks, remove_finished_downloads, verbose_log, save_log_to_disk, save_debug_to_disk, comment_filter (text: words separated by |, in lowercase; comments containing them are discarded)",
         "additionalProperties": {
           "oneOf": [
             {
@@ -525,24 +525,24 @@
           },
           "incoming_path": {
             "type": "string",
-            "description": "cartella dei file completati (vuota = quella di default)"
+            "description": "folder for completed files (empty = the default one)"
           },
           "priority": {
             "type": "integer",
             "minimum": 0,
             "maximum": 5,
-            "description": "0 bassa, 1 normale, 2 alta, 3 massima, 4 molto bassa, 5 automatica"
+            "description": "0 low, 1 normal, 2 high, 3 highest, 4 very low, 5 automatic"
           },
           "auto_cat": {
             "type": "string",
-            "description": "parole che assegnano la categoria ai nuovi download"
+            "description": "words that assign the category to new downloads"
           },
           "regexp": {
             "type": "string"
           },
           "color": {
             "type": "integer",
-            "description": "-1 = predefinito"
+            "description": "-1 = default"
           }
         }
       },
@@ -580,7 +580,7 @@
         "properties": {
           "other_file": {
             "type": "string",
-            "description": "solo per le fonti A4AF: il download per cui eMule le sta usando adesso"
+            "description": "only for A4AF sources: the download for which eMule is using them right now"
           },
           "name": {
             "type": "string"
@@ -698,25 +698,25 @@
             "items": {
               "type": "string"
             },
-            "description": "(solo in lettura) cartelle condivise che non esistono sul disco: restano in elenco finche' non le togli"
+            "description": "(read-only) shared folders that do not exist on disk: they stay in the list until you remove them"
           },
           "incoming": {
             "type": "string",
-            "description": "dove vanno i file completati (condivisa da sola)"
+            "description": "where completed files go (shared automatically)"
           },
           "temp": {
             "type": "array",
             "items": {
               "type": "string"
             },
-            "description": "dove stanno i .part; almeno una"
+            "description": "where the .part files are; at least one"
           },
           "shared": {
             "type": "array",
             "items": {
               "type": "string"
             },
-            "description": "altre cartelle condivise"
+            "description": "other shared folders"
           }
         },
         "example": {
@@ -734,12 +734,12 @@
         "properties": {
           "id": {
             "type": "integer",
-            "description": "numero progressivo, mai riusato"
+            "description": "sequence number, never reused"
           },
           "time": {
             "type": "integer",
             "format": "int64",
-            "description": "millisecondi Unix"
+            "description": "Unix milliseconds"
           },
           "level": {
             "type": "string",
@@ -757,7 +757,7 @@
               "server",
               "api"
             ],
-            "description": "server = messaggi dei server ed2k; api = azioni fatte via API"
+            "description": "server = messages from the ed2k servers; api = actions done via API"
           },
           "text": {
             "type": "string"
@@ -775,11 +775,11 @@
           },
           "last_id": {
             "type": "integer",
-            "description": "numero dell'ultima riga esistita: passalo come after la volta dopo"
+            "description": "number of the last line that existed: pass it as after the next time"
           },
           "truncated": {
             "type": "boolean",
-            "description": "con after: alcune righe fra after e la prima rimasta sono gia' state scartate"
+            "description": "with after: some lines between after and the first one left have already been discarded"
           }
         }
       },
@@ -834,7 +834,7 @@
         "properties": {
           "upnp": {
             "type": "object",
-            "description": "UPnP (apertura automatica delle porte sul router)",
+            "description": "UPnP (automatic opening of the ports on the router)",
             "properties": {
               "enabled": {
                 "type": "boolean"
@@ -849,21 +849,21 @@
                   "failed",
                   "unavailable"
                 ],
-                "description": "off = spento; offline = il demone e' senza rete; pending = cerca il router; forwarded = porte inoltrate; failed = il router non le ha inoltrate"
+                "description": "off = switched off; offline = the daemon has no network; pending = looking for the router; forwarded = ports forwarded; failed = the router did not forward them"
               }
             }
           },
           "version": {
             "type": "string",
-            "description": "versione di eMule annunciata in rete"
+            "description": "eMule version announced on the network"
           },
           "emuled_version": {
             "type": "string",
-            "description": "versione di emuled"
+            "description": "emuled version"
           },
           "base_version": {
             "type": "string",
-            "description": "codice eMule da cui deriva emuled"
+            "description": "eMule code that emuled derives from"
           },
           "nick": {
             "type": "string"
@@ -955,15 +955,15 @@
   "paths": {
     "/api/v1/ping": {
       "get": {
-        "summary": "Il demone risponde?",
-        "description": "Unica chiamata senza token: serve all'interfaccia web per sapere se il demone e' acceso.",
+        "summary": "Is the daemon answering?",
+        "description": "The only call without a token: the web interface uses it to know whether the daemon is running.",
         "tags": [
-          "Stato"
+          "Status"
         ],
         "security": [],
         "responses": {
           "200": {
-            "description": "Acceso",
+            "description": "Running",
             "content": {
               "application/json": {
                 "schema": {
@@ -982,15 +982,15 @@
     },
     "/api/v1/auth/status": {
       "get": {
-        "summary": "C'e' un account?",
-        "description": "Senza token. L'interfaccia sa cosi' se mostrare l'accesso o il primo avvio.",
+        "summary": "Is there an account?",
+        "description": "Without a token. This way the interface knows whether to show the login or the first start.",
         "tags": [
           "Account"
         ],
         "security": [],
         "responses": {
           "200": {
-            "description": "Stato",
+            "description": "Status",
             "content": {
               "application/json": {
                 "schema": {
@@ -1012,8 +1012,8 @@
     },
     "/api/v1/auth/setup": {
       "post": {
-        "summary": "Crea il primo account",
-        "description": "Senza token ma con il codice di impostazione (il token del file emuled.token, stampato dal demone all'avvio finche' non c'e' un account). Sale casuale + PBKDF2-HMAC-SHA256; la password non si recupera, si reimposta con emuled --reset-user.",
+        "summary": "Create the first account",
+        "description": "Without a token but with the setup code (the token in the emuled.token file, printed by the daemon at startup until an account exists). Random salt + PBKDF2-HMAC-SHA256; the password cannot be recovered, it is reset with emuled --reset-user.",
         "tags": [
           "Account"
         ],
@@ -1035,11 +1035,11 @@
                   },
                   "username": {
                     "type": "string",
-                    "description": "1-32 caratteri: lettere, cifre, punto, trattino, trattino basso"
+                    "description": "1-32 characters: letters, digits, dot, hyphen, underscore"
                   },
                   "password": {
                     "type": "string",
-                    "description": "almeno 8 caratteri"
+                    "description": "at least 8 characters"
                   }
                 }
               }
@@ -1048,7 +1048,7 @@
         },
         "responses": {
           "201": {
-            "description": "Account creato",
+            "description": "Account created",
             "content": {
               "application/json": {
                 "schema": {
@@ -1069,7 +1069,7 @@
             }
           },
           "400": {
-            "description": "Nome o password non validi (bad_username, bad_password)",
+            "description": "Invalid name or password (bad_username, bad_password)",
             "content": {
               "application/json": {
                 "schema": {
@@ -1079,7 +1079,7 @@
             }
           },
           "403": {
-            "description": "Codice di impostazione errato (bad_setup_code)",
+            "description": "Wrong setup code (bad_setup_code)",
             "content": {
               "application/json": {
                 "schema": {
@@ -1089,7 +1089,7 @@
             }
           },
           "409": {
-            "description": "L'account esiste gia' (account_exists)",
+            "description": "The account already exists (account_exists)",
             "content": {
               "application/json": {
                 "schema": {
@@ -1099,7 +1099,7 @@
             }
           },
           "429": {
-            "description": "Troppi tentativi (too_many_attempts)",
+            "description": "Too many attempts (too_many_attempts)",
             "content": {
               "application/json": {
                 "schema": {
@@ -1113,8 +1113,8 @@
     },
     "/api/v1/auth/login": {
       "post": {
-        "summary": "Accedi con nome utente e password",
-        "description": "Senza token. Risponde con un gettone di sessione (30 giorni), da usare come Bearer. Cinque tentativi sbagliati da un indirizzo lo bloccano per un minuto.",
+        "summary": "Log in with user name and password",
+        "description": "Without a token. Answers with a session token (30 days), to be used as Bearer. Five wrong attempts from one address block it for one minute.",
         "tags": [
           "Account"
         ],
@@ -1143,7 +1143,7 @@
         },
         "responses": {
           "200": {
-            "description": "Accesso riuscito",
+            "description": "Login succeeded",
             "content": {
               "application/json": {
                 "schema": {
@@ -1164,7 +1164,7 @@
             }
           },
           "401": {
-            "description": "Nome utente o password errati (bad_credentials)",
+            "description": "Wrong user name or password (bad_credentials)",
             "content": {
               "application/json": {
                 "schema": {
@@ -1174,7 +1174,7 @@
             }
           },
           "429": {
-            "description": "Troppi tentativi (too_many_attempts)",
+            "description": "Too many attempts (too_many_attempts)",
             "content": {
               "application/json": {
                 "schema": {
@@ -1188,11 +1188,11 @@
     },
     "/api/v1/setup": {
       "get": {
-        "summary": "Il primo avvio e' da completare?",
-        "description": "pending=true dopo la creazione del primo account, finche' il Wizard web non e' finito.",
+        "summary": "Is the first start still to be completed?",
+        "description": "pending=true after the first account is created, until the web Wizard is finished.",
         "responses": {
           "200": {
-            "description": "Stato",
+            "description": "Status",
             "content": {
               "application/json": {
                 "schema": {
@@ -1223,17 +1223,17 @@
           }
         ],
         "tags": [
-          "Stato"
+          "Status"
         ]
       }
     },
     "/api/v1/setup/done": {
       "post": {
-        "summary": "Il Wizard di primo avvio e' finito",
-        "description": "Segna il primo avvio come completato (pending=false).",
+        "summary": "The first-start Wizard is finished",
+        "description": "Marks the first start as completed (pending=false).",
         "responses": {
           "200": {
-            "description": "Fatto",
+            "description": "Done",
             "content": {
               "application/json": {
                 "schema": {
@@ -1264,17 +1264,17 @@
           }
         ],
         "tags": [
-          "Stato"
+          "Status"
         ]
       }
     },
     "/api/v1/setup/import": {
       "get": {
-        "summary": "Si puo' importare un profilo eMule?",
-        "description": "available=true solo durante il primo avvio (Wizard non finito) e se non si e' gia' importato; imported=true dopo l'importazione. candidates: cartelle del computer che sembrano la configurazione di un eMule (vecchie installazioni ~/.emuled*, ~/.config/emule, ~/eMule/config, Wine, /mnt, /media), solo se available.",
+        "summary": "Can an eMule profile be imported?",
+        "description": "available=true only during the first start (Wizard not finished) and if nothing has been imported yet; imported=true after the import. candidates: folders on the computer that look like an eMule configuration (old ~/.emuled* installations, ~/.config/emule, ~/eMule/config, Wine, /mnt, /media), only if available.",
         "responses": {
           "200": {
-            "description": "Stato",
+            "description": "Status",
             "content": {
               "application/json": {
                 "schema": {
@@ -1314,15 +1314,15 @@
           }
         ],
         "tags": [
-          "Stato"
+          "Status"
         ]
       },
       "post": {
-        "summary": "Importa un profilo eMule esistente",
-        "description": "Copia (la cartella di origine non si modifica) i file di configurazione di un eMule, di solito di Windows: hash utente, chiave, crediti, file conosciuti, server, nodi Kad, preferenze. Corregge i percorsi Windows con le regole indicate (o proposte). I file vengono preparati e il demone si riavvia da solo: all'avvio li mette al loro posto (i file sostituiti vanno in pre-import-DATA/). Solo durante il primo avvio.",
+        "summary": "Import an existing eMule profile",
+        "description": "Copies (the source folder is not modified) the configuration files of an eMule, usually a Windows one: user hash, key, credits, known files, servers, Kad nodes, preferences. Fixes the Windows paths with the given (or proposed) rules. The files are staged and the daemon restarts by itself: at startup it puts them in place (replaced files go into pre-import-DATE/). Only during the first start.",
         "responses": {
           "200": {
-            "description": "Preparato; il demone si riavvia fra meno di un secondo",
+            "description": "Staged; the daemon restarts in less than a second",
             "content": {
               "application/json": {
                 "schema": {
@@ -1350,7 +1350,7 @@
             }
           },
           "409": {
-            "description": "Non e' il primo avvio, o si e' gia' importato",
+            "description": "It is not the first start, or something has already been imported",
             "content": {
               "application/json": {
                 "schema": {
@@ -1360,7 +1360,7 @@
             }
           },
           "422": {
-            "description": "Cartella non valida, spazio insufficiente o regole sbagliate",
+            "description": "Invalid folder, not enough space or wrong rules",
             "content": {
               "application/json": {
                 "schema": {
@@ -1376,7 +1376,7 @@
           }
         ],
         "tags": [
-          "Stato"
+          "Status"
         ],
         "requestBody": {
           "required": true,
@@ -1418,11 +1418,11 @@
     },
     "/api/v1/setup/import/scan": {
       "post": {
-        "summary": "Guarda un profilo eMule da importare",
-        "description": "Sola lettura. Elenca i file che verrebbero copiati, il nome utente, le cartelle (Incoming, Temp, condivise) e propone le regole dei percorsi Windows (es. Z:/eMule = /mnt/z/eMule) cercando sopra la cartella indicata. Con rules si ricalcola dove finirebbero le cartelle.",
+        "summary": "Look at an eMule profile to import",
+        "description": "Read-only. Lists the files that would be copied, the user name, the folders (Incoming, Temp, shared) and proposes the rules for Windows paths (e.g. Z:/eMule = /mnt/z/eMule) by looking above the given folder. With rules it recomputes where the folders would end up.",
         "responses": {
           "200": {
-            "description": "Esito",
+            "description": "Result",
             "content": {
               "application/json": {
                 "schema": {
@@ -1498,7 +1498,7 @@
             }
           },
           "409": {
-            "description": "Non e' il primo avvio",
+            "description": "It is not the first start",
             "content": {
               "application/json": {
                 "schema": {
@@ -1508,7 +1508,7 @@
             }
           },
           "422": {
-            "description": "Non sembra una cartella di eMule, e' quella di emuled, o regole sbagliate",
+            "description": "It does not look like an eMule folder, it is the emuled one, or wrong rules",
             "content": {
               "application/json": {
                 "schema": {
@@ -1524,7 +1524,7 @@
           }
         ],
         "tags": [
-          "Stato"
+          "Status"
         ],
         "requestBody": {
           "required": true,
@@ -1566,11 +1566,11 @@
     },
     "/api/v1/ports/test-url": {
       "get": {
-        "summary": "Indirizzo del test delle porte di emule-project.net",
-        "description": "Come TriggerPortTest di eMule: https://porttest.emule-project.net/connectiontest.php con le porte TCP e UDP IN USO adesso, lang (identificatore di lingua di Windows: 1040 italiano, 1033 inglese; predefinito 1033) e obf=0, oppure obf=1 e clienthash=<hash utente> se l'offuscamento e' acceso. Il demone NON apre l'indirizzo: lo apre il browser su un clic dell'utente; il sito prova a collegarsi alle porte e il demone risponde.",
+        "summary": "Address of the emule-project.net port test",
+        "description": "Like eMule's TriggerPortTest: https://porttest.emule-project.net/connectiontest.php with the TCP and UDP ports IN USE right now, lang (Windows language identifier: 1040 Italian, 1033 English; default 1033) and obf=0, or obf=1 and clienthash=<user hash> if obfuscation is on. The daemon does NOT open the address: the browser opens it when the user clicks; the site tries to connect to the ports and the daemon answers.",
         "responses": {
           "200": {
-            "description": "Indirizzo",
+            "description": "Address",
             "content": {
               "application/json": {
                 "schema": {
@@ -1610,7 +1610,7 @@
           }
         ],
         "tags": [
-          "Stato"
+          "Status"
         ],
         "parameters": [
           {
@@ -1625,11 +1625,11 @@
     },
     "/api/v1/system/restart": {
       "post": {
-        "summary": "Riavvia il demone",
-        "description": "Il demone si spegne in modo pulito (salva tutto) e riparte da solo, stesso processo e stessi argomenti (execv); serve per le porte nuove. Risponde subito e riparte dopo meno di un secondo. L'interfaccia aspetta che torni e ricarica la pagina.",
+        "summary": "Restart the daemon",
+        "description": "The daemon shuts down cleanly (saves everything) and starts again by itself, same process and same arguments (execv); needed for new ports. It answers at once and restarts in less than a second. The interface waits for it to come back and reloads the page.",
         "responses": {
           "200": {
-            "description": "Riavvio in corso",
+            "description": "Restarting",
             "content": {
               "application/json": {
                 "schema": {
@@ -1654,7 +1654,7 @@
             }
           },
           "501": {
-            "description": "Riavvio non disponibile in questa modalita'",
+            "description": "Restart not available in this mode",
             "content": {
               "application/json": {
                 "schema": {
@@ -1670,17 +1670,17 @@
           }
         ],
         "tags": [
-          "Stato"
+          "Status"
         ]
       }
     },
     "/api/v1/ports/check": {
       "get": {
-        "summary": "Le porte sono libere?",
-        "description": "Prova a mettersi in ascolto (TCP) o ad aprire (UDP) le porte indicate, poi chiude. own=true: e' la porta che emuled usa gia' (nessun conflitto). Non cambia niente.",
+        "summary": "Are the ports free?",
+        "description": "Tries to listen (TCP) or to open (UDP) the given ports, then closes them. own=true: it is the port emuled already uses (no conflict). Changes nothing.",
         "responses": {
           "200": {
-            "description": "Esito",
+            "description": "Result",
             "content": {
               "application/json": {
                 "schema": {
@@ -1742,7 +1742,7 @@
           }
         ],
         "tags": [
-          "Stato"
+          "Status"
         ],
         "parameters": [
           {
@@ -1764,11 +1764,11 @@
     },
     "/api/v1/fs": {
       "get": {
-        "summary": "Sottocartelle di una cartella del computer del demone",
-        "description": "Per la finestra 'scegli una cartella'. Sono le cartelle del computer dove gira il demone (con Docker: del contenitore). Solo cartelle, mai file; le nascoste solo con hidden=1; al massimo 2000. Senza path parte dalla cartella dell'utente.",
+        "summary": "Subfolders of a folder on the daemon's computer",
+        "description": "For the 'choose a folder' window. These are the folders of the computer where the daemon runs (with Docker: of the container). Folders only, never files; hidden ones only with hidden=1; at most 2000. Without path it starts from the user's home folder.",
         "responses": {
           "200": {
-            "description": "Elenco",
+            "description": "List",
             "content": {
               "application/json": {
                 "schema": {
@@ -1821,7 +1821,7 @@
             }
           },
           "400": {
-            "description": "Percorso non assoluto o non e' una cartella (bad_path, not_a_directory)",
+            "description": "Path not absolute or not a folder (bad_path, not_a_directory)",
             "content": {
               "application/json": {
                 "schema": {
@@ -1831,7 +1831,7 @@
             }
           },
           "403": {
-            "description": "Percorso non consentito (forbidden_path)",
+            "description": "Path not allowed (forbidden_path)",
             "content": {
               "application/json": {
                 "schema": {
@@ -1841,7 +1841,7 @@
             }
           },
           "404": {
-            "description": "Cartella inesistente (dir_not_found)",
+            "description": "Folder does not exist (dir_not_found)",
             "content": {
               "application/json": {
                 "schema": {
@@ -1867,7 +1867,7 @@
           }
         ],
         "tags": [
-          "Cartelle"
+          "Folders"
         ],
         "parameters": [
           {
@@ -1893,11 +1893,11 @@
     },
     "/api/v1/fs/mkdir": {
       "post": {
-        "summary": "Crea una cartella",
-        "description": "Crea UNA cartella; quella che la contiene deve esistere.",
+        "summary": "Create a folder",
+        "description": "Creates ONE folder; the folder that contains it must exist.",
         "responses": {
           "201": {
-            "description": "Creata",
+            "description": "Created",
             "content": {
               "application/json": {
                 "schema": {
@@ -1912,7 +1912,7 @@
             }
           },
           "400": {
-            "description": "Percorso non valido (bad_path, bad_dirname)",
+            "description": "Invalid path (bad_path, bad_dirname)",
             "content": {
               "application/json": {
                 "schema": {
@@ -1922,7 +1922,7 @@
             }
           },
           "403": {
-            "description": "Percorso non consentito (forbidden_path)",
+            "description": "Path not allowed (forbidden_path)",
             "content": {
               "application/json": {
                 "schema": {
@@ -1932,7 +1932,7 @@
             }
           },
           "404": {
-            "description": "La cartella che la contiene non esiste (dir_not_found)",
+            "description": "The containing folder does not exist (dir_not_found)",
             "content": {
               "application/json": {
                 "schema": {
@@ -1942,7 +1942,7 @@
             }
           },
           "409": {
-            "description": "La cartella esiste gia' (dir_exists)",
+            "description": "The folder already exists (dir_exists)",
             "content": {
               "application/json": {
                 "schema": {
@@ -1968,7 +1968,7 @@
           }
         ],
         "tags": [
-          "Cartelle"
+          "Folders"
         ],
         "requestBody": {
           "required": true,
@@ -1992,11 +1992,11 @@
     },
     "/api/v1/status": {
       "get": {
-        "summary": "Stato generale",
-        "description": "Versione, porte, collegamento al server ed2k e a Kad, velocita' e numero di trasferimenti.",
+        "summary": "General status",
+        "description": "Version, ports, connection to the ed2k server and to Kad, speeds and number of transfers.",
         "responses": {
           "200": {
-            "description": "Stato",
+            "description": "Status",
             "content": {
               "application/json": {
                 "schema": {
@@ -2006,7 +2006,7 @@
             }
           },
           "401": {
-            "description": "Token mancante o errato",
+            "description": "Missing or wrong token",
             "content": {
               "application/json": {
                 "schema": {
@@ -2022,17 +2022,17 @@
           }
         ],
         "tags": [
-          "Stato"
+          "Status"
         ]
       }
     },
     "/api/v1/downloads": {
       "get": {
-        "summary": "Elenco dei download",
-        "description": "Tutti i file in scaricamento (e quelli in pausa o fermi), nell'ordine della coda.",
+        "summary": "List of downloads",
+        "description": "All the files being downloaded (and those paused or stopped), in queue order.",
         "responses": {
           "200": {
-            "description": "Elenco",
+            "description": "List",
             "content": {
               "application/json": {
                 "schema": {
@@ -2061,15 +2061,15 @@
           }
         ],
         "tags": [
-          "Download"
+          "Downloads"
         ]
       },
       "post": {
-        "summary": "Aggiungi un download",
-        "description": "Per link ed2k (\"link\") oppure per \"hash\" + \"name\" + \"size\". Il file parte subito se non si e' scelto di aggiungere i nuovi in pausa.",
+        "summary": "Add a download",
+        "description": "By ed2k link (\"link\") or by \"hash\" + \"name\" + \"size\". The file starts at once unless it was chosen to add new ones paused.",
         "responses": {
           "201": {
-            "description": "Aggiunto",
+            "description": "Added",
             "content": {
               "application/json": {
                 "schema": {
@@ -2079,7 +2079,7 @@
             }
           },
           "400": {
-            "description": "Il corpo non e' un oggetto JSON",
+            "description": "The body is not a JSON object",
             "content": {
               "application/json": {
                 "schema": {
@@ -2089,7 +2089,7 @@
             }
           },
           "409": {
-            "description": "Il file e' gia' in download",
+            "description": "The file is already being downloaded",
             "content": {
               "application/json": {
                 "schema": {
@@ -2099,7 +2099,7 @@
             }
           },
           "422": {
-            "description": "Link, hash o dimensione non validi",
+            "description": "Invalid link, hash or size",
             "content": {
               "application/json": {
                 "schema": {
@@ -2125,7 +2125,7 @@
           }
         ],
         "tags": [
-          "Download"
+          "Downloads"
         ],
         "requestBody": {
           "required": true,
@@ -2141,11 +2141,11 @@
     },
     "/api/v1/downloads/clear-completed": {
       "post": {
-        "summary": "Svuota i completati",
-        "description": "Toglie dalla lista tutti i download completati (i file restano su disco). La lista dei completati e' solo in memoria, come la finestra di eMule: al riavvio del demone si svuota. Con l'opzione remove_finished_downloads i completati non entrano mai in lista.",
+        "summary": "Clear the completed ones",
+        "description": "Removes all completed downloads from the list (the files stay on disk). The list of completed ones is only in memory, like the eMule window: it is emptied when the daemon restarts. With the remove_finished_downloads option the completed ones never enter the list.",
         "responses": {
           "200": {
-            "description": "Quanti ne ha tolti",
+            "description": "How many were removed",
             "content": {
               "application/json": {
                 "schema": {
@@ -2176,17 +2176,17 @@
           }
         ],
         "tags": [
-          "Download"
+          "Downloads"
         ]
       }
     },
     "/api/v1/downloads/{hash}/find-sources": {
       "post": {
-        "summary": "Cerca fonti adesso",
-        "description": "Azzera l'attesa fra le richieste di fonti: al giro dopo il demone le chiede subito al server ed2k e a Kad (di solito il server si interroga ogni 15 minuti e Kad fino a 1 ora per tentativo). Risponde subito (202); le fonti compaiono man mano. Se non si e' collegati alle reti lo dice (server/kad = false).",
+        "summary": "Search for sources now",
+        "description": "Resets the wait between source requests: on the next round the daemon asks the ed2k server and Kad for them at once (normally the server is queried every 15 minutes and Kad up to 1 hour per attempt). It answers at once (202); the sources appear gradually. If you are not connected to the networks it says so (server/kad = false).",
         "responses": {
           "202": {
-            "description": "Richiesta fatta",
+            "description": "Request made",
             "content": {
               "application/json": {
                 "schema": {
@@ -2194,18 +2194,18 @@
                   "properties": {
                     "server": {
                       "type": "boolean",
-                      "description": "collegati al server: la richiesta partira'"
+                      "description": "connected to the server: the request will go out"
                     },
                     "kad": {
                       "type": "boolean"
                     },
                     "paused": {
                       "type": "boolean",
-                      "description": "il download e' fermo: le fonti si cercano quando riparte"
+                      "description": "the download is stopped: sources are searched when it restarts"
                     },
                     "wait_s": {
                       "type": "integer",
-                      "description": "il server accetta un gruppo di richieste di fonti ogni 300 s: fra quanti secondi parte quella in coda (0 = subito)"
+                      "description": "the server accepts one group of source requests every 300 s: in how many seconds the queued one goes out (0 = now)"
                     }
                   }
                 }
@@ -2213,7 +2213,7 @@
             }
           },
           "400": {
-            "description": "Hash non valido",
+            "description": "Invalid hash",
             "content": {
               "application/json": {
                 "schema": {
@@ -2223,7 +2223,7 @@
             }
           },
           "404": {
-            "description": "Download non trovato",
+            "description": "Download not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -2233,7 +2233,7 @@
             }
           },
           "409": {
-            "description": "Il download e' gia' completato",
+            "description": "The download is already completed",
             "content": {
               "application/json": {
                 "schema": {
@@ -2259,14 +2259,14 @@
           }
         ],
         "tags": [
-          "Download"
+          "Downloads"
         ],
         "parameters": [
           {
             "name": "hash",
             "in": "path",
             "required": true,
-            "description": "MD4 del file: 32 caratteri esadecimali",
+            "description": "MD4 of the file: 32 hexadecimal characters",
             "schema": {
               "type": "string",
               "pattern": "^[0-9A-Fa-f]{32}$"
@@ -2277,11 +2277,11 @@
     },
     "/api/v1/downloads/{hash}/sources": {
       "get": {
-        "summary": "Fonti di un download",
-        "description": "Le fonti note per il file, con lo stato di ognuna (scarica, in coda, in connessione, ...).",
+        "summary": "Sources of a download",
+        "description": "The known sources for the file, with the state of each one (downloading, queued, connecting, ...).",
         "responses": {
           "200": {
-            "description": "Elenco",
+            "description": "List",
             "content": {
               "application/json": {
                 "schema": {
@@ -2294,7 +2294,7 @@
             }
           },
           "400": {
-            "description": "Hash non valido",
+            "description": "Invalid hash",
             "content": {
               "application/json": {
                 "schema": {
@@ -2304,7 +2304,7 @@
             }
           },
           "404": {
-            "description": "Download non trovato",
+            "description": "Download not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -2314,7 +2314,7 @@
             }
           },
           "409": {
-            "description": "Il download e' gia' completato",
+            "description": "The download is already completed",
             "content": {
               "application/json": {
                 "schema": {
@@ -2340,14 +2340,14 @@
           }
         ],
         "tags": [
-          "Download"
+          "Downloads"
         ],
         "parameters": [
           {
             "name": "hash",
             "in": "path",
             "required": true,
-            "description": "MD4 del file: 32 caratteri esadecimali",
+            "description": "MD4 of the file: 32 hexadecimal characters",
             "schema": {
               "type": "string",
               "pattern": "^[0-9A-Fa-f]{32}$"
@@ -2358,14 +2358,14 @@
     },
     "/api/v1/downloads/{hash}/stream": {
       "post": {
-        "summary": "Crea il link di streaming",
-        "description": "Crea un link temporaneo (valido 6 ore, per UN file) che un player locale come VLC o mpv apre senza il token. Risposta: path (da aggiungere all'indirizzo del demone), name, size, mime, expires_in. Per un download in corso accende anche la priorita' di anteprima (prima e ultima parte per prime). Funziona anche per i completati.",
+        "summary": "Create the streaming link",
+        "description": "Creates a temporary link (valid 6 hours, for ONE file) that a local player such as VLC or mpv opens without the token. Response: path (to append to the daemon's address), name, size, mime, expires_in. For a download in progress it also turns on the preview priority (first and last part first). It also works for completed ones.",
         "responses": {
           "201": {
-            "description": "Link creato"
+            "description": "Link created"
           },
           "404": {
-            "description": "Download non trovato",
+            "description": "Download not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -2391,14 +2391,14 @@
           }
         ],
         "tags": [
-          "Download"
+          "Downloads"
         ],
         "parameters": [
           {
             "name": "hash",
             "in": "path",
             "required": true,
-            "description": "MD4 del file: 32 caratteri esadecimali",
+            "description": "MD4 of the file: 32 hexadecimal characters",
             "schema": {
               "type": "string",
               "pattern": "^[0-9A-Fa-f]{32}$"
@@ -2409,17 +2409,17 @@
     },
     "/api/v1/stream/{id}/{name}": {
       "get": {
-        "summary": "Streaming del file (senza token)",
-        "description": "Serve il file con richieste a intervalli (Range, risposta 206). Non vuole il token: l'autorizzazione e' l'id nel percorso. Per un download in corso si serve solo cio' che e' gia' su disco: se l'intervallo chiesto comincia in una parte non ancora scaricata risponde 503 con Retry-After (il player riprova), e un intervallo che va oltre i byte presenti viene accorciato. 403 se il link e' scaduto o sconosciuto; 416 per un intervallo non valido.",
+        "summary": "Stream the file (no token)",
+        "description": "Serves the file with range requests (Range, 206 response). It does not need the token: the authorization is the id in the path. For a download in progress only what is already on disk is served: if the requested range starts in a part not downloaded yet it answers 503 with Retry-After (the player retries), and a range that goes beyond the bytes present is shortened. 403 if the link is expired or unknown; 416 for an invalid range.",
         "responses": {
           "200": {
-            "description": "Il file intero"
+            "description": "The whole file"
           },
           "206": {
-            "description": "Una parte del file"
+            "description": "A part of the file"
           },
           "403": {
-            "description": "Link scaduto o non valido",
+            "description": "Expired or invalid link",
             "content": {
               "application/json": {
                 "schema": {
@@ -2429,7 +2429,7 @@
             }
           },
           "404": {
-            "description": "Download o file non trovato",
+            "description": "Download or file not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -2439,7 +2439,7 @@
             }
           },
           "416": {
-            "description": "Intervallo non valido",
+            "description": "Invalid range",
             "content": {
               "application/json": {
                 "schema": {
@@ -2449,7 +2449,7 @@
             }
           },
           "503": {
-            "description": "Parte non ancora scaricata",
+            "description": "Part not downloaded yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -2461,7 +2461,7 @@
         },
         "security": [],
         "tags": [
-          "Download"
+          "Downloads"
         ],
         "parameters": [
           {
@@ -2476,7 +2476,7 @@
             "name": "name",
             "in": "path",
             "required": true,
-            "description": "solo il nome, per i player: non conta",
+            "description": "the name only, for players: it does not matter",
             "schema": {
               "type": "string"
             }
@@ -2486,14 +2486,14 @@
     },
     "/api/v1/downloads/{hash}/blocks": {
       "get": {
-        "summary": "Blocchi in scarico adesso",
-        "description": "I blocchi (chunk da part_size = 9 728 000 byte) che stanno arrivando in questo momento: per ognuno part (da 0), size, missing e le fonti che lo trasferiscono (name, software, ip, port, speed in byte/s) con i pezzi da block_size = 184 320 byte richiesti (start, end, transferred). receiving = sta arrivando davvero (false = solo richiesto). Elenco active vuoto se nessuna fonte trasferisce. 404 se il download non c'e' o e' completato.",
+        "summary": "Blocks being downloaded now",
+        "description": "The blocks (chunks of part_size = 9 728 000 bytes) that are arriving right now: for each one part (from 0), size, missing and the sources transferring it (name, software, ip, port, speed in bytes/s) with the pieces of block_size = 184 320 bytes requested (start, end, transferred). receiving = it is really arriving (false = only requested). Empty active list if no source is transferring. 404 if the download does not exist or is completed.",
         "responses": {
           "200": {
-            "description": "Blocchi"
+            "description": "Blocks"
           },
           "404": {
-            "description": "Download non trovato",
+            "description": "Download not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -2519,14 +2519,14 @@
           }
         ],
         "tags": [
-          "Download"
+          "Downloads"
         ],
         "parameters": [
           {
             "name": "hash",
             "in": "path",
             "required": true,
-            "description": "MD4 del file: 32 caratteri esadecimali",
+            "description": "MD4 of the file: 32 hexadecimal characters",
             "schema": {
               "type": "string",
               "pattern": "^[0-9A-Fa-f]{32}$"
@@ -2537,14 +2537,14 @@
     },
     "/api/v1/downloads/{hash}/names": {
       "get": {
-        "summary": "Nomi del file usati dalle fonti",
-        "description": "La scheda «Nome» di eMule: i nomi con cui le fonti chiamano il file, con quante fonti usano ognuno (i piu' diffusi per primi), e il nome attuale (current). Elenco vuoto se nessuna fonte ha ancora risposto. 404 se il download non c'e' o e' gia' completato.",
+        "summary": "File names used by the sources",
+        "description": "eMule's \"Name\" tab: the names by which the sources call the file, with how many sources use each one (most common first), and the current name (current). Empty list if no source has answered yet. 404 if the download does not exist or is already completed.",
         "responses": {
           "200": {
-            "description": "Nomi"
+            "description": "Names"
           },
           "404": {
-            "description": "Download non trovato",
+            "description": "Download not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -2570,14 +2570,14 @@
           }
         ],
         "tags": [
-          "Download"
+          "Downloads"
         ],
         "parameters": [
           {
             "name": "hash",
             "in": "path",
             "required": true,
-            "description": "MD4 del file: 32 caratteri esadecimali",
+            "description": "MD4 of the file: 32 hexadecimal characters",
             "schema": {
               "type": "string",
               "pattern": "^[0-9A-Fa-f]{32}$"
@@ -2588,14 +2588,14 @@
     },
     "/api/v1/downloads/{hash}/comments": {
       "get": {
-        "summary": "Commenti e valutazioni",
-        "description": "La scheda «Tutti i commenti» di eMule: commenti e valutazioni (1 falso ... 5 eccellente) ricevuti dalle fonti (network ed2k) e le note trovate su Kad (network kad), con kad_connected, kad_searching e il filtro antispam in uso (filter).",
+        "summary": "Comments and ratings",
+        "description": "eMule's \"All comments\" tab: comments and ratings (1 fake ... 5 excellent) received from the sources (network ed2k) and the notes found on Kad (network kad), with kad_connected, kad_searching and the anti-spam filter in use (filter).",
         "responses": {
           "200": {
-            "description": "Commenti"
+            "description": "Comments"
           },
           "404": {
-            "description": "Download non trovato",
+            "description": "Download not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -2621,14 +2621,14 @@
           }
         ],
         "tags": [
-          "Download"
+          "Downloads"
         ],
         "parameters": [
           {
             "name": "hash",
             "in": "path",
             "required": true,
-            "description": "MD4 del file: 32 caratteri esadecimali",
+            "description": "MD4 of the file: 32 hexadecimal characters",
             "schema": {
               "type": "string",
               "pattern": "^[0-9A-Fa-f]{32}$"
@@ -2639,14 +2639,14 @@
     },
     "/api/v1/downloads/{hash}/comments/search-kad": {
       "post": {
-        "summary": "Cerca i commenti su Kad",
-        "description": "Chiede a Kad le note degli altri utenti su questo file (il pulsante «Ricerca in Kad»). I risultati arrivano piano piano e si leggono con GET .../comments.",
+        "summary": "Search for comments on Kad",
+        "description": "Asks Kad for the other users' notes about this file (the \"Search in Kad\" button). The results arrive gradually and are read with GET .../comments.",
         "responses": {
           "202": {
-            "description": "Ricerca partita"
+            "description": "Search started"
           },
           "404": {
-            "description": "Download non trovato",
+            "description": "Download not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -2656,7 +2656,7 @@
             }
           },
           "409": {
-            "description": "Una ricerca di note per questo file e' gia' in corso",
+            "description": "A notes search for this file is already running",
             "content": {
               "application/json": {
                 "schema": {
@@ -2666,7 +2666,7 @@
             }
           },
           "422": {
-            "description": "Kad non e' collegato",
+            "description": "Kad is not connected",
             "content": {
               "application/json": {
                 "schema": {
@@ -2692,14 +2692,14 @@
           }
         ],
         "tags": [
-          "Download"
+          "Downloads"
         ],
         "parameters": [
           {
             "name": "hash",
             "in": "path",
             "required": true,
-            "description": "MD4 del file: 32 caratteri esadecimali",
+            "description": "MD4 of the file: 32 hexadecimal characters",
             "schema": {
               "type": "string",
               "pattern": "^[0-9A-Fa-f]{32}$"
@@ -2710,14 +2710,14 @@
     },
     "/api/v1/downloads/{hash}/details": {
       "get": {
-        "summary": "Dettagli di un download",
-        "description": "Quello che la scheda «Generale» di eMule mostra: nome e file .part.met, hash ed2k e AICH (con lo stato: error, empty, untrusted, trusted, verified, complete), hashset disponibili, dimensione e spazio su disco, parti totali e disponibili, fonti (totali, utili, che trasferiscono, senza parti utili, usate per un altro file), velocita', dati trasferiti, compressione risparmiata, completati, corrotti, rimanenti, parti recuperate dall'I.C.H. e le date (aggiunto, durata attiva, visto completo, ultima ricezione). Percentuali troncate al decimo, come eMule.",
+        "summary": "Details of a download",
+        "description": "What eMule's \"General\" tab shows: name and .part.met file, ed2k and AICH hash (with the state: error, empty, untrusted, trusted, verified, complete), available hashsets, size and space on disk, total and available parts, sources (total, useful, transferring, without useful parts, used for another file), speed, transferred data, compression saved, completed, corrupted, remaining, parts recovered by I.C.H. and the dates (added, active time, last seen complete, last reception). Percentages truncated to the tenth, like eMule.",
         "responses": {
           "200": {
-            "description": "Dettagli"
+            "description": "Details"
           },
           "404": {
-            "description": "Download non trovato",
+            "description": "Download not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -2743,14 +2743,14 @@
           }
         ],
         "tags": [
-          "Download"
+          "Downloads"
         ],
         "parameters": [
           {
             "name": "hash",
             "in": "path",
             "required": true,
-            "description": "MD4 del file: 32 caratteri esadecimali",
+            "description": "MD4 of the file: 32 hexadecimal characters",
             "schema": {
               "type": "string",
               "pattern": "^[0-9A-Fa-f]{32}$"
@@ -2761,14 +2761,14 @@
     },
     "/api/v1/downloads/{hash}/content": {
       "get": {
-        "summary": "Contenuto del file (stato)",
-        "description": "state: idle (mai richiesto), running, done, failed o unavailable. A lettura finita (done): recognized, general {format, size, duration_s, overall_bitrate, title, movie, date}, video[] {codec, profile, codec_id, bitrate, width, height, aspect, fps, lang, title}, audio[] {codec, commercial, bitrate, channels, sampling, lang, title, default}, text[] (sottotitoli) {codec, lang, title, default, forced}. failed ha reason (timeout, bad_output, spawn); unavailable ha reason not_installed.",
+        "summary": "File content (state)",
+        "description": "state: idle (never requested), running, done, failed or unavailable. When the reading is finished (done): recognized, general {format, size, duration_s, overall_bitrate, title, movie, date}, video[] {codec, profile, codec_id, bitrate, width, height, aspect, fps, lang, title}, audio[] {codec, commercial, bitrate, channels, sampling, lang, title, default}, text[] (subtitles) {codec, lang, title, default, forced}. failed has reason (timeout, bad_output, spawn); unavailable has reason not_installed.",
         "responses": {
           "200": {
-            "description": "Stato e risultato"
+            "description": "State and result"
           },
           "400": {
-            "description": "Hash non valido",
+            "description": "Invalid hash",
             "content": {
               "application/json": {
                 "schema": {
@@ -2794,14 +2794,14 @@
           }
         ],
         "tags": [
-          "Download"
+          "Downloads"
         ],
         "parameters": [
           {
             "name": "hash",
             "in": "path",
             "required": true,
-            "description": "MD4 del file: 32 caratteri esadecimali",
+            "description": "MD4 of the file: 32 hexadecimal characters",
             "schema": {
               "type": "string",
               "pattern": "^[0-9A-Fa-f]{32}$"
@@ -2810,17 +2810,17 @@
         ]
       },
       "post": {
-        "summary": "Leggi il contenuto del file",
-        "description": "Lancia mediainfo sul file (il .part di un download in corso, o il file di un completato) e risponde subito (202); il risultato si legge con GET. Se mediainfo non e' installato risponde 200 con state unavailable.",
+        "summary": "Read the file content",
+        "description": "Runs mediainfo on the file (the .part of a download in progress, or the file of a completed one) and answers at once (202); the result is read with GET. If mediainfo is not installed it answers 200 with state unavailable.",
         "responses": {
           "202": {
-            "description": "Lettura avviata"
+            "description": "Reading started"
           },
           "200": {
-            "description": "mediainfo non installato"
+            "description": "mediainfo not installed"
           },
           "400": {
-            "description": "Hash non valido",
+            "description": "Invalid hash",
             "content": {
               "application/json": {
                 "schema": {
@@ -2830,7 +2830,7 @@
             }
           },
           "404": {
-            "description": "Download non trovato",
+            "description": "Download not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -2856,14 +2856,14 @@
           }
         ],
         "tags": [
-          "Download"
+          "Downloads"
         ],
         "parameters": [
           {
             "name": "hash",
             "in": "path",
             "required": true,
-            "description": "MD4 del file: 32 caratteri esadecimali",
+            "description": "MD4 of the file: 32 hexadecimal characters",
             "schema": {
               "type": "string",
               "pattern": "^[0-9A-Fa-f]{32}$"
@@ -2874,11 +2874,11 @@
     },
     "/api/v1/downloads/{hash}/parts": {
       "get": {
-        "summary": "Blocchi di un download",
-        "description": "I blocchi (chunk) di 9 728 000 byte: per ognuno quanti byte mancano, in quante fonti c'e', lo stato (empty, partial, complete, corrupted) e verified (false = completo ma non controllabile: manca l'hashset); in piu' hashset al livello superiore.",
+        "summary": "Blocks of a download",
+        "description": "The blocks (chunks) of 9 728 000 bytes: for each one how many bytes are missing, in how many sources it is available, the state (empty, partial, complete, corrupted) and verified (false = complete but cannot be checked: the hashset is missing); plus hashset at the top level.",
         "responses": {
           "200": {
-            "description": "Blocchi",
+            "description": "Blocks",
             "content": {
               "application/json": {
                 "schema": {
@@ -2888,7 +2888,7 @@
             }
           },
           "400": {
-            "description": "Hash non valido",
+            "description": "Invalid hash",
             "content": {
               "application/json": {
                 "schema": {
@@ -2898,7 +2898,7 @@
             }
           },
           "404": {
-            "description": "Download non trovato",
+            "description": "Download not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -2908,7 +2908,7 @@
             }
           },
           "409": {
-            "description": "Il download e' gia' completato",
+            "description": "The download is already completed",
             "content": {
               "application/json": {
                 "schema": {
@@ -2934,14 +2934,14 @@
           }
         ],
         "tags": [
-          "Download"
+          "Downloads"
         ],
         "parameters": [
           {
             "name": "hash",
             "in": "path",
             "required": true,
-            "description": "MD4 del file: 32 caratteri esadecimali",
+            "description": "MD4 of the file: 32 hexadecimal characters",
             "schema": {
               "type": "string",
               "pattern": "^[0-9A-Fa-f]{32}$"
@@ -2952,11 +2952,11 @@
     },
     "/api/v1/templates": {
       "get": {
-        "summary": "Elenco dei template d'interfaccia",
-        "description": "I template trovati in /usr/share/emuled/templates (system), ~/.emuled/templates (user) e nella cartella extra --templates-dir (dev), anche quelli non validi con il motivo (errors). Per ognuno: id, name, version, description, author, license, api, source, valid, errors, reserved, dir_name, url (/t/<id>/) e preview. dirs dice dove cercarli; api_version e' la versione dei template che il demone capisce. La scelta del template sta solo nel browser.",
+        "summary": "List of interface templates",
+        "description": "The templates found in /usr/share/emuled/templates (system), ~/.emuled/templates (user) and in the extra folder --templates-dir (dev), including invalid ones with the reason (errors). For each one: id, name, version, description, author, license, api, source, valid, errors, reserved, dir_name, url (/t/<id>/) and preview. dirs says where they are searched; api_version is the version of the templates the daemon understands. The choice of template lives only in the browser.",
         "responses": {
           "200": {
-            "description": "Elenco"
+            "description": "List"
           },
           "401": {
             "description": "Token",
@@ -2975,17 +2975,17 @@
           }
         ],
         "tags": [
-          "Template"
+          "Templates"
         ]
       }
     },
     "/api/v1/templates/rescan": {
       "post": {
-        "summary": "Rilegge le cartelle dei template",
-        "description": "Da usare dopo aver copiato o tolto un template. Risponde con lo stesso elenco di GET /templates.",
+        "summary": "Re-read the template folders",
+        "description": "To be used after copying or removing a template. It answers with the same list as GET /templates.",
         "responses": {
           "200": {
-            "description": "Elenco"
+            "description": "List"
           },
           "401": {
             "description": "Token",
@@ -3004,17 +3004,17 @@
           }
         ],
         "tags": [
-          "Template"
+          "Templates"
         ]
       }
     },
     "/api/v1/log": {
       "get": {
-        "summary": "Leggi il registro degli eventi",
-        "description": "Le righe che il demone scrive (collegamenti ai server, errori, azioni fatte via API: \"[api] ...\"). Senza \"after\" ritorna le ultime \"limit\" righe; con \"after\" solo quelle piu' nuove di quel numero, per seguire il registro a pezzi. Le righe di debug ci sono solo con la preferenza verbose_log.",
+        "summary": "Read the event log",
+        "description": "The lines the daemon writes (connections to servers, errors, actions done via API: \"[api] ...\"). Without \"after\" it returns the last \"limit\" lines; with \"after\" only those newer than that number, to follow the log in pieces. Debug lines are present only with the verbose_log preference.",
         "responses": {
           "200": {
-            "description": "Righe",
+            "description": "Lines",
             "content": {
               "application/json": {
                 "schema": {
@@ -3024,7 +3024,7 @@
             }
           },
           "422": {
-            "description": "Parametro non valido",
+            "description": "Invalid parameter",
             "content": {
               "application/json": {
                 "schema": {
@@ -3050,13 +3050,13 @@
           }
         ],
         "tags": [
-          "Registro"
+          "Log"
         ],
         "parameters": [
           {
             "name": "after",
             "in": "query",
-            "description": "numero dell'ultima riga gia' vista",
+            "description": "number of the last line already seen",
             "schema": {
               "type": "integer",
               "minimum": 0
@@ -3065,7 +3065,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "da 1 a 2000 (predefinito 500)",
+            "description": "from 1 to 2000 (default 500)",
             "schema": {
               "type": "integer",
               "minimum": 1,
@@ -3075,7 +3075,7 @@
           {
             "name": "level",
             "in": "query",
-            "description": "livello minimo (predefinito info)",
+            "description": "minimum level (default info)",
             "schema": {
               "type": "string",
               "enum": [
@@ -3089,11 +3089,11 @@
         ]
       },
       "delete": {
-        "summary": "Svuota il registro",
-        "description": "Toglie tutte le righe. La numerazione continua.",
+        "summary": "Clear the log",
+        "description": "Removes all the lines. Numbering continues.",
         "responses": {
           "200": {
-            "description": "Quante righe ha tolto",
+            "description": "How many lines were removed",
             "content": {
               "application/json": {
                 "schema": {
@@ -3124,17 +3124,17 @@
           }
         ],
         "tags": [
-          "Registro"
+          "Log"
         ]
       }
     },
     "/api/v1/directories": {
       "get": {
-        "summary": "Cartelle",
-        "description": "La cartella dei file completati (incoming), le cartelle temporanee dei .part e le cartelle condivise.",
+        "summary": "Folders",
+        "description": "The folder for completed files (incoming), the temporary folders for .part files and the shared folders.",
         "responses": {
           "200": {
-            "description": "Cartelle",
+            "description": "Folders",
             "content": {
               "application/json": {
                 "schema": {
@@ -3160,15 +3160,15 @@
           }
         ],
         "tags": [
-          "Cartelle"
+          "Folders"
         ]
       },
       "put": {
-        "summary": "Cambia le cartelle",
-        "description": "Corpo con uno o piu' campi: incoming, temp, shared. Si controlla tutto prima (percorsi assoluti, cartelle scrivibili o leggibili, nessun doppione) e non cambia nulla se c'e' un errore. Le cartelle temporanee e di arrivo si creano se mancano; i .part gia' iniziati restano dove sono. Cambiando shared il demone ricontrolla i file condivisi. \"saved\": scritto nel profilo (solo con identita' e porte del profilo).",
+        "summary": "Change the folders",
+        "description": "Body with one or more fields: incoming, temp, shared. Everything is checked first (absolute paths, writable or readable folders, no duplicates) and nothing changes if there is an error. The temporary and incoming folders are created if missing; .part files already started stay where they are. When shared changes the daemon re-checks the shared files. \"saved\": written to the profile (only with the profile's identity and ports).",
         "responses": {
           "200": {
-            "description": "Cartelle aggiornate",
+            "description": "Folders updated",
             "content": {
               "application/json": {
                 "schema": {
@@ -3186,7 +3186,7 @@
             }
           },
           "400": {
-            "description": "Corpo non valido",
+            "description": "Invalid body",
             "content": {
               "application/json": {
                 "schema": {
@@ -3196,7 +3196,7 @@
             }
           },
           "422": {
-            "description": "Percorso o combinazione non valida",
+            "description": "Invalid path or combination",
             "content": {
               "application/json": {
                 "schema": {
@@ -3222,7 +3222,7 @@
           }
         ],
         "tags": [
-          "Cartelle"
+          "Folders"
         ],
         "requestBody": {
           "required": true,
@@ -3238,11 +3238,11 @@
     },
     "/api/v1/downloads/{hash}": {
       "get": {
-        "summary": "Un download",
-        "description": "Stato di un download.",
+        "summary": "A download",
+        "description": "State of a download.",
         "responses": {
           "200": {
-            "description": "Il download",
+            "description": "The download",
             "content": {
               "application/json": {
                 "schema": {
@@ -3252,7 +3252,7 @@
             }
           },
           "400": {
-            "description": "Hash non valido",
+            "description": "Invalid hash",
             "content": {
               "application/json": {
                 "schema": {
@@ -3262,7 +3262,7 @@
             }
           },
           "404": {
-            "description": "Download non trovato",
+            "description": "Download not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -3288,14 +3288,14 @@
           }
         ],
         "tags": [
-          "Download"
+          "Downloads"
         ],
         "parameters": [
           {
             "name": "hash",
             "in": "path",
             "required": true,
-            "description": "MD4 del file: 32 caratteri esadecimali",
+            "description": "MD4 of the file: 32 hexadecimal characters",
             "schema": {
               "type": "string",
               "pattern": "^[0-9A-Fa-f]{32}$"
@@ -3304,11 +3304,11 @@
         ]
       },
       "patch": {
-        "summary": "Cambia categoria, priorita' o nome",
-        "description": "Corpo: \"category\" (id di una categoria), \"priority\" (auto, very_low, low, normal, high, release) e/o \"name\" (nuovo nome del file: non vuoto, senza \"/\", al massimo 255 byte; vale subito e anche a download completato; 409 se il file e' in verifica o in completamento).",
+        "summary": "Change category, priority or name",
+        "description": "Body: \"category\" (id of a category), \"priority\" (auto, very_low, low, normal, high, release) and/or \"name\" (new file name: not empty, without \"/\", at most 255 bytes; it applies at once and also when the download is completed; 409 if the file is being verified or completed).",
         "responses": {
           "200": {
-            "description": "Il download",
+            "description": "The download",
             "content": {
               "application/json": {
                 "schema": {
@@ -3318,7 +3318,7 @@
             }
           },
           "400": {
-            "description": "Hash o corpo non validi",
+            "description": "Invalid hash or body",
             "content": {
               "application/json": {
                 "schema": {
@@ -3328,7 +3328,7 @@
             }
           },
           "404": {
-            "description": "Download non trovato",
+            "description": "Download not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -3338,7 +3338,7 @@
             }
           },
           "422": {
-            "description": "Categoria o priorita' non valide",
+            "description": "Invalid category or priority",
             "content": {
               "application/json": {
                 "schema": {
@@ -3364,14 +3364,14 @@
           }
         ],
         "tags": [
-          "Download"
+          "Downloads"
         ],
         "parameters": [
           {
             "name": "hash",
             "in": "path",
             "required": true,
-            "description": "MD4 del file: 32 caratteri esadecimali",
+            "description": "MD4 of the file: 32 hexadecimal characters",
             "schema": {
               "type": "string",
               "pattern": "^[0-9A-Fa-f]{32}$"
@@ -3409,11 +3409,11 @@
         }
       },
       "delete": {
-        "summary": "Annulla il download",
-        "description": "Toglie il download dalla coda e CANCELLA il file parziale (.part e .part.met). Non si puo' annullare.",
+        "summary": "Cancel the download",
+        "description": "Removes the download from the queue and DELETES the partial file (.part and .part.met). It cannot be undone.",
         "responses": {
           "200": {
-            "description": "Il download appena cancellato",
+            "description": "The download just deleted",
             "content": {
               "application/json": {
                 "schema": {
@@ -3423,7 +3423,7 @@
             }
           },
           "400": {
-            "description": "Hash non valido",
+            "description": "Invalid hash",
             "content": {
               "application/json": {
                 "schema": {
@@ -3433,7 +3433,7 @@
             }
           },
           "404": {
-            "description": "Download non trovato",
+            "description": "Download not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -3459,14 +3459,14 @@
           }
         ],
         "tags": [
-          "Download"
+          "Downloads"
         ],
         "parameters": [
           {
             "name": "hash",
             "in": "path",
             "required": true,
-            "description": "MD4 del file: 32 caratteri esadecimali",
+            "description": "MD4 of the file: 32 hexadecimal characters",
             "schema": {
               "type": "string",
               "pattern": "^[0-9A-Fa-f]{32}$"
@@ -3477,11 +3477,11 @@
     },
     "/api/v1/downloads/{hash}/pause": {
       "post": {
-        "summary": "Metti in pausa",
-        "description": "Ferma i trasferimenti ma tiene le sorgenti.",
+        "summary": "Pause",
+        "description": "Stops the transfers but keeps the sources.",
         "responses": {
           "200": {
-            "description": "Il download",
+            "description": "The download",
             "content": {
               "application/json": {
                 "schema": {
@@ -3491,7 +3491,7 @@
             }
           },
           "404": {
-            "description": "Download non trovato",
+            "description": "Download not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -3517,14 +3517,14 @@
           }
         ],
         "tags": [
-          "Download"
+          "Downloads"
         ],
         "parameters": [
           {
             "name": "hash",
             "in": "path",
             "required": true,
-            "description": "MD4 del file: 32 caratteri esadecimali",
+            "description": "MD4 of the file: 32 hexadecimal characters",
             "schema": {
               "type": "string",
               "pattern": "^[0-9A-Fa-f]{32}$"
@@ -3535,11 +3535,11 @@
     },
     "/api/v1/downloads/{hash}/resume": {
       "post": {
-        "summary": "Riprendi",
-        "description": "Riprende un download in pausa o fermo.",
+        "summary": "Resume",
+        "description": "Resumes a paused or stopped download.",
         "responses": {
           "200": {
-            "description": "Il download",
+            "description": "The download",
             "content": {
               "application/json": {
                 "schema": {
@@ -3549,7 +3549,7 @@
             }
           },
           "404": {
-            "description": "Download non trovato",
+            "description": "Download not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -3575,14 +3575,14 @@
           }
         ],
         "tags": [
-          "Download"
+          "Downloads"
         ],
         "parameters": [
           {
             "name": "hash",
             "in": "path",
             "required": true,
-            "description": "MD4 del file: 32 caratteri esadecimali",
+            "description": "MD4 of the file: 32 hexadecimal characters",
             "schema": {
               "type": "string",
               "pattern": "^[0-9A-Fa-f]{32}$"
@@ -3593,11 +3593,11 @@
     },
     "/api/v1/downloads/{hash}/stop": {
       "post": {
-        "summary": "Ferma",
-        "description": "Ferma il download e scarta le sorgenti (si riprende con resume e una nuova ricerca).",
+        "summary": "Stop",
+        "description": "Stops the download and discards the sources (it resumes with resume and a new search).",
         "responses": {
           "200": {
-            "description": "Il download",
+            "description": "The download",
             "content": {
               "application/json": {
                 "schema": {
@@ -3607,7 +3607,7 @@
             }
           },
           "404": {
-            "description": "Download non trovato",
+            "description": "Download not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -3633,14 +3633,14 @@
           }
         ],
         "tags": [
-          "Download"
+          "Downloads"
         ],
         "parameters": [
           {
             "name": "hash",
             "in": "path",
             "required": true,
-            "description": "MD4 del file: 32 caratteri esadecimali",
+            "description": "MD4 of the file: 32 hexadecimal characters",
             "schema": {
               "type": "string",
               "pattern": "^[0-9A-Fa-f]{32}$"
@@ -3651,11 +3651,11 @@
     },
     "/api/v1/searches": {
       "get": {
-        "summary": "Ricerche in memoria",
-        "description": "Tutte le schede di ricerca, la piu' recente per prima, senza i risultati (si leggono con GET /searches/{id}).",
+        "summary": "Searches in memory",
+        "description": "All the search tabs, the most recent first, without the results (read them with GET /searches/{id}).",
         "responses": {
           "200": {
-            "description": "Elenco",
+            "description": "List",
             "content": {
               "application/json": {
                 "schema": {
@@ -3684,15 +3684,15 @@
           }
         ],
         "tags": [
-          "Ricerca"
+          "Search"
         ]
       },
       "post": {
-        "summary": "Avvia una ricerca",
-        "description": "scope: \"server\" (solo il server connesso), \"all\" (anche tutti gli altri server, per UDP), \"kad\" (rete Kademlia) o \"global\" (ed2k di tutti i server + Kad insieme, risultati uniti per hash; basta che una delle due reti sia connessa). Corre una sola ricerca alla volta: una nuova ferma la precedente. Le ricerche sono schede: restano con i loro risultati, anche dopo un riavvio del demone (<config>/searches.json), finche' non si tolgono con DELETE. Risponde subito (202); i risultati si leggono con GET /searches/{id}.",
+        "summary": "Start a search",
+        "description": "scope: \"server\" (only the connected server), \"all\" (also all the other servers, via UDP), \"kad\" (Kademlia network) or \"global\" (ed2k of all servers + Kad together, results merged by hash; it is enough that one of the two networks is connected). Only one search runs at a time: a new one stops the previous one. Searches are tabs: they stay with their results, even after a daemon restart (<config>/searches.json), until they are removed with DELETE. It answers at once (202); the results are read with GET /searches/{id}.",
         "responses": {
           "202": {
-            "description": "Ricerca avviata",
+            "description": "Search started",
             "content": {
               "application/json": {
                 "schema": {
@@ -3702,7 +3702,7 @@
             }
           },
           "400": {
-            "description": "Il corpo non e' un oggetto JSON",
+            "description": "The body is not a JSON object",
             "content": {
               "application/json": {
                 "schema": {
@@ -3712,7 +3712,7 @@
             }
           },
           "409": {
-            "description": "Non connessi (al server ed2k, o a Kad)",
+            "description": "Not connected (to the ed2k server, or to Kad)",
             "content": {
               "application/json": {
                 "schema": {
@@ -3722,7 +3722,7 @@
             }
           },
           "422": {
-            "description": "Espressione o scope non validi",
+            "description": "Invalid expression or scope",
             "content": {
               "application/json": {
                 "schema": {
@@ -3748,7 +3748,7 @@
           }
         ],
         "tags": [
-          "Ricerca"
+          "Search"
         ],
         "requestBody": {
           "required": true,
@@ -3764,11 +3764,11 @@
     },
     "/api/v1/searches/{id}/refresh": {
       "post": {
-        "summary": "Aggiorna la scheda",
-        "description": "Rifa la stessa ricerca (stessa parola, stesso dove e stessi filtri) nella stessa scheda: stesso id, i risultati si rifanno da capo. Come POST /searches, ferma la ricerca che stava correndo.",
+        "summary": "Refresh the tab",
+        "description": "Repeats the same search (same word, same where and same filters) in the same tab: same id, the results start again from scratch. Like POST /searches, it stops the search that was running.",
         "responses": {
           "202": {
-            "description": "Ricerca avviata",
+            "description": "Search started",
             "content": {
               "application/json": {
                 "schema": {
@@ -3778,7 +3778,7 @@
             }
           },
           "404": {
-            "description": "Ricerca sconosciuta",
+            "description": "Unknown search",
             "content": {
               "application/json": {
                 "schema": {
@@ -3788,7 +3788,7 @@
             }
           },
           "409": {
-            "description": "Non connessi (al server ed2k, o a Kad)",
+            "description": "Not connected (to the ed2k server, or to Kad)",
             "content": {
               "application/json": {
                 "schema": {
@@ -3798,7 +3798,7 @@
             }
           },
           "422": {
-            "description": "Ricerca non valida",
+            "description": "Invalid search",
             "content": {
               "application/json": {
                 "schema": {
@@ -3824,14 +3824,14 @@
           }
         ],
         "tags": [
-          "Ricerca"
+          "Search"
         ],
         "parameters": [
           {
             "name": "id",
             "in": "path",
             "required": true,
-            "description": "Numero della ricerca, dato da POST /searches",
+            "description": "Search number, returned by POST /searches",
             "schema": {
               "type": "integer"
             }
@@ -3841,11 +3841,11 @@
     },
     "/api/v1/searches/{id}/cancel": {
       "post": {
-        "summary": "Ferma la ricerca",
-        "description": "Ferma la ricerca in corso; la scheda e i risultati gia' arrivati restano.",
+        "summary": "Stop the search",
+        "description": "Stops the running search; the tab and the results already received stay.",
         "responses": {
           "200": {
-            "description": "La ricerca",
+            "description": "The search",
             "content": {
               "application/json": {
                 "schema": {
@@ -3855,7 +3855,7 @@
             }
           },
           "404": {
-            "description": "Ricerca sconosciuta",
+            "description": "Unknown search",
             "content": {
               "application/json": {
                 "schema": {
@@ -3881,14 +3881,14 @@
           }
         ],
         "tags": [
-          "Ricerca"
+          "Search"
         ],
         "parameters": [
           {
             "name": "id",
             "in": "path",
             "required": true,
-            "description": "Numero della ricerca, dato da POST /searches",
+            "description": "Search number, returned by POST /searches",
             "schema": {
               "type": "integer"
             }
@@ -3898,11 +3898,11 @@
     },
     "/api/v1/searches/{id}": {
       "get": {
-        "summary": "Stato e risultati",
-        "description": "I risultati arrivano man mano: si interroga finche' state vale \"finished\". I file uguali (stesso hash) di server diversi sono uniti; ordinati per numero di sorgenti.",
+        "summary": "State and results",
+        "description": "The results arrive gradually: poll until state is \"finished\". Equal files (same hash) from different servers are merged; sorted by number of sources.",
         "responses": {
           "200": {
-            "description": "La ricerca con i risultati",
+            "description": "The search with the results",
             "content": {
               "application/json": {
                 "schema": {
@@ -3912,7 +3912,7 @@
             }
           },
           "404": {
-            "description": "Ricerca sconosciuta o tolta dalla memoria",
+            "description": "Unknown search or removed from memory",
             "content": {
               "application/json": {
                 "schema": {
@@ -3938,14 +3938,14 @@
           }
         ],
         "tags": [
-          "Ricerca"
+          "Search"
         ],
         "parameters": [
           {
             "name": "id",
             "in": "path",
             "required": true,
-            "description": "Numero della ricerca, dato da POST /searches",
+            "description": "Search number, returned by POST /searches",
             "schema": {
               "type": "integer"
             }
@@ -3953,11 +3953,11 @@
         ]
       },
       "delete": {
-        "summary": "Togli la scheda di ricerca",
-        "description": "Ferma la ricerca se e' in corso e toglie la scheda, per sempre: e' l'unico modo in cui sparisce.",
+        "summary": "Remove the search tab",
+        "description": "Stops the search if it is running and removes the tab, for good: it is the only way it goes away.",
         "responses": {
           "200": {
-            "description": "La ricerca",
+            "description": "The search",
             "content": {
               "application/json": {
                 "schema": {
@@ -3967,7 +3967,7 @@
             }
           },
           "404": {
-            "description": "Ricerca sconosciuta",
+            "description": "Unknown search",
             "content": {
               "application/json": {
                 "schema": {
@@ -3993,14 +3993,14 @@
           }
         ],
         "tags": [
-          "Ricerca"
+          "Search"
         ],
         "parameters": [
           {
             "name": "id",
             "in": "path",
             "required": true,
-            "description": "Numero della ricerca, dato da POST /searches",
+            "description": "Search number, returned by POST /searches",
             "schema": {
               "type": "integer"
             }
@@ -4010,11 +4010,11 @@
     },
     "/api/v1/servers/urls": {
       "get": {
-        "summary": "Indirizzi delle liste di server",
-        "description": "Gli indirizzi (server.met) gia' usati, i piu' recenti per primi (file AC_ServerMetURLs.dat, lo stesso di eMule), piu' quelli di addresses.dat.",
+        "summary": "Addresses of the server lists",
+        "description": "The addresses (server.met) already used, the most recent first (file AC_ServerMetURLs.dat, the same as eMule), plus those of addresses.dat.",
         "responses": {
           "200": {
-            "description": "Elenco",
+            "description": "List",
             "content": {
               "application/json": {
                 "schema": {
@@ -4049,11 +4049,11 @@
     },
     "/api/v1/servers/update": {
       "get": {
-        "summary": "Stato dell'aggiornamento della lista",
-        "description": "state: idle (mai partito), running, done (added = server nuovi, total = in tutto) o failed (error).",
+        "summary": "State of the list update",
+        "description": "state: idle (never started), running, done (added = new servers, total = overall) or failed (error).",
         "responses": {
           "200": {
-            "description": "Stato",
+            "description": "Status",
             "content": {
               "application/json": {
                 "schema": {
@@ -4106,14 +4106,14 @@
         ]
       },
       "post": {
-        "summary": "Aggiorna la lista dei server da un indirizzo",
-        "description": "Scarica un server.met da un indirizzo http o https (certificato verificato, al massimo 8 MB e 60 s, fino a 5 redirect) e lo UNISCE alla lista: i server nuovi si aggiungono, niente si toglie. Risponde subito (202); l'esito si legge con GET. L'indirizzo riuscito si ricorda.",
+        "summary": "Update the server list from an address",
+        "description": "Downloads a server.met from an http or https address (certificate verified, at most 8 MB and 60 s, up to 5 redirects) and MERGES it into the list: new servers are added, nothing is removed. It answers at once (202); the outcome is read with GET. The address that worked is remembered.",
         "responses": {
           "202": {
-            "description": "Partito"
+            "description": "Started"
           },
           "400": {
-            "description": "Il corpo non e' un oggetto JSON",
+            "description": "The body is not a JSON object",
             "content": {
               "application/json": {
                 "schema": {
@@ -4123,7 +4123,7 @@
             }
           },
           "409": {
-            "description": "Un aggiornamento e' gia' in corso",
+            "description": "An update is already running",
             "content": {
               "application/json": {
                 "schema": {
@@ -4133,7 +4133,7 @@
             }
           },
           "422": {
-            "description": "Indirizzo non http(s)",
+            "description": "Address is not http(s)",
             "content": {
               "application/json": {
                 "schema": {
@@ -4183,11 +4183,11 @@
     },
     "/api/v1/kad/bootstrap": {
       "get": {
-        "summary": "Stato del bootstrap di Kad",
-        "description": "state: idle, running, done (url: added = contatti nuovi, contacts = in tutto) o failed (error).",
+        "summary": "State of the Kad bootstrap",
+        "description": "state: idle, running, done (url: added = new contacts, contacts = overall) or failed (error).",
         "responses": {
           "200": {
-            "description": "Stato",
+            "description": "Status",
             "content": {
               "application/json": {
                 "schema": {
@@ -4247,14 +4247,14 @@
         ]
       },
       "post": {
-        "summary": "Ripopola Kad da un nodes.dat o da un nodo",
-        "description": "Con \"url\" scarica un nodes.dat (http o https) e ne aggiunge i contatti (partono Kad se era spento); con \"address\" (ip:porta) chiede a quel nodo i primi contatti. Uno dei due, non entrambi. Con \"url\" risponde subito (202) e l'esito si legge con GET.",
+        "summary": "Repopulate Kad from a nodes.dat or from a node",
+        "description": "With \"url\" it downloads a nodes.dat (http or https) and adds its contacts (Kad starts if it was off); with \"address\" (ip:port) it asks that node for the first contacts. One of the two, not both. With \"url\" it answers at once (202) and the outcome is read with GET.",
         "responses": {
           "202": {
-            "description": "Partito"
+            "description": "Started"
           },
           "400": {
-            "description": "Il corpo non e' un oggetto JSON",
+            "description": "The body is not a JSON object",
             "content": {
               "application/json": {
                 "schema": {
@@ -4264,7 +4264,7 @@
             }
           },
           "409": {
-            "description": "Kad non disponibile, gia' collegato (con address) o un bootstrap in corso",
+            "description": "Kad not available, already connected (with address) or a bootstrap in progress",
             "content": {
               "application/json": {
                 "schema": {
@@ -4274,7 +4274,7 @@
             }
           },
           "422": {
-            "description": "Parametri non validi",
+            "description": "Invalid parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -4314,7 +4314,7 @@
                   },
                   "address": {
                     "type": "string",
-                    "description": "ip:porta UDP di un nodo Kad"
+                    "description": "ip:UDP port of a Kad node"
                   }
                 }
               }
@@ -4325,11 +4325,11 @@
     },
     "/api/v1/shared": {
       "get": {
-        "summary": "File condivisi",
-        "description": "Tutti i file che il demone offre agli altri (cartelle condivise e download in corso).",
+        "summary": "Shared files",
+        "description": "All the files the daemon offers to others (shared folders and downloads in progress).",
         "responses": {
           "200": {
-            "description": "Elenco",
+            "description": "List",
             "content": {
               "application/json": {
                 "schema": {
@@ -4358,17 +4358,17 @@
           }
         ],
         "tags": [
-          "Condivisione"
+          "Sharing"
         ]
       }
     },
     "/api/v1/shared/reload": {
       "post": {
-        "summary": "Ricontrolla le cartelle condivise",
-        "description": "Rilegge le cartelle e calcola l'hash dei file nuovi. Risponde subito (202).",
+        "summary": "Re-check the shared folders",
+        "description": "Re-reads the folders and computes the hash of new files. It answers at once (202).",
         "responses": {
           "202": {
-            "description": "Avviato"
+            "description": "Started"
           },
           "401": {
             "description": "Token",
@@ -4387,17 +4387,17 @@
           }
         ],
         "tags": [
-          "Condivisione"
+          "Sharing"
         ]
       }
     },
     "/api/v1/shared/{hash}/priority": {
       "post": {
-        "summary": "Priorita' di condivisione",
-        "description": "Quanto il file passa avanti nella coda di chi lo chiede.",
+        "summary": "Sharing priority",
+        "description": "How far ahead the file goes in the queue of whoever asks for it.",
         "responses": {
           "200": {
-            "description": "Il file",
+            "description": "The file",
             "content": {
               "application/json": {
                 "schema": {
@@ -4407,7 +4407,7 @@
             }
           },
           "400": {
-            "description": "Hash o corpo non validi",
+            "description": "Invalid hash or body",
             "content": {
               "application/json": {
                 "schema": {
@@ -4417,7 +4417,7 @@
             }
           },
           "404": {
-            "description": "File non condiviso",
+            "description": "File not shared",
             "content": {
               "application/json": {
                 "schema": {
@@ -4427,7 +4427,7 @@
             }
           },
           "422": {
-            "description": "Priorita' sconosciuta",
+            "description": "Unknown priority",
             "content": {
               "application/json": {
                 "schema": {
@@ -4453,14 +4453,14 @@
           }
         ],
         "tags": [
-          "Condivisione"
+          "Sharing"
         ],
         "parameters": [
           {
             "name": "hash",
             "in": "path",
             "required": true,
-            "description": "MD4 del file: 32 caratteri esadecimali",
+            "description": "MD4 of the file: 32 hexadecimal characters",
             "schema": {
               "type": "string",
               "pattern": "^[0-9A-Fa-f]{32}$"
@@ -4497,11 +4497,11 @@
     },
     "/api/v1/uploads": {
       "get": {
-        "summary": "Upload e coda",
-        "description": "Chi sta scaricando da te adesso e chi aspetta in coda.",
+        "summary": "Uploads and queue",
+        "description": "Who is downloading from you right now and who is waiting in the queue.",
         "responses": {
           "200": {
-            "description": "Upload",
+            "description": "Uploads",
             "content": {
               "application/json": {
                 "schema": {
@@ -4527,17 +4527,17 @@
           }
         ],
         "tags": [
-          "Condivisione"
+          "Sharing"
         ]
       }
     },
     "/api/v1/kad": {
       "get": {
-        "summary": "Stato di Kad",
-        "description": "Collegamento, firewall, contatti e utenti stimati.",
+        "summary": "Kad status",
+        "description": "Connection, firewall, contacts and estimated users.",
         "responses": {
           "200": {
-            "description": "Stato",
+            "description": "Status",
             "content": {
               "application/json": {
                 "schema": {
@@ -4569,14 +4569,14 @@
     },
     "/api/v1/kad/connect": {
       "post": {
-        "summary": "Avvia Kad",
-        "description": "Avvia (o riavvia) Kad con nodes.dat del profilo. Il collegamento richiede qualche decina di secondi: lo stato si legge da /kad. 409 se il demone e' senza Kad (--no-kad e --offline) o se non parte.",
+        "summary": "Start Kad",
+        "description": "Starts (or restarts) Kad with the profile's nodes.dat. Connecting takes a few tens of seconds: the status is read from /kad. 409 if the daemon has no Kad (--no-kad and --offline) or if it does not start.",
         "responses": {
           "202": {
-            "description": "Avviata"
+            "description": "Started"
           },
           "409": {
-            "description": "Kad non disponibile",
+            "description": "Kad not available",
             "content": {
               "application/json": {
                 "schema": {
@@ -4608,14 +4608,14 @@
     },
     "/api/v1/kad/recheck-firewall": {
       "post": {
-        "summary": "Ricontrolla il firewall",
-        "description": "Rifa il test di raggiungibilita' (TCP e UDP) di Kad, come il comando di eMule. Risponde subito (202): il risultato si legge da /kad (tcp_firewalled, udp_firewalled, udp_verified). 409 se Kad e' spento.",
+        "summary": "Re-check the firewall",
+        "description": "Repeats Kad's reachability test (TCP and UDP), like the eMule command. It answers at once (202): the result is read from /kad (tcp_firewalled, udp_firewalled, udp_verified). 409 if Kad is off.",
         "responses": {
           "202": {
-            "description": "Controllo avviato"
+            "description": "Check started"
           },
           "409": {
-            "description": "Kad spento",
+            "description": "Kad off",
             "content": {
               "application/json": {
                 "schema": {
@@ -4647,11 +4647,11 @@
     },
     "/api/v1/kad/disconnect": {
       "post": {
-        "summary": "Ferma Kad",
-        "description": "Ferma Kad (salva i contatti). Non fallisce se Kad era gia' ferma.",
+        "summary": "Stop Kad",
+        "description": "Stops Kad (saves the contacts). It does not fail if Kad was already stopped.",
         "responses": {
           "200": {
-            "description": "Fermata"
+            "description": "Stopped"
           },
           "401": {
             "description": "Token",
@@ -4676,11 +4676,11 @@
     },
     "/api/v1/preferences": {
       "get": {
-        "summary": "Leggi le preferenze",
-        "description": "Tutte le preferenze gestite dall'API, come oggetto piatto chiave/valore (vedi APIDOC.md per l'elenco e il significato).",
+        "summary": "Read the preferences",
+        "description": "All the preferences managed by the API, as a flat key/value object (see APIDOC.md for the list and the meaning).",
         "responses": {
           "200": {
-            "description": "Preferenze",
+            "description": "Preferences",
             "content": {
               "application/json": {
                 "schema": {
@@ -4706,15 +4706,15 @@
           }
         ],
         "tags": [
-          "Preferenze"
+          "Preferences"
         ]
       },
       "patch": {
-        "summary": "Cambia preferenze",
-        "description": "Corpo: solo le chiavi da cambiare. Si controlla tutto prima: se una chiave e' sconosciuta o un valore non vale, non cambia nulla (422). \"saved\" dice se sono state scritte nel profilo: il demone avviato con identita' o porte temporanee le cambia solo in memoria. \"restart_required\" elenca le chiavi cambiate che valgono dal prossimo avvio.",
+        "summary": "Change preferences",
+        "description": "Body: only the keys to change. Everything is checked first: if a key is unknown or a value is not valid, nothing changes (422). \"saved\" says whether they were written to the profile: a daemon started with temporary identity or ports changes them only in memory. \"restart_required\" lists the changed keys that take effect from the next start.",
         "responses": {
           "200": {
-            "description": "Preferenze aggiornate",
+            "description": "Preferences updated",
             "content": {
               "application/json": {
                 "schema": {
@@ -4738,7 +4738,7 @@
             }
           },
           "400": {
-            "description": "Corpo non valido o vuoto",
+            "description": "Invalid or empty body",
             "content": {
               "application/json": {
                 "schema": {
@@ -4748,7 +4748,7 @@
             }
           },
           "422": {
-            "description": "Chiave sconosciuta, tipo o limiti non validi",
+            "description": "Unknown key, invalid type or limits",
             "content": {
               "application/json": {
                 "schema": {
@@ -4774,7 +4774,7 @@
           }
         ],
         "tags": [
-          "Preferenze"
+          "Preferences"
         ],
         "requestBody": {
           "required": true,
@@ -4790,11 +4790,11 @@
     },
     "/api/v1/categories": {
       "get": {
-        "summary": "Elenco delle categorie",
-        "description": "La categoria 0 (\"tutte\") c'e' sempre.",
+        "summary": "List of categories",
+        "description": "Category 0 (\"all\") is always there.",
         "responses": {
           "200": {
-            "description": "Elenco",
+            "description": "List",
             "content": {
               "application/json": {
                 "schema": {
@@ -4823,15 +4823,15 @@
           }
         ],
         "tags": [
-          "Categorie"
+          "Categories"
         ]
       },
       "post": {
-        "summary": "Crea una categoria",
-        "description": "Serve almeno \"title\". Si salva subito in Category.ini.",
+        "summary": "Create a category",
+        "description": "At least \"title\" is needed. It is saved at once in Category.ini.",
         "responses": {
           "201": {
-            "description": "Creata",
+            "description": "Created",
             "content": {
               "application/json": {
                 "schema": {
@@ -4841,7 +4841,7 @@
             }
           },
           "400": {
-            "description": "Corpo non valido",
+            "description": "Invalid body",
             "content": {
               "application/json": {
                 "schema": {
@@ -4851,7 +4851,7 @@
             }
           },
           "422": {
-            "description": "Campo non valido",
+            "description": "Invalid field",
             "content": {
               "application/json": {
                 "schema": {
@@ -4877,7 +4877,7 @@
           }
         ],
         "tags": [
-          "Categorie"
+          "Categories"
         ],
         "requestBody": {
           "required": true,
@@ -4893,11 +4893,11 @@
     },
     "/api/v1/categories/{id}": {
       "patch": {
-        "summary": "Modifica una categoria",
-        "description": "Solo i campi indicati. La categoria 0 non cambia nome ne' cartella.",
+        "summary": "Edit a category",
+        "description": "Only the given fields. Category 0 changes neither name nor folder.",
         "responses": {
           "200": {
-            "description": "Modificata",
+            "description": "Edited",
             "content": {
               "application/json": {
                 "schema": {
@@ -4907,7 +4907,7 @@
             }
           },
           "400": {
-            "description": "Id o corpo non validi",
+            "description": "Invalid id or body",
             "content": {
               "application/json": {
                 "schema": {
@@ -4917,7 +4917,7 @@
             }
           },
           "404": {
-            "description": "Categoria non trovata",
+            "description": "Category not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -4927,7 +4927,7 @@
             }
           },
           "422": {
-            "description": "Campo non valido",
+            "description": "Invalid field",
             "content": {
               "application/json": {
                 "schema": {
@@ -4953,14 +4953,14 @@
           }
         ],
         "tags": [
-          "Categorie"
+          "Categories"
         ],
         "parameters": [
           {
             "name": "id",
             "in": "path",
             "required": true,
-            "description": "Numero della categoria (0 = tutte)",
+            "description": "Category number (0 = all)",
             "schema": {
               "type": "integer",
               "minimum": 0
@@ -4979,11 +4979,11 @@
         }
       },
       "delete": {
-        "summary": "Cancella una categoria",
-        "description": "I download di quella categoria tornano a \"tutte\". La 0 non si cancella; gli id successivi scalano di uno.",
+        "summary": "Delete a category",
+        "description": "The downloads of that category go back to \"all\". 0 cannot be deleted; the following ids shift down by one.",
         "responses": {
           "200": {
-            "description": "Categoria cancellata",
+            "description": "Category deleted",
             "content": {
               "application/json": {
                 "schema": {
@@ -4993,7 +4993,7 @@
             }
           },
           "400": {
-            "description": "Id non valido",
+            "description": "Invalid id",
             "content": {
               "application/json": {
                 "schema": {
@@ -5003,7 +5003,7 @@
             }
           },
           "404": {
-            "description": "Categoria non trovata",
+            "description": "Category not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -5013,7 +5013,7 @@
             }
           },
           "422": {
-            "description": "La 0 non si cancella",
+            "description": "0 cannot be deleted",
             "content": {
               "application/json": {
                 "schema": {
@@ -5039,14 +5039,14 @@
           }
         ],
         "tags": [
-          "Categorie"
+          "Categories"
         ],
         "parameters": [
           {
             "name": "id",
             "in": "path",
             "required": true,
-            "description": "Numero della categoria (0 = tutte)",
+            "description": "Category number (0 = all)",
             "schema": {
               "type": "integer",
               "minimum": 0
@@ -5057,11 +5057,11 @@
     },
     "/api/v1/servers": {
       "get": {
-        "summary": "Elenco dei server ed2k",
-        "description": "La lista dei server (server.met).",
+        "summary": "List of ed2k servers",
+        "description": "The list of servers (server.met).",
         "responses": {
           "200": {
-            "description": "Elenco",
+            "description": "List",
             "content": {
               "application/json": {
                 "schema": {
@@ -5094,11 +5094,11 @@
         ]
       },
       "post": {
-        "summary": "Aggiungi un server",
-        "description": "Corpo: \"address\" (indirizzo:porta, anche nome DNS), \"name\", \"priority\" (low, normal, high), \"static\". Si riscrive server.met. 409 se c'e' gia'; 422 se l'indirizzo non e' ammesso (locale, 0.0.0.0 o filtrato).",
+        "summary": "Add a server",
+        "description": "Body: \"address\" (address:port, a DNS name also works), \"name\", \"priority\" (low, normal, high), \"static\". server.met is rewritten. 409 if it is already there; 422 if the address is not allowed (local, 0.0.0.0 or filtered).",
         "responses": {
           "201": {
-            "description": "Aggiunto",
+            "description": "Added",
             "content": {
               "application/json": {
                 "schema": {
@@ -5108,7 +5108,7 @@
             }
           },
           "400": {
-            "description": "Corpo non valido",
+            "description": "Invalid body",
             "content": {
               "application/json": {
                 "schema": {
@@ -5118,7 +5118,7 @@
             }
           },
           "409": {
-            "description": "Gia' in lista",
+            "description": "Already in the list",
             "content": {
               "application/json": {
                 "schema": {
@@ -5128,7 +5128,7 @@
             }
           },
           "422": {
-            "description": "Indirizzo non valido o non ammesso",
+            "description": "Invalid or not allowed address",
             "content": {
               "application/json": {
                 "schema": {
@@ -5195,11 +5195,11 @@
     },
     "/api/v1/servers/{addr}": {
       "patch": {
-        "summary": "Modifica un server",
-        "description": "Priorita', server fisso (static) e/o nome. Si riscrive server.met.",
+        "summary": "Edit a server",
+        "description": "Priority, fixed server (static) and/or name. server.met is rewritten.",
         "responses": {
           "200": {
-            "description": "Il server",
+            "description": "The server",
             "content": {
               "application/json": {
                 "schema": {
@@ -5209,7 +5209,7 @@
             }
           },
           "400": {
-            "description": "Indirizzo o corpo non validi",
+            "description": "Invalid address or body",
             "content": {
               "application/json": {
                 "schema": {
@@ -5219,7 +5219,7 @@
             }
           },
           "404": {
-            "description": "Server non in lista",
+            "description": "Server not in the list",
             "content": {
               "application/json": {
                 "schema": {
@@ -5229,7 +5229,7 @@
             }
           },
           "422": {
-            "description": "Valore non valido",
+            "description": "Invalid value",
             "content": {
               "application/json": {
                 "schema": {
@@ -5262,7 +5262,7 @@
             "name": "addr",
             "in": "path",
             "required": true,
-            "description": "indirizzo:porta del server (es. 176.123.5.89:4725)",
+            "description": "address:port of the server (e.g. 176.123.5.89:4725)",
             "schema": {
               "type": "string"
             }
@@ -5296,11 +5296,11 @@
         }
       },
       "delete": {
-        "summary": "Togli un server dalla lista",
-        "description": "Se e' il server collegato, prima ci si scollega. Si riscrive server.met.",
+        "summary": "Remove a server from the list",
+        "description": "If it is the connected server, it is disconnected first. server.met is rewritten.",
         "responses": {
           "200": {
-            "description": "Il server tolto",
+            "description": "The removed server",
             "content": {
               "application/json": {
                 "schema": {
@@ -5310,7 +5310,7 @@
             }
           },
           "400": {
-            "description": "Indirizzo non valido",
+            "description": "Invalid address",
             "content": {
               "application/json": {
                 "schema": {
@@ -5320,7 +5320,7 @@
             }
           },
           "404": {
-            "description": "Server non in lista",
+            "description": "Server not in the list",
             "content": {
               "application/json": {
                 "schema": {
@@ -5353,7 +5353,7 @@
             "name": "addr",
             "in": "path",
             "required": true,
-            "description": "indirizzo:porta del server (es. 176.123.5.89:4725)",
+            "description": "address:port of the server (e.g. 176.123.5.89:4725)",
             "schema": {
               "type": "string"
             }
@@ -5363,14 +5363,14 @@
     },
     "/api/v1/servers/connect": {
       "post": {
-        "summary": "Collegati a un server",
-        "description": "Con \"address\": \"ip:porta\" ci si collega a quel server; senza corpo (o senza address) a uno qualsiasi della lista. Risponde subito (202): lo stato si legge da /status.",
+        "summary": "Connect to a server",
+        "description": "With \"address\": \"ip:port\" it connects to that server; without a body (or without address) to any one in the list. It answers at once (202): the status is read from /status.",
         "responses": {
           "202": {
-            "description": "Connessione avviata"
+            "description": "Connection started"
           },
           "400": {
-            "description": "Corpo non valido",
+            "description": "Invalid body",
             "content": {
               "application/json": {
                 "schema": {
@@ -5380,7 +5380,7 @@
             }
           },
           "404": {
-            "description": "Server non in lista",
+            "description": "Server not in the list",
             "content": {
               "application/json": {
                 "schema": {
@@ -5390,7 +5390,7 @@
             }
           },
           "422": {
-            "description": "address non e' ip:porta",
+            "description": "address is not ip:port",
             "content": {
               "application/json": {
                 "schema": {
@@ -5438,11 +5438,11 @@
     },
     "/api/v1/servers/disconnect": {
       "post": {
-        "summary": "Scollegati dal server",
-        "description": "Chiude la connessione e ferma i tentativi.",
+        "summary": "Disconnect from the server",
+        "description": "Closes the connection and stops the attempts.",
         "responses": {
           "200": {
-            "description": "Scollegato"
+            "description": "Disconnected"
           },
           "401": {
             "description": "Token",
@@ -5467,10 +5467,10 @@
     },
     "/api/v1/events": {
       "get": {
-        "summary": "WebSocket degli eventi",
-        "description": "Collegamento WebSocket (Upgrade) con il token in ?token=. Messaggi JSON {type, data}: stats, server.state, kad.state, download.added|updated|removed, search.results, log. Vedi APIDOC.md, sezione 6.",
+        "summary": "Events WebSocket",
+        "description": "WebSocket connection (Upgrade) with the token in ?token=. JSON messages {type, data}: stats, server.state, kad.state, download.added|updated|removed, search.results, log. See APIDOC.md, section 6.",
         "tags": [
-          "Stato"
+          "Status"
         ],
         "security": [
           {
@@ -5489,10 +5489,10 @@
         ],
         "responses": {
           "101": {
-            "description": "Passaggio a WebSocket"
+            "description": "Switch to WebSocket"
           },
           "401": {
-            "description": "Token mancante o errato",
+            "description": "Missing or wrong token",
             "content": {
               "application/json": {
                 "schema": {
@@ -5506,10 +5506,10 @@
     },
     "/api/v1/openapi.json": {
       "get": {
-        "summary": "Questa descrizione",
-        "description": "La descrizione OpenAPI dell'API, servita dal demone.",
+        "summary": "This description",
+        "description": "The OpenAPI description of the API, served by the daemon.",
         "tags": [
-          "Stato"
+          "Status"
         ],
         "security": [],
         "responses": {

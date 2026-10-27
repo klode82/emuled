@@ -1,5 +1,5 @@
-// CServerConnect + CServerSocket (originali portati) contro un finto server ed2k su un indirizzo della macchina (non loopback: la lista server scarta 127.*):
-// login (OP_LOGINREQUEST), risposte (messaggio, ID alto, stato, identita'), ricerca con risultati letti nel ponte, disconnessione.
+// CServerConnect + CServerSocket (ported originals) against a fake ed2k server on a machine address (not loopback: the server list discards 127.*):
+// login (OP_LOGINREQUEST), replies (message, high ID, status, identity), search with results read in the bridge, disconnection.
 #include "StdAfx.h"
 #include "net/Profile.h"
 #include "Emule.h"
@@ -44,7 +44,7 @@ static bool ReadPkt(int fd, uint8_t &op, std::string &pl)
 
 int main()
 {
-	emule::net::ScopedProfile profile;		// profilo temporaneo: preferenze iniziali e oggetti dell'applicazione
+	emule::net::ScopedProfile profile;		// temporary profile: initial preferences and application objects
 	using namespace emule::net;
 	in_addr ip; if (!LocalIp(ip)) { std::printf("SKIP nessuna interfaccia non loopback\n"); return 0; }
 	int ls = socket(AF_INET, SOCK_STREAM, 0); sockaddr_in a{}; a.sin_family = AF_INET; a.sin_addr = ip;
@@ -74,8 +74,8 @@ int main()
 	UploadBandwidthThrottler thr; theApp.uploadBandwidthThrottler = &thr;
 	emule::log::Capture cap;
 	thePrefs.SetServerUDPPort(0);
-	thePrefs.SetFilterLANIPs(false);					// l'indirizzo della macchina puo' essere privato
-	// il server nella lista
+	thePrefs.SetFilterLANIPs(false);					// the machine's address may be private
+	// the server in the list
 	CServer *s = new CServer(ntohs(a.sin_port), ipstr(ip.s_addr)); s->SetListName("Server di prova");
 	CHECK(theApp.serverlist->AddServer(s, true));
 	CServerConnect &sc = *theApp.serverconnect;
@@ -84,10 +84,10 @@ int main()
 	CHECK(gotLogin);
 	CHECK(sc.IsConnected());
 	CHECK(sc.GetClientID() == 0x0A0B0C0D && !sc.IsLowID());			// ID alto
-	CHECK(s->GetUsers() == 321 && s->GetFiles() == 654);				// OP_SERVERSTATUS aggiornato nella lista
-	// login: hash utente (16) + ID 0 + porta + 4 tag, con l'hash dei marcatori eMule
+	CHECK(s->GetUsers() == 321 && s->GetFiles() == 654);				// OP_SERVERSTATUS updated in the list
+	// login: user hash (16) + ID 0 + port + 4 tags, with the eMule marker hash
 	CHECK(loginPayload.size() > 26 && (uint8_t)loginPayload[5] == 14 && (uint8_t)loginPayload[14] == 111);
-	// ricerca: stessa richiesta della sonda, per CServerConnect::SendPacket
+	// search: same request as the probe, for CServerConnect::SendPacket
 	{
 		CSafeMemFile d; d.WriteUInt8(1); d.WriteUInt16(5); d.Write("fight", 5);
 		Packet *p = new Packet(d); p->opcode = OP_SEARCHREQUEST; CHECK(sc.SendPacket(p));
@@ -99,7 +99,7 @@ int main()
 		auto &h = theApp.searchlist->serverHits[0];
 		CHECK(h.name == "Fight Club ITA.avi" && h.size == 734003200ull && h.sources == 42 && h.hash == "0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A" && h.server_ip == s->GetIP());
 	}
-	CHECK(cap.Contains("Benvenuto nel server di prova"));					// il messaggio del server e' nel registro
+	CHECK(cap.Contains("Benvenuto nel server di prova"));					// the server message is in the log
 	sc.Disconnect();
 	for (int i = 0; i < 10; ++i) loop.RunOnce(20);
 	CHECK(!sc.IsConnected());

@@ -1,4 +1,4 @@
-// LINUX (codice nuovo): lettore di byte con controllo dei limiti e lettore di tag ed2k, condivisi da validatori e caricamento.
+// LINUX (new code): bounds-checked byte reader and ed2k tag reader, shared by validators and loading.
 #pragma once
 #include <cstdint>
 #include <cstddef>
@@ -7,7 +7,7 @@
 
 namespace emule::met {
 
-// Ogni lettura oltre la fine marca l'errore e restituisce 0.
+// Every read past the end flags the error and returns 0.
 struct Reader {
 	const uint8_t *p; size_t n; size_t pos = 0; bool bad = false;
 	size_t left() const { return n - pos; }
@@ -21,14 +21,14 @@ struct Reader {
 
 struct Tag {
 	uint8_t type = 0, id = 0;
-	std::string name;		// vuoto se il nome e' un id a 1 byte
+	std::string name;		// empty if the name is a 1-byte id
 	uint64_t num = 0;
-	std::string str;		// byte grezzi della stringa (codifica da decidere a chi legge)
+	std::string str;		// raw string bytes (encoding left to the reader)
 	bool isInt = false, isStr = false;
-	size_t off = 0, len = 0;	// posizione e lunghezza dei byte del tag nel buffer: permette di riscriverlo identico
+	size_t off = 0, len = 0;	// position and length of the tag bytes in the buffer: allows rewriting it identically
 };
 
-// Rispecchia CTag::CTag(CFileDataIO&) di Packets.cpp. Ritorna false se il tag non e' leggibile.
+// Mirrors CTag::CTag(CFileDataIO&) of Packets.cpp. Returns false if the tag is not readable.
 bool ReadTag(Reader &r, Tag &t, std::string &why);
 
 } // namespace emule::met

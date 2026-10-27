@@ -17,7 +17,7 @@ const s = useSearch(), dl = useDownloads(), core = useCore(), prefs = usePrefs()
 const advanced = ref(false)
 const SCOPES: SearchScope[] = ['global', 'server', 'all', 'kad']
 onMounted(() => { void s.load(); void prefs.loadCategories() })
-// scelta multipla: spunta i file da scaricare insieme (quelli gia' in lista non si possono scegliere)
+// multiple choice: tick the files to download together (those already in the list cannot be chosen)
 const chosen = ref<Set<string>>(new Set()), bulkCat = ref(0), bulkBusy = ref(false)
 const pickable = computed(() => results.value.filter((r) => !dl.items[r.hash]))
 const allChosen = computed(() => pickable.value.length > 0 && pickable.value.every((r) => chosen.value.has(r.hash)))
@@ -36,7 +36,7 @@ const running = computed(() => s.current?.state === 'running')
 const results = computed(() => s.current?.results ?? [])
 const minMb = computed({ get: () => (s.form.min_size ? s.form.min_size / 1048576 : ''), set: (v: number | '') => { s.form.min_size = v ? Math.round(Number(v) * 1048576) : undefined } })
 const offline = computed(() => { const k = !core.status?.kad.connected, e = !core.status?.ed2k.connected; return s.form.scope === 'kad' ? k : s.form.scope === 'global' ? k && e : e })
-// percentuale di fonti complete (hanno tutto il file): la rete Kad non lo dice, quindi per le ricerche su Kad la colonna e' vuota
+// percentage of complete sources (they have the whole file): the Kad network does not say, so for Kad searches the column is empty
 const pct = (r: { sources: number; complete_sources: number }) => (r.sources ? Math.round((100 * r.complete_sources) / r.sources) : 0)
 const knowsComplete = computed(() => s.current?.scope !== 'kad')
 const scopeShort = (x: SearchScope) => t('search.scope.' + x)

@@ -1,5 +1,5 @@
-// LINUX (codice nuovo): controllo UPnP in SOLA LETTURA. Cerca il router (SSDP sulla rete locale), ne legge lo stato e l'IP esterno e l'elenco dei mapping delle porte
-// gia' presenti. Non aggiunge ne toglie nulla: per aprire le porte con UPnP c'e' CUPnPImplMiniLib (comando separato e esplicito).
+// LINUX (new code): READ-ONLY UPnP check. Finds the router (SSDP on the local network), reads its status and the external IP and the list of port mappings
+// already present. Adds and removes nothing: to open ports with UPnP there is CUPnPImplMiniLib (separate, explicit command).
 #pragma once
 #include <cstdint>
 #include <string>
@@ -12,7 +12,7 @@ struct UpnpMapping { std::string protocol, internal_client, description; uint16_
 struct UpnpInfo
 {
 	std::string error;
-	bool found = false;						// un router con UPnP ha risposto
+	bool found = false;						// a UPnP router answered
 	std::string control_url, service_type, local_ip, external_ip, status;
 	int devices_seen = 0;
 	std::vector<UpnpMapping> mappings;

@@ -472,8 +472,8 @@ void CPartFile::CreatePartFile(UINT cat)
 * [DWORD]ED2K(16)HASH1(16)HASH2(16)... <-- ED2K Hash Set: count;ed2k hash;hash1,hash2,hash3,...
 * [...] <-- Comments
 */
-// LINUX: l'importazione dei download di Shareaza (file .sd) non e' ancora portata: serve un lettore di archivi (CArchive) e non e' una
-// funzione usata nel profilo reale. Si riconosce come "formato sconosciuto". Vedi la nota in Bench (Fase 5).
+// LINUX: import of Shareaza downloads (.sd files) is not ported yet: it needs an archive reader (CArchive) and it is not a
+// function used in the real profile. It is recognized as "unknown format". See the note in Bench (Phase 5).
 EPartFileLoadResult CPartFile::ImportShareazaTempfile(LPCTSTR /*in_directory*/, LPCTSTR /*in_filename*/, EPartFileFormat *pOutCheckFileFormat)
 {
 	if (pOutCheckFileFormat != NULL)
@@ -1909,7 +1909,7 @@ uint32 CPartFile::Process(uint32 factor, UINT icounter)
 					}
 				}
 				break;
-			// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+			// LINUX: the other values do nothing (listed so -Wswitch flags new values)
 			case DS_CONNECTED:
 			case DS_ERROR:
 			case DS_REMOTEQUEUEFULL:
@@ -2288,12 +2288,12 @@ UINT CPartFile::CompleteThreadProc(LPVOID pvParams)
 	return 0;
 }
 
-// LINUX: la compressione NTFS non esiste: niente da decomprimere
+// LINUX: NTFS compression does not exist: nothing to decompress
 static void UncompressFile(LPCTSTR, CPartFile*)
 {
 }
 
-// LINUX: la "zona" di sicurezza dei file scaricati (Mark of the Web) e' una funzione di Windows: nessun effetto
+// LINUX: the security "zone" of downloaded files (Mark of the Web) is a Windows feature: no effect
 static void SetZoneIdentifier(LPCTSTR)
 {
 }
@@ -2491,7 +2491,7 @@ void CPartFile::PerformFileCompleteEnd(DWORD dwResult)
 		theApp.knownfiles->SafeAddKFile(this);
 		ASSERT(!nInUse);
 		theApp.downloadqueue->RemoveFile(this);
-		emule::CompletedDownloads::Add(this); // LINUX: la riga "Completato" della finestra dei trasferimenti, tenuta dal demone
+		emule::CompletedDownloads::Add(this); // LINUX: the "Completed" row of the transfers window, kept by the daemon
 		CUploadDiskIOThread::DissociateFile(this); //file has moved, a new handle would be required
 		bNoNewReads = false; //ready for uploading - enable reading
 		if (thePrefs.GetRemoveFinishedDownloads())
@@ -2518,7 +2518,7 @@ void CPartFile::PerformFileCompleteEnd(DWORD dwResult)
 		theApp.emuledlg->ShowNotifier(GetResString(IDS_TBN_DOWNLOADDONE) + _T('\n') + GetFileName(), TBN_DOWNLOADFINISHED, GetFilePath());
 		if (dwResult & FILE_COMPLETION_THREAD_RENAMED) {
 			CString strFilePath(GetFullName());
-			strFilePath = strFilePath.Mid(strFilePath.ReverseFind(_T('/')) + 1);	// LINUX: nell'originale ::PathStripPath
+			strFilePath = strFilePath.Mid(strFilePath.ReverseFind(_T('/')) + 1);	// LINUX: in the original ::PathStripPath
 			Log(LOG_STATUSBAR, GetResString(IDS_DOWNLOADRENAMED), (LPCTSTR)strFilePath);
 		}
 		if (!m_pCollection && CCollection::HasCollectionExtention(GetFileName())) {
@@ -2705,7 +2705,7 @@ bool CPartFile::IsArchive(bool onlyPreviewable) const
 		case ARCHIVE_7Z:
 		case IMAGE_ISO:
 			return true;
-		// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+		// LINUX: the other values do nothing (listed so -Wswitch flags new values)
 		case AUDIO_MPEG:
 		case DOCUMENT_PDF:
 		case FILETYPE_EXECUTABLE:
@@ -2763,7 +2763,7 @@ bool CPartFile::CanOpenFile() const
 	return GetStatus() == PS_COMPLETE;
 }
 
-// LINUX: aprire il file con il programma predefinito e' compito dell'interfaccia (Fase 8)
+// LINUX: opening the file with the default program is the interface's job (Phase 8)
 void CPartFile::OpenFile() const
 {
 }
@@ -2775,7 +2775,7 @@ bool CPartFile::CanStopFile() const
 	case PS_COMPLETE:
 	case PS_COMPLETING:
 		return false;
-	// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+	// LINUX: the other values do nothing (listed so -Wswitch flags new values)
 	case PS_EMPTY:
 	case PS_HASHING:
 	case PS_INSUFFICIENT:
@@ -2828,7 +2828,7 @@ bool CPartFile::CanPauseFile() const
 	case PS_COMPLETE:
 	case PS_COMPLETING:
 		return false;
-	// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+	// LINUX: the other values do nothing (listed so -Wswitch flags new values)
 	case PS_EMPTY:
 	case PS_HASHING:
 	case PS_INSUFFICIENT:
@@ -2897,7 +2897,7 @@ bool CPartFile::CanResumeFile() const
 	case PS_INSUFFICIENT:
 	case PS_PAUSED:
 		return true;
-	// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+	// LINUX: the other values do nothing (listed so -Wswitch flags new values)
 	case PS_COMPLETE:
 	case PS_COMPLETING:
 	case PS_EMPTY:
@@ -2971,7 +2971,7 @@ CString CPartFile::getPartfileStatus() const
 			case PFOP_UNCOMPRESSING:
 				strState += _T(" (Uncompressing)");
 				break;
-			// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+			// LINUX: the other values do nothing (listed so -Wswitch flags new values)
 			case PFOP_IMPORTPARTS:
 			case PFOP_NONE:
 				break;
@@ -3012,7 +3012,7 @@ int CPartFile::getPartfileStatusRank() const
 		return 4;
 	case PS_ERROR:
 		return 8;
-	// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+	// LINUX: the other values do nothing (listed so -Wswitch flags new values)
 	case PS_EMPTY:
 	case PS_READY:
 	case PS_UNKNOWN:
@@ -3039,7 +3039,7 @@ time_t CPartFile::getTimeRemaining() const
 	return (estimate < DAY2S(15)) ? estimate : (time_t)-1;
 }
 
-// LINUX: l'anteprima con un programma esterno e il recupero degli archivi parziali non sono portati (Fase 8: anteprima dall'interfaccia web)
+// LINUX: preview with an external program and recovery of partial archives are not ported (Phase 8: preview from the web interface)
 void CPartFile::PreviewFile()
 {
 }
@@ -3730,7 +3730,7 @@ void CPartFile::FlushBuffersExceptionHandler(CFileException *ex)
 				PauseFile(true);
 	} else {
 		if (thePrefs.IsErrorBeepEnabled())
-			;	// LINUX: nessun beep sul daemon
+			;	// LINUX: no beep on the daemon
 
 		if (ex->m_cause == CFileException::diskFull) {
 			CString msg;
@@ -4257,7 +4257,7 @@ bool CPartFile::GetNextRequestedBlock(CUpDownClient *sender, Requested_Block_Str
 					//ASSERT(cur_chunk.frequency >= rareBound);
 
 					// used to slightly lessen the importance of frequency
-					uint16 randomAdd = (uint16)((3ull * RAND_MAX / 2 + (uint64)rand() * (almostRareBound - rareBound)) / RAND_MAX);		// LINUX: 64 bit (RAND_MAX vale 2^31-1, non 32767: in 32 bit andava in overflow)
+					uint16 randomAdd = (uint16)((3ull * RAND_MAX / 2 + (uint64)rand() * (almostRareBound - rareBound)) / RAND_MAX);		// LINUX: 64 bit (RAND_MAX is 2^31-1, not 32767: in 32 bit it overflowed)
 					//AddDebugLogLine(DLP_VERYLOW, false, _T("RandomAdd: %i, (%i-%i=%i)"), randomAdd, rareBound, almostRareBound, almostRareBound-rareBound);
 
 					cur_chunk.rank = (cur_chunk.frequency)           // Criterion 1

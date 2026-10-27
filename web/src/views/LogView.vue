@@ -14,11 +14,11 @@ const box = ref<HTMLElement | null>(null)
 const LEVELS: LevelFilter[] = ['all', 'info', 'warning', 'error']
 const SOURCES: SourceFilter[] = ['all', 'general', 'server', 'api']
 onMounted(async () => { await Promise.all([log.loaded ? log.sync() : log.load(), prefs.load()]); scroll() })
-// "Segui": con la casella attiva la vista resta in fondo quando arrivano righe nuove
+// "Follow": with the box checked the view stays at the bottom when new lines arrive
 function scroll() { void nextTick(() => { if (log.follow && box.value) box.value.scrollTop = box.value.scrollHeight }) }
 watch(() => log.shown.length, scroll)
 watch(() => log.follow, scroll)
-function onScroll() { const el = box.value; if (el && log.follow && el.scrollHeight - el.scrollTop - el.clientHeight > 80) log.follow = false }   // chi sale a leggere ferma il "segui"
+function onScroll() { const el = box.value; if (el && log.follow && el.scrollHeight - el.scrollTop - el.clientHeight > 80) log.follow = false }   // scrolling up to read stops "follow"
 const time = (ms: number) => new Date(ms).toLocaleTimeString(locale.value, { hour12: false })
 const levelClass = (l: string) => (l === 'error' ? 'text-bad' : l === 'warning' ? 'text-warn' : l === 'debug' ? 'text-mute' : 'text-fg')
 

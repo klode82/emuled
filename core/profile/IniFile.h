@@ -1,7 +1,7 @@
-// LINUX (codice nuovo): lettore/scrittore INI compatibile con quelli di eMule (GetPrivateProfile* di Windows).
-// - sezioni e chiavi senza distinzione di maiuscole, vince la prima chiave duplicata
-// - conserva byte per byte le righe non modificate, fine riga (CRLF/LF), BOM e codifica (ANSI, UTF-8, UTF-16LE)
-// - Set() riscrive solo la riga toccata; Save() usa SafeWriteMet (validazione, .bak solo se sano, rename atomico)
+// LINUX (new code): INI reader/writer compatible with eMule's (Windows GetPrivateProfile*).
+// - case-insensitive sections and keys, the first duplicate key wins
+// - keeps byte for byte the unmodified lines, line endings (CRLF/LF), BOM and encoding (ANSI, UTF-8, UTF-16LE)
+// - Set() rewrites only the touched line; Save() uses SafeWriteMet (validation, .bak only if healthy, atomic rename)
 #pragma once
 #include "met/SafeMet.h"
 #include <string>
@@ -12,12 +12,12 @@ namespace emule::profile {
 
 enum class TextEnc { Ansi, Utf8Bom, Utf16LE };
 
-// Divide un file di testo in righe UTF-8 (shareddir.dat, downloads.txt, .ini, ...). Riconosce BOM UTF-16LE/UTF-8.
+// Splits a text file into UTF-8 lines (shareddir.dat, downloads.txt, .ini, ...). Recognizes UTF-16LE/UTF-8 BOM.
 struct DecodedText {
 	std::vector<std::string> lines;
 	TextEnc enc = TextEnc::Ansi;
 	std::string eol = "\r\n";
-	bool ok = true;			// false se UTF-16 di lunghezza dispari
+	bool ok = true;			// false if UTF-16 of odd length
 };
 DecodedText DecodeText(const std::string &bytes);
 
@@ -25,10 +25,10 @@ class IniFile {
 public:
 	IniFile() = default;
 	static IniFile FromBytes(const std::string &bytes);
-	// false se il file non si legge (err valorizzato); un file assente da' false con err "assente"
+	// false if the file cannot be read (err set); a missing file gives false with err "absent"
 	static bool Load(const std::string &path, IniFile &out, std::string &err);
 
-	std::vector<std::string> Sections() const;			// nomi delle sezioni nell'ordine del file
+	std::vector<std::string> Sections() const;			// section names in file order
 	bool Has(const std::string &sec, const std::string &key) const;
 	std::string Get(const std::string &sec, const std::string &key, const std::string &def = "") const;
 	int64_t GetInt(const std::string &sec, const std::string &key, int64_t def = 0) const;

@@ -225,15 +225,15 @@ bool CSearchManager::IsFWCheckUDPSearch(const CUInt128 &uTarget)
 	return itSearchMap->second->GetSearchType() == CSearch::NODEFWCHECKUDP;
 }
 
-// LINUX: le parole sono UTF-8. I separatori sono tutti ASCII, quindi si cercano a byte (strcspn); uChars conta le unita' UTF-16 della parola
-// come nell'originale (serve alla regola "una parola di 3 caratteri e 3 byte in fondo e' quasi sempre l'estensione del file").
+// LINUX: words are UTF-8. Separators are all ASCII, so they are searched bytewise (strcspn); uChars counts the UTF-16 units of the word
+// as in the original (needed by the rule "a 3-character word with 3 bytes at the end is almost always the file extension").
 static size_t Utf16Units(LPCSTR p, size_t n)
 {
 	size_t u = 0;
 	for (size_t i = 0; i < n; ++i) {
 		unsigned char ch = (unsigned char)p[i];
-		if ((ch & 0xC0) == 0x80) continue;			// byte di continuazione
-		u += (ch >= 0xF0) ? 2 : 1;					// fuori dal BMP: coppia surrogata
+		if ((ch & 0xC0) == 0x80) continue;			// continuation byte
+		u += (ch >= 0xF0) ? 2 : 1;					// outside the BMP: surrogate pair
 	}
 	return u;
 }
@@ -243,11 +243,11 @@ void CSearchManager::GetWords(LPCTSTR sz, WordList &rlistWords)
 	size_t uChars = 0;
 	size_t uBytes = 0;
 	for (LPCSTR szS = sz; *szS;) {
-		const size_t uSeg = strcspn(szS, g_szInvKadKeywordCharsA);		// lunghezza della parola in byte
+		const size_t uSeg = strcspn(szS, g_szInvKadKeywordCharsA);		// word length in bytes
 		uChars = Utf16Units(szS, uSeg);
 		CKadTagValueString sWord(CStringW(szS, (int)uSeg));
-		// TODO (originale): serve un modo sicuro per capire se una sequenza di 3 caratteri e' una vera parola. Oggi si valutano i byte UTF-8:
-		// funziona per le lingue occidentali SOLO finche' il minimo e' 3 byte.
+		// TODO (original): need a safe way to tell whether a 3-character sequence is a real word. Today the UTF-8 bytes are evaluated:
+		// works for western languages ONLY as long as the minimum is 3 bytes.
 		uBytes = KadGetKeywordBytes(sWord).GetLength();
 		if (uBytes >= 3) {
 			KadTagStrMakeLower(sWord);
@@ -255,7 +255,7 @@ void CSearchManager::GetWords(LPCTSTR sz, WordList &rlistWords)
 			rlistWords.push_back(sWord);
 		}
 		szS += uSeg;
-		szS += static_cast<int>(*szS != '\0');		// salta il separatore, se c'e'
+		szS += static_cast<int>(*szS != '\0');		// skip the separator, if any
 	}
 
 	// if the last word we have added, contains 3 chars (and 3 bytes), in almost all cases it's a file's extension.

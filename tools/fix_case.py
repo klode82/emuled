@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Include di eMule: ignorano maiuscole/minuscole e usano backslash (Windows). GCC su Linux no.
-Per ogni #include "..." dei file in core/ che non si risolve cosi' com'e', crea in compat/ci/ un symlink (relativo)
+For every #include "..." of the files in core/ that does not resolve as is, creates in compat/ci/ a (relative) symlink
 che porta al file vero, con il percorso scritto nell'include (cartelle comprese). I backslash restano nel nome del
 symlink, che e' un file legittimo su Linux. I sorgenti non si modificano: il diff con srchybrid resta pulito.
 Si lancia da solo a ogni configurazione di CMake. Idempotente: ricrea tutto da zero."""
@@ -39,26 +39,26 @@ for r, _, fs in os.walk(core):
             if not m: continue
             written = m.group(1)
             slashed = written.replace("\\", "/")
-            # gia' risolvibile cosi' com'e' (come lo vede GCC: cartella del file, poi -I compat, compat/ci, core)
+            # already resolvable as is (as GCC sees it: file folder, then -I compat, compat/ci, core)
             if "\\" not in written and any(exact(b, written) for b in (here, compat, ci, core) + tuple(SYSTEM)): continue
             target = None
             for b in (here, core, compat) + tuple(SYSTEM):
                 target = ci_resolve(b, slashed)
                 if target: break
             if not target and "/" not in slashed:
-                # file portato in una sottocartella di core/ (es. core/net/AsyncSocketEx.h): nell'originale stava nella cartella unica
+                # file ported into a subfolder of core/ (e.g. core/net/AsyncSocketEx.h): in the original it sat in the single folder
                 hits = []
                 for rr, _, ff in os.walk(core):
                     for fn in ff:
                         if fn.lower() == slashed.lower(): hits.append(os.path.join(rr, fn))
                 if len(hits) == 1: target = hits[0]
             if not target:
-                # percorso con cartella che nel sistema e' piatto (es. "zlib/zlib.h" -> /usr/include/zlib.h)
+                # path with a folder that is flat on the system (e.g. "zlib/zlib.h" -> /usr/include/zlib.h)
                 for sd in SYSTEM:
                     t = ci_resolve(sd, os.path.basename(slashed))
                     if t and "/" in slashed: target = t; break
             if not target:
-                # i file di sistema spesso stanno in una sottocartella con lo stesso nome della libreria
+                # system files often sit in a subfolder with the same name as the library
                 lib = slashed.split("/")[0].lower()
                 for sd in SYSTEM:
                     t = ci_resolve(sd, lib + "/" + os.path.basename(slashed))

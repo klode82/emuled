@@ -15,7 +15,7 @@ export const useServers = defineStore('servers', () => {
   async function connect(address?: string) {
     try { await api().connectServer(address); useToasts().info(address ? t('servers.connectingTo', { address }) : t('servers.searching')); setTimeout(() => void useCore().refresh(), 1500) } catch (e) { useToasts().error(errText(e)) }
   }
-  // "Riconnetti": scollega e ricollega allo stesso server, che rifa' anche la richiesta di fonti
+  // "Reconnect": disconnect and reconnect to the same server, which also repeats the sources request
   async function reconnect(address: string) {
     try { await api().disconnectServer(); await connect(address) } catch (e) { useToasts().error(errText(e)) }
   }
@@ -29,9 +29,9 @@ export const useServers = defineStore('servers', () => {
   async function remove(addr: string) {
     try { await api().removeServer(addr); await load(); useToasts().ok(t('servers.removed')) } catch (e) { useToasts().error(errText(e)) }
   }
-  // aggiorna la lista dei server da un indirizzo web (server.met): parte il download, poi si guarda lo stato finche' non finisce
+  // update the server list from a web address (server.met): the download starts, then the state is watched until it finishes
   const urls = ref<string[]>([]); const updating = ref(false)
-  async function loadUrls() { try { urls.value = await api().serverUrls() } catch { /* senza elenco si scrive a mano */ } }
+  async function loadUrls() { try { urls.value = await api().serverUrls() } catch { /* without a list, type it by hand */ } }
   async function updateFromUrl(url: string) {
     updating.value = true
     try {

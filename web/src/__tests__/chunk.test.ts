@@ -16,7 +16,7 @@ describe('ricarica dopo un aggiornamento', () => {
     installChunkReload(router, (u) => urls.push(u))
     await router.push('/').catch(() => {})
     await router.push('/kad').catch(() => {}); expect(urls).toEqual(['/kad'])
-    await router.push('/kad').catch(() => {}); expect(urls).toEqual(['/kad'])			// ancora rotto: niente giro in tondo
+    await router.push('/kad').catch(() => {}); expect(urls).toEqual(['/kad'])			// still broken: no endless loop
     fail = false; await router.push('/').catch(() => {}); await router.push('/kad').catch(() => {}); expect(urls).toEqual(['/kad'])
   })
 })

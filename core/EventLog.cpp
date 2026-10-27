@@ -1,4 +1,4 @@
-// LINUX (codice nuovo): vedi EventLog.h
+// LINUX (new code): see EventLog.h
 #include "StdAfx.h"
 #include "EventLog.h"
 #include "Preferences.h"
@@ -35,8 +35,8 @@ void EventLog::Add(log::Level level, std::string text, bool debug)
 	while (lines_.size() > cap_) lines_.pop_front();
 }
 
-// Una riga per messaggio, come l'esportazione dell'interfaccia: "2026-10-26T05:25:03.183Z [info] [general] testo". File logs/emuled.log; oltre 20 MB diventa emuled.log.1 (uno solo, il vecchio si perde).
-// ponytail: scrittura sotto il mutex del registro; se il disco rallenta rallenta anche chi scrive il log. Un thread dedicato solo se si vede nei profili.
+// One line per message, like the interface export: "2026-10-26T05:25:03.183Z [info] [general] text". File logs/emuled.log; beyond 20 MB it becomes emuled.log.1 (just one, the old one is lost).
+// ponytail: write under the log mutex; if the disk slows down, so does whoever writes the log. A dedicated thread only if it shows up in profiles.
 void EventLog::WriteToDisk(const LogLine &l)
 {
 	namespace fs = std::filesystem;

@@ -34,7 +34,7 @@ extern _CRT_ALLOC_HOOK g_pfnPrevCrtAllocHook;
 ///////////////////////////////////////////////////////////////////////////////
 // CStatistics
 
-CStatistics theStats __attribute__((init_priority(101)));	// LINUX: costruita prima di theApp e degli altri globali (che la usano nei costruttori)
+CStatistics theStats __attribute__((init_priority(101)));	// LINUX: constructed before theApp and the other globals (which use it in their constructors)
 
 RA<float>	CStatistics::maxDown;
 RA<float>	CStatistics::maxDownavg;

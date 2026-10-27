@@ -560,7 +560,7 @@ bool CUpDownClient::ProcessHelloTypePacket(CSafeMemFile &data)
 		UINT uAddHelloDataSize = (UINT)(data.GetLength() - data.GetPosition());
 		if (uAddHelloDataSize == sizeof(uint32)) {
 			uint32 test = data.ReadUInt32();
-			if (test == 0x4B444C4D) {		// LINUX: 'KDLM' come costante (carattere multiplo non portabile)
+			if (test == 0x4B444C4D) {		// LINUX: 'KDLM' as a constant (multi-character constant not portable)
 				m_bIsML = true;
 				if (bDbgInfo)
 					m_strHelloInfo += _T("\n  ***AddData: \"MLDK\"");
@@ -1522,7 +1522,7 @@ void CUpDownClient::ConnectionEstablished()
 		DEBUG_ONLY(DebugLog(_T("Set KS_FWCHECK_UDP for client %s"), (LPCTSTR)DbgGetClientInfo()));
 		SendFirewallCheckUDPRequest();
 		break;
-	// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+	// LINUX: the other values do nothing (listed so -Wswitch flags new values)
 	case KS_CONNECTED_BUDDY:
 	case KS_CONNECTED_FWCHECK:
 	case KS_FWCHECK_UDP:
@@ -1549,7 +1549,7 @@ void CUpDownClient::ConnectionEstablished()
 		SetDownloadState(DS_CONNECTED);
 		SendFileRequest();
 		break;
-	// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+	// LINUX: the other values do nothing (listed so -Wswitch flags new values)
 	case DS_BANNED:
 	case DS_CONNECTED:
 	case DS_DOWNLOADING:
@@ -1812,7 +1812,7 @@ void CUpDownClient::ProcessSharedFileList(const uchar *pachPacket, uint32 nSize,
 {
 	if (m_iFileListRequested > 0) {
 		--m_iFileListRequested;
-		/* LINUX: la lista dei file condivisi di un client (vedi "Mostra file") passa alla ricerca nel daemon: Bench, Fase 6 */
+		/* LINUX: a client's shared file list (see "Show files") goes to the search in the daemon: Bench, Phase 6 */
 		(void)pachPacket; (void)nSize; (void)pszDirectory;
 	}
 }
@@ -2089,7 +2089,7 @@ void CUpDownClient::SendPreviewRequest(const CAbstractFile &rForFile)
 		LogWarning(LOG_STATUSBAR, GetResString(IDS_ERR_PREVIEWALREADY));
 }
 
-// LINUX: le miniature dei video (GDI+/DirectShow) non sono portate: all'altro client si risponde "nessuna anteprima" (0 immagini).
+// LINUX: video thumbnails (GDI+/DirectShow) are not ported: the other client is answered "no preview" (0 images).
 void CUpDownClient::SendPreviewAnswer(const CKnownFile *pForFile, void **, uint8)
 {
 	m_fPreviewAnsPending = 0;
@@ -2132,7 +2132,7 @@ void CUpDownClient::ProcessPreviewAnswer(const uchar *pachPacket, uint32 nSize)
 	uint8 nCount = data.ReadUInt8();
 	if (nCount == 0)
 		LogError(LOG_STATUSBAR, GetResString(IDS_ERR_PREVIEWFAILED), GetUserName());
-	// LINUX: le immagini di anteprima ricevute non si decodificano (Fase 8)
+	// LINUX: received preview images are not decoded (Phase 8)
 }
 
 // Sends a packet. If needed, it will establish a connection before.
@@ -2625,7 +2625,7 @@ void CUpDownClient::ProcessChatMessage(CSafeMemFile &data, uint32 nLength)
 						m_strCaptchaPendingMsg = strMessage;
 						CSafeMemFile fileAnswer(1024);
 						fileAnswer.WriteUInt8(0); // no tags, for future use
-						// LINUX: nessun generatore di immagini CAPTCHA (GDI): non si puo' sfidare il client
+						// LINUX: no CAPTCHA image generator (GDI): the client cannot be challenged
 						DebugLogError(_T("Failed to create CAPTCHA for client %s"), (LPCTSTR)DbgGetClientInfo());
 					}
 				} else {
@@ -2710,7 +2710,7 @@ void CUpDownClient::ProcessChatMessage(CSafeMemFile &data, uint32 nLength)
 	theApp.emuledlg->chatwnd->chatselector.ProcessMessage(this, strMessage);
 }
 
-// LINUX: le immagini CAPTCHA della chat (GDI) non sono portate: la richiesta si ignora. Chat privata e CAPTCHA: Bench, Fase 8.
+// LINUX: chat CAPTCHA images (GDI) are not ported: the request is ignored. Private chat and CAPTCHA: Bench, Phase 8.
 void CUpDownClient::ProcessCaptchaRequest(CSafeMemFile &)
 {
 	DebugLogWarning(_T("Received CAPTCHA request from client, ignored (%s)"), (LPCTSTR)DbgGetClientInfo());

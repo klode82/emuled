@@ -1,4 +1,4 @@
-// LINUX: dichiarazioni delle stringhe di debug (originale: OtherFunctions.h)
+// LINUX: declarations of the debug strings (original: OtherFunctions.h)
 #pragma once
 #include "StdAfx.h"
 struct Requested_Block_Struct;

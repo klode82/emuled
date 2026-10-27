@@ -65,8 +65,8 @@ CServerList::~CServerList()
 
 void CServerList::AutoUpdate()
 {
-	// LINUX: l'aggiornamento di server.met da un indirizzo web (CHttpDownloadDlg, finestra di Windows) non e' ancora portato: si fara' con libcurl
-	// (Fase 8, "IP filter con aggiornamento automatico" e liste di server). Per ora la lista si carica solo dal file.
+	// LINUX: updating server.met from a web address (CHttpDownloadDlg, a Windows dialog) is not ported yet: it will be done with libcurl
+	// (Phase 8, "IP filter with automatic update" and server lists). For now the list is loaded from the file only.
 	AddLogLine(false, _T("Server list auto-update from the web is not available yet: using the local server.met"));
 }
 
@@ -79,7 +79,7 @@ bool CServerList::Init()
 	// Load Met file
 	const CString sConfDir(thePrefs.GetMuleDirectory(EMULE_CONFIGDIR));
 	if (sConfDir.IsEmpty() || ((LPCTSTR)sConfDir)[0] != '/')
-		return false;		// LINUX: nessuna cartella di configurazione valida (assoluta): la lista resta vuota e non si legge nulla
+		return false;		// LINUX: no valid (absolute) configuration folder: the list stays empty and nothing is read
 
 	bool bRes = AddServerMetToList(sConfDir + SERVER_MET_FILENAME, false);
 	if (thePrefs.GetAutoUpdateServerList()) {
@@ -419,8 +419,8 @@ void CServerList::Sort()
 
 void CServerList::GetUserSortedServers()
 {
-	// LINUX: nell'originale l'ordine dei server si rilegge dalla lista grafica (l'utente puo' ordinarla per colonna). Nel daemon l'ordine e' quello della lista;
-	// se l'interfaccia web vorra' un ordine suo, lo comunichera' con un'API (Fase 6).
+	// LINUX: in the original the server order is re-read from the graphical list (the user can sort it by column). In the daemon the order is that of the list;
+	// if the web interface wants its own order, it will pass it through an API (Phase 6).
 }
 
 #ifdef _DEBUG
@@ -552,11 +552,11 @@ bool CServerList::SaveServermetToFile()
 	m_nLastSaved = ::GetTickCount();
 	const CString sConfDir(thePrefs.GetMuleDirectory(EMULE_CONFIGDIR));
 	if (sConfDir.IsEmpty() || ((LPCTSTR)sConfDir)[0] != '/')
-		return false;		// LINUX: nessuna cartella impostata, o non assoluta (es. letta da un oggetto gia' distrutto): non si scrive nulla
+		return false;		// LINUX: no folder set, or not absolute (e.g. read from an already destroyed object): nothing is written
 	const CString curservermet(sConfDir + SERVER_MET_FILENAME);
 
-	// LINUX: il file si compone in memoria e si scrive con la scrittura sicura (controllo, file temporaneo, rinomina atomica, .bak solo se l'originale e' sano).
-	// L'originale scriveva "server.met.new" e poi rinominava senza controllare il vecchio (server_met.old).
+	// LINUX: the file is composed in memory and written with the safe write (check, temporary file, atomic rename, .bak only if the original is healthy).
+	// The original wrote "server.met.new" and then renamed without checking the old one (server_met.old).
 	CSafeMemFile file(8192);
 	try {
 		file.WriteUInt8(0xE0);
@@ -790,7 +790,7 @@ bool CServerList::SaveStaticServers()
 {
 	const CString sConfDir(thePrefs.GetMuleDirectory(EMULE_CONFIGDIR));
 	if (sConfDir.IsEmpty() || ((LPCTSTR)sConfDir)[0] != '/')
-		return false;		// vedi SaveServermetToFile
+		return false;		// see SaveServermetToFile
 	std::string text;
 	for (POSITION pos = list.GetHeadPosition(); pos != NULL;) {
 		const CServer *pServer = list.GetNext(pos);
@@ -800,7 +800,7 @@ bool CServerList::SaveStaticServers()
 			text += (LPCTSTR)line;
 		}
 	}
-	// LINUX: file di testo: file temporaneo e rinomina atomica (l'originale lo troncava sul posto)
+	// LINUX: text file: temporary file and atomic rename (the original truncated it in place)
 	const std::string path = std::string((LPCTSTR)sConfDir) + "staticservers.dat", tmp = path + ".tmp";
 	FILE *f = fopen(tmp.c_str(), "wb");
 	if (!f) {

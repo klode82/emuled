@@ -1,5 +1,5 @@
-// Server HTTP/WebSocket dell'API: token, percorsi con parametri, corpi, file statici (anche i tentativi di uscire dalla cartella), WebSocket
-// (handshake con la chiave dell'RFC 6455, frame mascherati, ping, messaggi dal server), richieste in sequenza sulla stessa connessione, limiti.
+// API HTTP/WebSocket server: token, paths with parameters, bodies, static files (including attempts to escape the folder), WebSocket
+// (handshake with the RFC 6455 key, masked frames, ping, messages from the server), sequential requests on the same connection, limits.
 #include "StdAfx.h"
 #include "api/HttpServer.h"
 #include "net/EventLoop.h"
@@ -26,7 +26,7 @@ static int Connect(uint16_t port)
 	if (connect(fd, (sockaddr*)&a, sizeof a) != 0) { close(fd); return -1; }
 	return fd;
 }
-// legge fino a che arriva "n" risposte complete (Content-Length) oppure chiude
+// reads until "n" complete responses (Content-Length) arrive, or closes
 static std::string Raw(uint16_t port, const std::string &req, int responses = 1)
 {
 	int fd = Connect(port); if (fd < 0) return "";
@@ -67,10 +67,10 @@ int main()
 	srv.Route("GET", "/api/v1/hello/:name", [](const Request &r) { return Response::Json(200, "{\"hello\":\"" + r.params.at("name") + "\",\"q\":\"" + (r.query.count("x") ? r.query.at("x") : "") + "\"}"); });
 	srv.Route("POST", "/api/v1/echo", [](const Request &r) { return Response::Json(201, r.body); });
 	srv.Route("GET", "/api/v1/boom", [](const Request &) -> Response { throw std::runtime_error("guasto"); });
-	// risposte da file (streaming): file piu' grande di un pezzo da 256 KB, intervallo, HEAD, richiesta in coda dopo il file
+	// responses from file (streaming): file larger than a 256 KB chunk, range, HEAD, queued request after the file
 	std::string big(700000, 'x'); for (size_t i = 0; i < big.size(); ++i) big[i] = (char)('a' + i % 26);
 	{ std::ofstream(base / "grande.bin", std::ios::binary) << big; }
-	srv.Route("GET", "/api/v1/stream/:id/:name", [&](const Request &r) {		// percorso /api/v1/stream/: raggiungibile SENZA token
+	srv.Route("GET", "/api/v1/stream/:id/:name", [&](const Request &r) {		// path /api/v1/stream/: reachable WITHOUT a token
 		Response x; x.status = 206; x.content_type = "video/mp4"; x.file_path = (base / "grande.bin").string();
 		x.file_offset = r.query.count("off") ? std::stoull(r.query.at("off")) : 0; x.file_len = r.query.count("len") ? std::stoull(r.query.at("len")) : big.size();
 		return x;
@@ -80,71 +80,71 @@ int main()
 
 	{
 		auto r = call(Req("GET", "/api/v1/stream/abc/film.mp4"));
-		CHECK(Status(r) == 206 && Body(r).size() == big.size() && Body(r) == big);						// 700 KB: piu' pezzi, tutti i byte, nessun token
+		CHECK(Status(r) == 206 && Body(r).size() == big.size() && Body(r) == big);						// 700 KB: several chunks, all bytes, no token
 		r = call(Req("GET", "/api/v1/stream/abc/film.mp4?off=1000&len=300000"));
 		CHECK(Status(r) == 206 && Body(r) == big.substr(1000, 300000));
 		r = call(Req("HEAD", "/api/v1/stream/abc/film.mp4"));
-		CHECK(Status(r) == 206 && r.find("Content-Length: 700000") != std::string::npos && Body(r).empty());	// HEAD: intestazioni, niente corpo
-		r = call(Req("GET", "/api/v1/stream/abc/f.mp4?off=5&len=10") + Req("GET", "/api/v1/ping"), 2);		// la seconda richiesta aspetta la fine del file e poi riceve la sua risposta
+		CHECK(Status(r) == 206 && r.find("Content-Length: 700000") != std::string::npos && Body(r).empty());	// HEAD: headers, no body
+		r = call(Req("GET", "/api/v1/stream/abc/f.mp4?off=5&len=10") + Req("GET", "/api/v1/ping"), 2);		// the second request waits for the end of the file and then receives its response
 		CHECK(r.find(big.substr(5, 10) + "HTTP/1.1 200") != std::string::npos && r.find("{\"pong\":true}") != std::string::npos);
-		CHECK(Status(call(Req("GET", "/api/v1/hello/x"))) == 401);										// il resto di /api/ resta protetto
+		CHECK(Status(call(Req("GET", "/api/v1/hello/x"))) == 401);										// the rest of /api/ stays protected
 	}
-	// template d'interfaccia: /t/<id>/ serve la cartella del template, senza token, e non esce mai dalla cartella
+	// interface templates: /t/<id>/ serves the template folder, without a token, and never leaves the folder
 	{
 		fs::path tdir = base / "tpl" / "ciao"; fs::create_directories(tdir / "assets"); fs::create_directories(tdir / "extra");
 		{ std::ofstream(tdir / "start.html") << "<html>CIAO</html>"; std::ofstream(tdir / "assets" / "a.js") << "console.log('ciao')"; std::ofstream(tdir / "extra" / "index.html") << "SOTTO"; }
-		fs::create_symlink(base / "segreto.txt", tdir / "fuga.txt");					// un collegamento che esce dalla cartella del template
+		fs::create_symlink(base / "segreto.txt", tdir / "fuga.txt");					// a link that escapes the template folder
 		fs::create_symlink(base / "web", tdir / "fuga-dir");
 		srv.SetTemplates([&](const std::string &id, TemplateTarget &t) { if (id != "ciao") return false; t.dir = tdir.string(); t.entry = "start.html"; return true; }, false);
 		auto r = call(Req("GET", "/t/ciao/")); CHECK(Status(r) == 200 && Body(r) == "<html>CIAO</html>" && r.find("text/html") != std::string::npos);
 		r = call(Req("GET", "/t/ciao/assets/a.js")); CHECK(Status(r) == 200 && Body(r) == "console.log('ciao')" && r.find("text/javascript") != std::string::npos);
-		r = call(Req("GET", "/t/ciao")); CHECK(Status(r) == 301 && r.find("Location: /t/ciao/\r\n") != std::string::npos);				// serve la barra finale
-		r = call(Req("GET", "/t/ciao/qualche/percorso/spa")); CHECK(Status(r) == 200 && Body(r) == "<html>CIAO</html>");					// senza estensione: pagina d'ingresso
+		r = call(Req("GET", "/t/ciao")); CHECK(Status(r) == 301 && r.find("Location: /t/ciao/\r\n") != std::string::npos);				// the trailing slash is required
+		r = call(Req("GET", "/t/ciao/qualche/percorso/spa")); CHECK(Status(r) == 200 && Body(r) == "<html>CIAO</html>");					// without extension: entry page
 		r = call(Req("GET", "/t/ciao/manca.js")); CHECK(Status(r) == 404);
-		r = call(Req("GET", "/t/ciao/extra/")); CHECK(Status(r) == 200 && Body(r) == "SOTTO");												// una sottocartella ha il suo index.html
-		CHECK(Status(call(Req("GET", "/t/ciao/%2e%2e/segreto.txt"))) == 403);																// niente uscite dalla cartella
+		r = call(Req("GET", "/t/ciao/extra/")); CHECK(Status(r) == 200 && Body(r) == "SOTTO");												// a subfolder has its own index.html
+		CHECK(Status(call(Req("GET", "/t/ciao/%2e%2e/segreto.txt"))) == 403);																// no escapes from the folder
 		CHECK(Status(call(Req("GET", "/t/ciao/..%2fsegreto.txt"))) == 403);
-		CHECK(Status(call(Req("GET", "/t/ciao/fuga.txt"))) == 403);																			// ne' tramite collegamenti simbolici
+		CHECK(Status(call(Req("GET", "/t/ciao/fuga.txt"))) == 403);																			// nor via symbolic links
 		CHECK(Status(call(Req("GET", "/t/ciao/fuga-dir/index.html"))) == 403);
-		r = call(Req("GET", "/t/nulla/")); CHECK(Status(r) == 404 && Body(r).find("Template non trovato") != std::string::npos && Body(r).find("/?template=console") != std::string::npos);
-		CHECK(Body(call(Req("GET", "/t/nulla/"))).find("localStorage.removeItem('emuled.template')") != std::string::npos);					// toglie la scelta rotta
-		r = call(Req("GET", "/t/<b>x</b>/")); CHECK(Status(r) == 404 && Body(r).find("<b>") == std::string::npos && Body(r).find("localStorage") == std::string::npos);							// l'id nella pagina e' protetto
+		r = call(Req("GET", "/t/nulla/")); CHECK(Status(r) == 404 && Body(r).find("Template not found") != std::string::npos && Body(r).find("/?template=console") != std::string::npos);
+		CHECK(Body(call(Req("GET", "/t/nulla/"))).find("localStorage.removeItem('emuled.template')") != std::string::npos);					// removes the broken choice
+		r = call(Req("GET", "/t/<b>x</b>/")); CHECK(Status(r) == 404 && Body(r).find("<b>") == std::string::npos && Body(r).find("localStorage") == std::string::npos);							// the id in the page is protected
 		CHECK(Status(call(Req("POST", "/t/ciao/", "", "x"))) == 405);
-		// intestazioni di sicurezza: solo sulle pagine dei template (non sul resto); file enormi non si servono
+		// security headers: only on the template pages (not on the rest); huge files are not served
 		r = call(Req("GET", "/t/ciao/")); CHECK(r.find("connect-src 'self'") != std::string::npos && r.find("frame-ancestors 'none'") != std::string::npos && r.find("Referrer-Policy: no-referrer") != std::string::npos && r.find("X-Frame-Options: DENY") != std::string::npos);
 		CHECK(call(Req("GET", "/api/v1/ping")).find("Content-Security-Policy") == std::string::npos);
 		{ std::ofstream(tdir / "enorme.bin", std::ios::binary).close(); fs::resize_file(tdir / "enorme.bin", (32u << 20) + 1); }
 		CHECK(Status(call(Req("GET", "/t/ciao/enorme.bin"))) == 413);
 		r = call(Req("HEAD", "/t/ciao/")); CHECK(Status(r) == 200 && Body(r).empty());
-		// senza launcher "/" resta la cartella web di prima; con il launcher e' la paginetta che porta al template scelto
+		// without launcher "/" stays the web folder as before; with the launcher it is the little page leading to the chosen template
 		r = call(Req("GET", "/")); CHECK(Status(r) == 200 && Body(r) == "<html>UI</html>");
 		srv.SetTemplates([&](const std::string &id, TemplateTarget &t) { if (id != "ciao") return false; t.dir = tdir.string(); t.entry = "start.html"; return true; }, true);
 		r = call(Req("GET", "/")); CHECK(Status(r) == 200 && Body(r).find("emuled.template") != std::string::npos && Body(r).find("/t/console/") != std::string::npos && Body(r).find("UI") == std::string::npos);
-		CHECK(Status(call(Req("GET", "/assets/app.js"))) == 200);																				// il resto della cartella web continua a servirsi
+		CHECK(Status(call(Req("GET", "/assets/app.js"))) == 200);																				// the rest of the web folder keeps being served
 		srv.SetTemplates(nullptr, false);
 	}
-	// ping senza token; il resto di /api/ richiede il token
+	// ping without a token; the rest of /api/ requires the token
 	CHECK(Status(call(Req("GET", "/api/v1/ping"))) == 200);
 	CHECK(Status(call(Req("GET", "/api/v1/hello/mondo"))) == 401);
 	CHECK(Status(call(Req("GET", "/api/v1/hello/mondo", "Authorization: Bearer sbagliato\r\n"))) == 401);
 	{ auto r = call(Req("GET", "/api/v1/hello/mondo?x=a%20b", "Authorization: Bearer tok123\r\n")); CHECK(Status(r) == 200); CHECK(Body(r) == "{\"hello\":\"mondo\",\"q\":\"a b\"}"); }
-	CHECK(Status(call(Req("GET", "/api/v1/hello/mondo?token=tok123"))) == 200);			// anche con ?token=
+	CHECK(Status(call(Req("GET", "/api/v1/hello/mondo?token=tok123"))) == 200);			// also with ?token=
 	CHECK(Status(call(Req("GET", "/api/v1/nulla", "Authorization: Bearer tok123\r\n"))) == 404);
 	CHECK(Status(call(Req("DELETE", "/api/v1/hello/x", "Authorization: Bearer tok123\r\n"))) == 405);
 	CHECK(Status(call(Req("GET", "/api/v1/boom", "Authorization: Bearer tok123\r\n"))) == 500);
 	{ auto r = call(Req("POST", "/api/v1/echo", "Authorization: Bearer tok123\r\n", "{\"a\":1}")); CHECK(Status(r) == 201 && Body(r) == "{\"a\":1}"); }
 	{ auto r = call(Req("HEAD", "/api/v1/ping")); CHECK(Status(r) == 200 && Body(r).empty()); }
-	// due richieste nella stessa connessione, in un solo invio
+	// two requests on the same connection, in a single send
 	{ auto r = call(Req("GET", "/api/v1/ping") + Req("GET", "/api/v1/ping"), 2); size_t p = r.find("pong"); CHECK(p != std::string::npos && r.find("pong", p + 1) != std::string::npos); }
-	// limiti
+	// limits
 	CHECK(Status(call("POST /api/v1/echo HTTP/1.1\r\nAuthorization: Bearer tok123\r\nContent-Length: 99999999\r\n\r\n")) == 413);
 	CHECK(Status(call("GET /api/v1/ping HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\n")) == 400);
 	CHECK(Status(call("NONSENSE\r\n\r\n")) == 400);
 
-	// file statici
+	// static files
 	{ auto r = call(Req("GET", "/")); CHECK(Status(r) == 200 && Body(r) == "<html>UI</html>"); }
 	{ auto r = call(Req("GET", "/assets/app.js")); CHECK(Status(r) == 200 && r.find("text/javascript") != std::string::npos); }
-	{ auto r = call(Req("GET", "/downloads")); CHECK(Status(r) == 200 && Body(r) == "<html>UI</html>"); }			// pagina singola: percorso dell'app
+	{ auto r = call(Req("GET", "/downloads")); CHECK(Status(r) == 200 && Body(r) == "<html>UI</html>"); }			// single page: app path
 	CHECK(Status(call(Req("GET", "/assets/manca.js"))) == 404);
 	CHECK(Status(call(Req("GET", "/../segreto.txt"))) != 200);
 	{ auto r = call(Req("GET", "/%2e%2e/segreto.txt")); CHECK(Status(r) != 200 && r.find("NO") == std::string::npos); }
@@ -154,18 +154,18 @@ int main()
 	// WebSocket
 	const std::string upg = "GET /api/v1/events%s HTTP/1.1\r\nHost: x\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n";
 	auto upgrade = [&](const char *q) { char b[512]; snprintf(b, sizeof b, upg.c_str(), q); return std::string(b); };
-	CHECK(Status(call(upgrade(""))) == 401);												// senza token
+	CHECK(Status(call(upgrade(""))) == 401);												// without token
 	{
 		int fd = -1; std::string resp;
 		Pump(loop, [&] { fd = Connect(port); std::string u = upgrade("?token=tok123"); send(fd, u.data(), u.size(), 0); char b[1024]; ssize_t n = recv(fd, b, sizeof b, 0); resp.assign(b, n > 0 ? (size_t)n : 0); return 0; });
-		CHECK(Status(resp) == 101 && resp.find("Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=") != std::string::npos);	// valore dell'RFC 6455
+		CHECK(Status(resp) == 101 && resp.find("Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=") != std::string::npos);	// value from RFC 6455
 		for (int i = 0; i < 20; ++i) loop.RunOnce(10);
 		CHECK(srv.WsClients() == 1);
-		// il client scrive: il gestore lo riceve
+		// the client writes: the handler receives it
 		std::string m = Mask("ciao"); send(fd, m.data(), m.size(), 0);
 		for (int i = 0; i < 50 && wsGot.empty(); ++i) loop.RunOnce(10);
 		CHECK(wsGot == "ciao");
-		// il server trasmette
+		// the server transmits
 		srv.Broadcast("{\"evento\":1}");
 		std::string frame = Pump(loop, [&] { char b[256]; ssize_t n = recv(fd, b, sizeof b, 0); return std::string(b, n > 0 ? (size_t)n : 0); });
 		CHECK(frame.size() == 2 + 12 && (uint8_t)frame[0] == 0x81 && frame.substr(2) == "{\"evento\":1}");
@@ -173,7 +173,7 @@ int main()
 		std::string p = Mask("zz", 9); send(fd, p.data(), p.size(), 0);
 		std::string pong = Pump(loop, [&] { char b[64]; ssize_t n = recv(fd, b, sizeof b, 0); return std::string(b, n > 0 ? (size_t)n : 0); });
 		CHECK(pong.size() == 4 && (uint8_t)pong[0] == 0x8A && pong.substr(2) == "zz");
-		// frame NON mascherato: violazione, il server chiude
+		// NOT masked frame: violation, the server closes
 		std::string bad = std::string("\x81\x02xy", 4); send(fd, bad.data(), bad.size(), 0);
 		std::string cl = Pump(loop, [&] { char b[64]; ssize_t n = recv(fd, b, sizeof b, 0); return std::string(b, n > 0 ? (size_t)n : 0); });
 		CHECK(cl.size() >= 2 && ((uint8_t)cl[0] & 0x0f) == 0x8);

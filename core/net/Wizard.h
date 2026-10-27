@@ -1,10 +1,10 @@
-// LINUX (codice nuovo): Wizard da terminale al primo avvio (Bench 871).
-//   Quando emuled parte da un terminale e non c'e' ancora nessuna configurazione, chiede SOLO cio' che serve ad aprire l'interfaccia web:
-//   su quale indirizzo ascoltare, su quale porta (si verifica che sia libera) e dove tenere il profilo. Scrive ~/.emuled/config.yaml e chiede
-//   se installare emuled come servizio systemd dell'utente; se si', lo avvia, aspetta che l'API risponda e invita ad aprire la pagina web
-//   (dove un secondo Wizard, nel browser, chiede nome utente, password, rete e limiti). Se no, il demone parte nel terminale.
-//   Tutto cio' che tocca il sistema (input, output, comandi, controllo della porta, attesa dell'API) e' iniettabile: il test lo prova senza toccare niente.
-//   Messages in English by default (WizardEnv::english); the Italian texts are kept (emuled sets english=false only with EMULED_LANG=it). Non scarica niente.
+// LINUX (new code): terminal Wizard at first start (Bench 871).
+//   When emuled starts from a terminal and there is no configuration yet, it asks ONLY what is needed to open the web interface:
+//   which address to listen on, which port (checked to be free) and where to keep the profile. Writes ~/.emuled/config.yaml and asks
+//   whether to install emuled as a user systemd service; if yes, it starts it, waits for the API to answer and invites to open the web page
+//   (where a second Wizard, in the browser, asks for user name, password, network and limits). If not, the daemon starts in the terminal.
+//   Everything that touches the system (input, output, commands, port check, API wait) is injectable: the test exercises it without touching anything.
+//   Messages in English by default (WizardEnv::english); the Italian texts are kept (emuled sets english=false only with EMULED_LANG=it). Downloads nothing.
 #pragma once
 #include <cstdint>
 #include <functional>
@@ -16,31 +16,31 @@ namespace emule::net {
 
 struct WizardEnv
 {
-	std::string home;							// cartella dell'utente (~)
-	std::string exe;							// percorso del programma in esecuzione (per l'unita' del servizio)
-	bool english = false;						// messaggi in inglese
-	bool have_systemctl = false;				// systemd c'e': si puo' offrire il servizio
-	bool packaged_unit = false;					// il pacchetto ha gia' installato l'unita' (/usr/lib/systemd/user/emuled.service) e exe e' quello del pacchetto
-	std::function<bool(const std::string &bind, uint16_t port)> port_free;	// la porta e' libera su quell'indirizzo?
-	std::function<int(const std::string &command)> run;						// esegue un comando di shell, ritorna il codice di uscita
-	std::function<bool(const std::string &bind, uint16_t port)> api_up;		// l'API risponde? (si chiede piu' volte, finche' non risponde o scade il tempo)
-	ConfigExtras extras;						// web_dir / templates_dir / mediainfo arrivati da variabili d'ambiente: si scrivono nel file di configurazione
+	std::string home;							// user's home folder (~)
+	std::string exe;							// path of the running program (for the service unit)
+	bool english = false;						// messages in English
+	bool have_systemctl = false;				// systemd is present: the service can be offered
+	bool packaged_unit = false;					// the package already installed the unit (/usr/lib/systemd/user/emuled.service) and exe is the package's one
+	std::function<bool(const std::string &bind, uint16_t port)> port_free;	// is the port free on that address?
+	std::function<int(const std::string &command)> run;						// runs a shell command, returns the exit code
+	std::function<bool(const std::string &bind, uint16_t port)> api_up;		// does the API answer? (asked several times, until it answers or the time runs out)
+	ConfigExtras extras;						// web_dir / templates_dir / mediainfo coming from environment variables: written to the configuration file
 	int api_wait_s = 15;
 };
 
 enum class WizardResult
 {
-	Continue,			// configurazione scritta, nessun servizio: il demone parte nel terminale
-	ServiceStarted,		// configurazione scritta e servizio avviato: il programma puo' uscire con 0
-	Aborted,			// l'utente ha interrotto (fine dell'input): niente e' stato scritto
-	Failed,				// errore (file non scrivibile, servizio non partito): il messaggio e' gia' stato stampato
+	Continue,			// configuration written, no service: the daemon starts in the terminal
+	ServiceStarted,		// configuration written and service started: the program can exit with 0
+	Aborted,			// the user aborted (end of input): nothing was written
+	Failed,				// error (file not writable, service did not start): the message has already been printed
 };
 
-// force = true (emuled --setup): se esiste gia' una configurazione si chiede conferma e se ne tiene una copia (.bak)
+// force = true (emuled --setup): if a configuration already exists it asks for confirmation and keeps a copy (.bak)
 WizardResult RunWizard(std::istream &in, std::ostream &out, const WizardEnv &env, bool force = false);
 
-bool IsPortFree(const std::string &bind, uint16_t port);			// prova a mettersi in ascolto (come fa il demone), poi chiude
+bool IsPortFree(const std::string &bind, uint16_t port);			// tries to listen (as the daemon does), then closes
 bool ApiResponds(const std::string &bind, uint16_t port);			// GET /api/v1/ping
-std::string ServiceUnitText(const std::string &exe);				// l'unita' systemd dell'utente
+std::string ServiceUnitText(const std::string &exe);				// the user's systemd unit
 
 } // namespace emule::net

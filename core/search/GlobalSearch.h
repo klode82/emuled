@@ -1,11 +1,11 @@
-// LINUX (codice nuovo): la ricerca sul server connesso e, volendo, su tutti i server della lista. Nell'originale questa orchestrazione sta nella FINESTRA
-// dei risultati (SearchResultsWnd.cpp: DoNewEd2kSearch e OnTimer); qui e' una classe senza interfaccia grafica con la stessa sequenza:
-//   1. OP_SEARCHREQUEST (TCP) al server connesso;
-//   2. per la ricerca globale, quando il server connesso ha finito di rispondere (o dopo 50 secondi) parte un timer da 750 ms;
-//   3. a ogni scatto si sceglie il server successivo (GetNextSearchServer, con le priorita') e gli si manda per UDP OP_GLOBSEARCHREQ (o REQ2 / REQ3 a seconda
-//      di cio' che il server dichiara: file grandi, estensioni) con lo stesso albero di ricerca;
-//   4. finita la lista (o se la connessione cade) la ricerca si chiude; le risposte UDP in ritardo arrivano ancora.
-// I risultati li raccoglie il ponte (theApp.searchlist->serverHits).
+// LINUX (new code): search on the connected server and, if wanted, on all servers in the list. In the original this orchestration lives in the results WINDOW
+// (SearchResultsWnd.cpp: DoNewEd2kSearch and OnTimer); here it is a class without a GUI with the same sequence:
+//   1. OP_SEARCHREQUEST (TCP) to the connected server;
+//   2. for the global search, when the connected server has finished answering (or after 50 seconds) a 750 ms timer starts;
+//   3. at every tick the next server is chosen (GetNextSearchServer, with priorities) and OP_GLOBSEARCHREQ is sent to it over UDP (or REQ2 / REQ3 depending
+//      on what the server declares: large files, extensions) with the same search tree;
+//   4. when the list is finished (or if the connection drops) the search closes; late UDP answers still arrive.
+// Results are collected by the bridge (theApp.searchlist->serverHits).
 #pragma once
 #include "StdAfx.h"
 #include "search/SearchBuilder.h"
@@ -24,18 +24,18 @@ public:
 	GlobalSearch(const GlobalSearch &) = delete;
 	GlobalSearch &operator=(const GlobalSearch &) = delete;
 
-	// Lancia la ricerca sul server connesso e prepara quella globale (allServers). false = non connessi o espressione vuota. Lancia SearchParseError.
+	// Starts the search on the connected server and prepares the global one (allServers). false = not connected or empty expression. Throws SearchParseError.
 	bool Start(SSearchParams params, bool allServers);
-	void Cancel();									// ferma i timer (le risposte in ritardo si leggono comunque)
-	bool Finished() const { return finished_; }		// tutti i server interrogati (o ricerca annullata)
+	void Cancel();									// stops the timers (late answers are still read)
+	bool Finished() const { return finished_; }		// all servers queried (or search cancelled)
 	unsigned ServersAsked() const { return asked_; }
 	unsigned ServersSkipped() const { return skipped_; }
-	void OnLocalServerAnswered();					// il server connesso ha finito: parte la ricerca globale (chiamata da LocalEd2kSearchEnd)
+	void OnLocalServerAnswered();					// the connected server has finished: the global search starts (called by LocalEd2kSearchEnd)
 
 private:
 	void StartGlobalTimer();
 	void Tick();
-	std::unique_ptr<Packet> searchPacket_;			// copia del pacchetto da mandare ai server per UDP
+	std::unique_ptr<Packet> searchPacket_;			// copy of the packet to send to the servers over UDP
 	bool allServers_ = false, packetUses64Bit_ = false, finished_ = true;
 	unsigned serverCount_ = 0, asked_ = 0, skipped_ = 0;
 	uint64_t localTimer_ = 0, globalTimer_ = 0;

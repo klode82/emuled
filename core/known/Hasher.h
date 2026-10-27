@@ -1,7 +1,7 @@
-// LINUX (codice nuovo): hash ed2k di un file e coda di hashing a thread (HashNextFile/CAddFileThread di eMule).
-// Regola ed2k (FileIdentifier.cpp, GetTheoreticalMD4PartHashCount): file < PARTSIZE: hash = MD4 del file, nessun hash di parte.
-// Altrimenti N = size / PARTSIZE + 1 hash di parte (l'ultima puo' essere vuota se la dimensione e' multipla esatta),
-// hash del file = MD4 della concatenazione degli hash di parte. L'hash AICH non e' calcolato qui (Fase 5).
+// LINUX (new code): ed2k hash of a file and threaded hashing queue (HashNextFile/CAddFileThread of eMule).
+// ed2k rule (FileIdentifier.cpp, GetTheoreticalMD4PartHashCount): file < PARTSIZE: hash = MD4 of the file, no part hash.
+// Otherwise N = size / PARTSIZE + 1 part hashes (the last may be empty if the size is an exact multiple),
+// file hash = MD4 of the concatenation of the part hashes. The AICH hash is not computed here (Phase 5).
 #pragma once
 #include "known/KnownFile.h"
 #include <atomic>
@@ -22,11 +22,11 @@ struct HashResult {
 	bool cancelled = false;
 };
 
-// Sincrono. progress(byte_letti) viene chiamata circa ogni MiB; cancel e' controllato a ogni lettura.
-// Se la dimensione del file cambia durante la lettura il risultato e' un errore (il file e' in scrittura).
+// Synchronous. progress(bytes_read) is called about every MiB; cancel is checked at every read.
+// If the file size changes during reading the result is an error (the file is being written).
 HashResult HashFile(const std::string &path, const std::atomic<bool> *cancel = nullptr, const std::function<void(uint64_t)> &progress = nullptr);
 
-// Coda con N thread di lavoro a bassa priorita'.
+// Queue with N low-priority worker threads.
 class HashPool {
 public:
 	struct Job { std::string path; uint64_t size = 0; uint32_t mtime = 0; };
@@ -34,7 +34,7 @@ public:
 	HashPool(unsigned threads, Done done);
 	~HashPool();
 	void Add(Job j);
-	void Wait();					// ritorna quando la coda e' vuota e nessun lavoro e' in corso
+	void Wait();					// returns when the queue is empty and no job is running
 	void Cancel();					// scarta i lavori in coda e interrompe quelli in corso
 	uint64_t bytes_done() const { return bytes_done_; }
 	size_t pending() const;

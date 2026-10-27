@@ -49,7 +49,7 @@ static char THIS_FILE[] = __FILE__;
 
 using namespace Kademlia;
 
-// LINUX: il percorso di preferencesKad.dat lo passa il chiamante (vuoto = nessun file: il daemon non scrive mai nel profilo senza averlo deciso)
+// LINUX: the path of preferencesKad.dat is passed by the caller (empty = no file: the daemon never writes to the profile without having decided so)
 CPrefs::CPrefs(LPCTSTR szFilename)
 {
 	Init(szFilename);
@@ -116,7 +116,7 @@ void CPrefs::ReadFile()
 	}
 }
 
-// LINUX: scrittura sicura (file temporaneo, controllo, rinomina atomica, copia .bak sana): vedi met/SafeMet.h
+// LINUX: safe write (temp file, check, atomic rename, healthy .bak copy): see met/SafeMet.h
 void CPrefs::WriteFile()
 {
 	if (m_sFilename.IsEmpty())
@@ -129,7 +129,7 @@ void CPrefs::WriteFile()
 	std::string data((const char*)f.GetBuffer(), (size_t)f.GetLength());
 	auto r = emule::met::SafeWriteMet((LPCTSTR)m_sFilename, data, emule::met::ValidatePreferencesKad);
 	if (!r.ok)
-		AddDebugLogLine(false, _T("preferencesKad.dat non scritto: %s"), r.error.c_str());
+		AddDebugLogLine(false, _T("preferencesKad.dat not written: %s"), r.error.c_str());
 }
 
 void CPrefs::SetIPAddress(uint32 uVal)
@@ -295,9 +295,9 @@ bool CPrefs::FindExternKadPort(bool bReset)
 
 uint8 CPrefs::GetMyConnectOptions(bool bEncryption, bool bCallback)
 {
-	// LINUX: copia di ::GetMyConnectOptions (OtherFunctions.cpp), che non puo' stare qui sotto perche' dipende da Kademlia e dal tester UDP.
-	// Bit: 4 = richiamata diretta, 2 = cifratura richiesta, 1 = cifratura preferita, 0 = cifratura supportata.
-	// La richiamata diretta (UDP aperto verificato) si abilitera' col tester del firewall UDP (Fase 4, passo 3).
+	// LINUX: copy of ::GetMyConnectOptions (OtherFunctions.cpp), which cannot live here because it depends on Kademlia and the UDP tester.
+	// Bit: 4 = direct callback, 2 = encryption required, 1 = encryption preferred, 0 = encryption supported.
+	// The direct callback (verified open UDP) will be enabled with the UDP firewall tester (Phase 4, step 3).
 	const uint8 uSupports = static_cast<uint8>(thePrefs.IsCryptLayerEnabled() && bEncryption);
 	const uint8 uRequests = static_cast<uint8>(thePrefs.IsCryptLayerPreferred() && bEncryption);
 	const uint8 uRequires = static_cast<uint8>(thePrefs.IsCryptLayerRequired() && bEncryption);

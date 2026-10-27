@@ -625,7 +625,7 @@ bool CUpDownClient::GetFriendSlot() const
 		case IS_IDNEEDED:
 		case IS_IDBADGUY:
 			return false;
-		// LINUX: gli altri valori non fanno nulla (elencati per far segnalare a -Wswitch i valori nuovi)
+		// LINUX: the other values do nothing (listed so -Wswitch flags new values)
 		case IS_IDENTIFIED:
 		case IS_NOTAVAILABLE:
 			break;

@@ -1,5 +1,5 @@
-// LINUX: testi dei messaggi di server e ricerca, in inglese (le traduzioni passano all'interfaccia web). Testo da emule.rc.
-// GetResString(IDS_X) restituisce il testo stesso: cosi' i file portati restano identici all'originale.
+// LINUX: texts of server and search messages, in English (translations are handled by the web interface). Text from emule.rc.
+// GetResString(IDS_X) returns the text itself: so the ported files stay identical to the original.
 #pragma once
 #include "StdAfx.h"
 #define IDS_CONNECTEDTO "Connection established on: %s"

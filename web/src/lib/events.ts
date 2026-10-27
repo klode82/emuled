@@ -1,4 +1,4 @@
-// WebSocket degli eventi con riconnessione (attesa 1 s, raddoppia fino a 15 s). Il token va nell'indirizzo: il browser non puo' mettere intestazioni.
+// Events WebSocket with reconnection (wait 1 s, doubling up to 15 s). The token goes in the address: the browser cannot set headers.
 import type { ServerEvent } from '@/types'
 
 export type LinkState = 'connecting' | 'open' | 'closed'
@@ -26,7 +26,7 @@ export class EventsClient {
     this.ws = ws
     ws.onopen = () => { this.wait = 1000; this.onState('open') }
     ws.onmessage = (m) => {
-      try { this.onEvent(JSON.parse(String(m.data)) as ServerEvent) } catch { /* messaggio non valido: ignorato */ }
+      try { this.onEvent(JSON.parse(String(m.data)) as ServerEvent) } catch { /* invalid message: ignored */ }
     }
     ws.onclose = () => {
       this.onState('closed')

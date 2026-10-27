@@ -1,5 +1,5 @@
-// CClientCredits letto da clients.met: la lunghezza della chiave pubblica e' un byte del file. Un valore oltre MAXPUBKEYSIZE (file danneggiato o
-// costruito apposta) faceva uscire la memcpy dai buffer (trovato con ASan su un profilo di prova): ora la chiave si considera assente.
+// CClientCredits read from clients.met: the public key length is a byte of the file. A value above MAXPUBKEYSIZE (damaged or
+// purpose-built file) made the memcpy overrun the buffers (found with ASan on a test profile): now the key is considered absent.
 #include "StdAfx.h"
 #include "net/Profile.h"
 #include "ClientCredits.h"

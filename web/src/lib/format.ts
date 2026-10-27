@@ -1,10 +1,10 @@
-// Formati dei numeri, delle dimensioni e dei tempi. Seguono la lingua dell'interfaccia (virgola o punto decimale).
-// Le dimensioni sono in base 1024 con le sigle KB/MB/GB: come eMule, cosi' i numeri coincidono con quelli del client Windows.
+// Formats of numbers, sizes and times. They follow the interface language (decimal comma or point).
+// Sizes are base 1024 with KB/MB/GB abbreviations: like eMule, so the numbers match the Windows client's.
 import { lang, t } from '@/i18n'
 
 const U = ['B', 'KB', 'MB', 'GB', 'TB']
 const nf = (digits: number) => new Intl.NumberFormat(lang(), { minimumFractionDigits: digits, maximumFractionDigits: digits })
-// minKb: la dimensione minima mostrata e' il KB (un file piccolo si vede 0,29 KB, non 300 B)
+// minKb: the minimum size shown is the KB (a small file shows 0.29 KB, not 300 B)
 export function bytes(n: number, digits = 2, minKb = false): string {
   if (!Number.isFinite(n) || n < 0) return '—'
   let i = 0
@@ -22,7 +22,7 @@ export function duration(seconds: number): string {
   if (m) return t('time.m', { m })
   return t('time.s', { s })
 }
-// tempo rimasto: serve una velocita' positiva e qualcosa ancora da scaricare
+// time left: needs a positive speed and something still to download
 export function eta(size: number, completed: number, bps: number): string {
   if (bps <= 0 || completed >= size) return '—'
   return duration((size - completed) / bps)
@@ -32,7 +32,7 @@ export function dateTime(unixSeconds: number): string { return new Intl.DateTime
 export function ed2kLink(name: string, size: number, hash: string): string {
   return `ed2k://|file|${encodeURIComponent(name)}|${size}|${hash}|/`
 }
-// ricava i link ed2k://|file|...|/ da un testo incollato (uno per riga o separati da spazi)
+// extracts the ed2k://|file|...|/ links from pasted text (one per line or separated by spaces)
 export function extractLinks(text: string): string[] {
   return text.match(/ed2k:\/\/\|file\|[^|]*\|\d+\|[0-9A-Fa-f]{32}\|[^\s]*/g) ?? []
 }

@@ -1,8 +1,8 @@
-// LINUX (codice nuovo): importazione di un profilo eMule esistente dal Wizard web (Bench 875). Vedi profile/Import.h.
-//   GET  /api/v1/setup/import                  {available, imported}   available = primo avvio in corso e niente ancora importato
-//   POST /api/v1/setup/import/scan {path, rules?}   guarda la cartella (sola lettura) e propone le regole dei percorsi Windows
-//   POST /api/v1/setup/import {path, rules}    prepara i file e riavvia il demone: all'avvio li mette al loro posto
-// Solo durante il primo avvio (Wizard non finito): non e' un modo per sostituire il profilo in uso quando si vuole.
+// LINUX (new code): import of an existing eMule profile from the web Wizard (Bench 875). See profile/Import.h.
+//   GET  /api/v1/setup/import                  {available, imported}   available = first start in progress and nothing imported yet
+//   POST /api/v1/setup/import/scan {path, rules?}   looks at the folder (read only) and proposes the Windows path rules
+//   POST /api/v1/setup/import {path, rules}    prepares the files and restarts the daemon: at startup it puts them in place
+// Only during first start (Wizard not finished): not a way to replace the profile in use whenever you want.
 #include "api/Auth.h"
 #include "api/HttpServer.h"
 #include "profile/Import.h"
@@ -21,8 +21,8 @@ bool Rules(const json &b, std::vector<profile::ImportRule> &out, std::string &er
 	for (auto &r : *it) {
 		if (!r.is_object() || !r.contains("win") || !r["win"].is_string() || !r.contains("linux") || !r["linux"].is_string()) { err = "ogni regola vuole win e linux (testo)"; return false; }
 		const std::string w = r["win"], l = r["linux"];
-		if (w.size() < 3 || !isalpha((unsigned char)w[0]) || w[1] != ':') { err = "regola non valida: '" + w + "' non e' un percorso Windows (es. Z:\\eMule)"; return false; }
-		if (l.empty() || l[0] != '/') { err = "regola non valida: '" + l + "' non e' un percorso assoluto"; return false; }
+		if (w.size() < 3 || !isalpha((unsigned char)w[0]) || w[1] != ':') { err = "invalid rule: '" + w + "' is not a Windows path (e.g. Z:\\eMule)"; return false; }
+		if (l.empty() || l[0] != '/') { err = "invalid rule: '" + l + "' is not an absolute path"; return false; }
 		out.push_back({w, l});
 	}
 	return true;
@@ -40,16 +40,16 @@ json ScanJson(const profile::ImportScan &s)
 void RegisterImportRoutes(HttpServer &srv, Auth &auth, const std::string &profile_dir, std::function<void()> restart)
 {
 	auto allowed = [&auth, profile_dir] { return auth.SetupPending() && !profile::ImportedAlready(profile_dir); };
-	const char *kNo = "l'importazione e' possibile solo durante il primo avvio, prima di aver finito il Wizard";
+	const char *kNo = "importing is only possible during the first start, before finishing the Wizard";
 	srv.Route("GET", "/api/v1/setup/import", [allowed, profile_dir](const Request &) {
 		const bool ok = allowed(); const char *h = std::getenv("HOME");
-		json cand = json::array(); if (ok) for (const std::string &c : profile::FindImportCandidates(h ? h : "", profile_dir)) cand.push_back(c);		// dove sembra esserci un eMule
+		json cand = json::array(); if (ok) for (const std::string &c : profile::FindImportCandidates(h ? h : "", profile_dir)) cand.push_back(c);		// where an eMule seems to be
 		return Ok({{"available", ok}, {"imported", profile::ImportedAlready(profile_dir)}, {"candidates", cand}});
 	});
 	srv.Route("POST", "/api/v1/setup/import/scan", [allowed, profile_dir, kNo](const Request &r) {
 		if (!allowed()) return Response::Error(409, kNo);
 		json b = json::parse(r.body, nullptr, false);
-		if (!b.is_object() || !b.contains("path") || !b["path"].is_string()) return Response::Error(400, "serve un oggetto JSON con path");
+		if (!b.is_object() || !b.contains("path") || !b["path"].is_string()) return Response::Error(400, "a JSON object is required, with path");
 		std::vector<profile::ImportRule> rules; std::string err;
 		if (!Rules(b, rules, err)) return Response::Error(422, err);
 		profile::ImportScan sc;
@@ -59,7 +59,7 @@ void RegisterImportRoutes(HttpServer &srv, Auth &auth, const std::string &profil
 	srv.Route("POST", "/api/v1/setup/import", [allowed, profile_dir, kNo, restart](const Request &r) {
 		if (!allowed()) return Response::Error(409, kNo);
 		json b = json::parse(r.body, nullptr, false);
-		if (!b.is_object() || !b.contains("path") || !b["path"].is_string()) return Response::Error(400, "serve un oggetto JSON con path");
+		if (!b.is_object() || !b.contains("path") || !b["path"].is_string()) return Response::Error(400, "a JSON object is required, with path");
 		std::vector<profile::ImportRule> rules; std::string err;
 		if (!Rules(b, rules, err)) return Response::Error(422, err);
 		if (!profile::StageImport(b["path"], profile_dir, rules, err)) return Response::Error(422, err);

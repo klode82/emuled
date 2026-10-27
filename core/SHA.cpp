@@ -134,7 +134,7 @@ CString CSHA::HashToHexString(const SHA1 *pHashIn, bool bURN)
 	static LPCTSTR const pszHex = _T("0123456789ABCDEF");
 
 	CString strHash;
-	LPTSTR pszHash = strHash.GetBuffer(SHA1_DIGEST_SIZE * 2 * sizeof(TCHAR));		// LINUX: due caratteri per byte (upstream chiedeva meta' del necessario e scriveva oltre il buffer)
+	LPTSTR pszHash = strHash.GetBuffer(SHA1_DIGEST_SIZE * 2 * sizeof(TCHAR));		// LINUX: two characters per byte (upstream asked for half of what is needed and wrote past the buffer)
 
 	LPBYTE pHash = (LPBYTE)pHashIn;
 	for (int nByte = 0; nByte < SHA1_DIGEST_SIZE; ++nByte) {

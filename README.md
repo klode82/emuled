@@ -34,6 +34,7 @@ A community fork of [eMule 0.72a-community](https://github.com/irwir/eMule), por
 - [What changed compared with eMule](#what-changed-compared-with-emule)
 - [Status](#status)
 - [Installation](#installation) — [Deb / Rpm](#deb--rpm) · [Docker](#docker) · [From source](#building-from-source)
+- [First start](#first-start)
 - [Using emuled](#using-emuled)
 - [Web interface and templates](#web-interface-and-templates)
 - [REST / WebSocket API](#rest--websocket-api)
@@ -88,7 +89,7 @@ Typical uses: an always-on download box / NAS, a headless server, a container, o
 | Protocol / file formats | eD2K, Kad, `known.met`, `*.part.met`, `preferences.dat`, … | **unchanged** and compatible |
 | Service | Desktop program | `systemd` user service, Docker image, `.deb`/`.rpm` |
 | Robustness | — | profile checker, atomic writes, guardian, memory-bug fixes found with sanitizers and fuzzing |
-| Tests | — | 47 C++ tests (ctest), 41 UI tests (vitest), browser end-to-end tests |
+| Tests | — | 47 C++ tests (ctest), 43 UI tests (vitest), browser end-to-end tests |
 | Languages | eMule's own | web UI in 14 languages |
 
 Fixes made along the way include out-of-bounds reads in the original code (for example the key size in `clients.met` and `CPTR()` past the end of an empty string). The original sources are kept **untouched** in [`upstream/`](upstream/emule/0.72a-community) and you can compare them with `diff -ru upstream/emule/0.72a-community/srchybrid core`; the history of every change is in git.
@@ -98,11 +99,11 @@ Fixes made along the way include out-of-bounds reads in the original code (for e
 emuled is **alpha**. Working live against the real network: server connection with high ID, Kad, searches, downloads and uploads with eMule/aMule/Adunanza, AICH recovery, UPnP.
 
 Known gaps — please read before relying on it:
-- `.rpm` packaging is configured but **not tested yet**
+- `.rpm`: installed and started on Fedora 44 (version 0.2.0); the upgrade path (restart of the service) of the `.deb` and `.rpm` is **not tested on a real machine yet**
 - Web templates *Dashboard*, *Studio* and *Mobile first* need more testing with real data and on touch screens
 - Translations other than Italian and English were produced with automatic help and **need native-speaker review**; right-to-left layout is only checked on the *Console* template
 - Some features are not ported or not finished (scheduler, friends/messages, desktop notifications, IP filter auto-update); see [`ROADMAP.md`](ROADMAP.md)
-- Project documentation in `docs/` is in **English**; the terminal messages and log lines of the daemon are still partly in Italian (being translated)
+- Code, documentation and the daemon's messages are in **English**; the terminal Wizard can speak Italian with `EMULED_LANG=it`
 
 ## Installation
 
@@ -114,14 +115,15 @@ Download the package from the [Releases](https://github.com/klode82/emuled/relea
 # Ubuntu 24.04 or Debian 13 (same package)
 sudo apt install ./emuled_<version>_amd64.deb
 
-# Fedora / RHEL family (untested)
+# Fedora / RHEL family
 sudo dnf install ./emuled-<version>-1.x86_64.rpm
-
-# then, as a normal user:
-systemctl --user enable --now emuled
 ```
 
-Open <http://127.0.0.1:8765>, create your account (the setup code is printed by `journalctl --user -u emuled`) and sign in. Configuration lives in `~/.emuled/config.yaml` (created on first start).
+Then, **as a normal user (not root)**, run `emuled` in a terminal: the first time it asks a few questions and can install itself as a service. All the steps are in [First start](#first-start).
+
+- **Upgrade**: installing a newer package over an installed one upgrades it and restarts the `emuled` user service of every logged-in user who has it running (`packaging/postinst`); your profile and `~/.emuled` are not touched. A first install starts nothing.
+- **Remove**: run `emuled --uninstall-service` first (it stops the service and removes the unit emuled wrote for you), then `sudo apt remove emuled` / `sudo dnf remove emuled`. Your profile and `~/.emuled/config.yaml` stay.
+- **Private repository**: the release files can only be downloaded after signing in, for example `gh release download -R klode82/emuled -p '*.deb'` (use `'*.rpm'` for Fedora).
 
 ### Docker
 
@@ -187,7 +189,7 @@ cmake --build build --target emuled
 
 ## First start
 
-Install the package (or build from source), then run **`emuled`** in a terminal. On the first start, if nothing is configured yet, a short text **wizard** asks only what is needed to open the web interface:
+Install the package (or build from source), then run **`emuled`** in a terminal, as the user who will use it (not with `sudo`). On the first start, if nothing is configured yet, a short text **wizard** asks only what is needed to open the web interface:
 
 1. **Where to listen**: only this computer (`127.0.0.1`, recommended) or the whole network (`0.0.0.0`, with a warning);
 2. **The port** of the web interface (default `8765`). The wizard **checks that it is free** and, if another program uses it, suggests the next free one;
@@ -196,6 +198,12 @@ Install the package (or build from source), then run **`emuled`** in a terminal.
 It saves `~/.emuled/config.yaml` and then asks whether to **install emuled as a service** (a systemd *user* service: it starts by itself and keeps running in the background). If you say yes, it starts the service, waits until the web page answers, and tells you the address and the one-time **setup code**. If you say no, emuled starts in the terminal. The wizard is skipped when there is no terminal (systemd, Docker) or when you pass any option. Run **`emuled --setup`** to run it again.
 
 The rest is asked by the web page: you create your account (username and password), then a short **setup wizard** asks your name on the network, the TCP/UDP ports (it warns you, without blocking, if one is taken), protocol obfuscation, speed limits and the Incoming/Temp folders. New ports apply at the next restart of emuled. Folders are picked with a **browse dialog** that shows the folders of the computer running emuled (also available in Preferences).
+
+**Open the page and sign in** (all installs): <http://127.0.0.1:8765> (or the port you chose). The first time it asks you to create the account; it needs the **setup code** that emuled prints in the terminal. With the service the code is in the log (`journalctl --user -u emuled`); with Docker, in `docker logs emuled`.
+
+**Keep it running after you log out:** a user service stops when your last session ends. To keep it running on a server run once `sudo loginctl enable-linger $USER`.
+
+**Reach it from another computer** (a server or a virtual machine): choose `0.0.0.0` in the wizard (or set `api_bind: 0.0.0.0` in `config.yaml`) and open the port in the firewall. On Fedora: `sudo firewall-cmd --add-port=8765/tcp --permanent && sudo firewall-cmd --reload`. The API is then reachable by the whole network: use it only on a network you trust. A safer way is to leave `127.0.0.1` and use an SSH tunnel: `ssh -N -L 8765:127.0.0.1:8765 user@server`, then open `http://127.0.0.1:8765` on your computer.
 
 **Change the port later:** edit `api_port` in `~/.emuled/config.yaml` and restart (`systemctl --user restart emuled`), or set `EMULED_API_PORT`, or run `emuled --setup`. With Docker change the `-p` mapping. If the port is taken the daemon says so in its log (`journalctl --user -u emuled`).
 

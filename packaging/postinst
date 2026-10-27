@@ -1,0 +1,13 @@
+#!/bin/sh
+# After an UPGRADE (not a first install) restart emuled for the users who have it running as a systemd user service, so the new binary is used.
+# Used as the .deb "postinst" and as the .rpm "%post" script. It never fails the installation.
+case "$1" in
+	configure) [ -n "$2" ] || exit 0 ;;				# deb: "configure <old version>" on upgrade
+	*) [ "${1:-1}" -gt 1 ] 2>/dev/null || exit 0 ;;		# rpm: number of installed copies (2 on upgrade)
+esac
+command -v loginctl >/dev/null 2>&1 || exit 0
+loginctl list-users --no-legend 2>/dev/null | while read -r uid _; do
+	systemctl --user --machine="${uid}@.host" daemon-reload >/dev/null 2>&1 || true
+	systemctl --user --machine="${uid}@.host" try-restart emuled.service >/dev/null 2>&1 || true		# try-restart: only if it is running
+done
+exit 0

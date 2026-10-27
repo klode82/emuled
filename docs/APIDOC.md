@@ -2,11 +2,11 @@
 
 Questo manuale spiega, in modo semplice, ogni chiamata dell'API del demone. La descrizione formale, leggibile dalle macchine (OpenAPI 3.0.3), è in [`openapi.json`](openapi.json) e il demone la serve anche a `/api/v1/openapi.json`. Le due cose sono tenute allineate da un test (`ctest`, prova `daemon_api`): ogni percorso dichiarato nella descrizione deve esistere davvero nel demone.
 
-Le sigle e i termini di eMule sono spiegati nel [MANUALE](MANUALE.md); qui sono ripetuti solo quelli che servono a capire un campo.
+Le sigle e i termini di eMule sono spiegati nel [MANUAL](MANUAL.md); qui sono ripetuti solo quelli che servono a capire un campo.
 
 ## 1. Come si parla con il demone
 
-**Avvio.** Il demone è `emuled --run` (vedi MANUALE, B5). L'API è dentro lo stesso processo e parte da sola:
+**Avvio.** Il demone è `emuled --run` (vedi MANUAL, B5). L'API è dentro lo stesso processo e parte da sola:
 
 ```
 emuled --run --profile /percorso/eMule/config --api-port 8765

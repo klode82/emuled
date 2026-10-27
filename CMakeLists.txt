@@ -417,7 +417,7 @@ else()
   message(WARNING "web/dist/templates non c'e': `cmake --install` non installera' i template di serie. Costruirli con: cd web && npm install && npm run build")
 endif()
 install(FILES packaging/emuled-pkg.service DESTINATION lib/systemd/user RENAME emuled.service)
-install(FILES README.md NOTICE.md LICENSE docs/MANUALE.md docs/TEMPLATES.md DESTINATION share/doc/emuled)
+install(FILES README.md NOTICE.md LICENSE docs/MANUAL.md docs/TEMPLATES.md DESTINATION share/doc/emuled)
 
 # ---- pacchetti (task 615): `cmake -S . -B build -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build --target emuled && cpack --config build/CPackConfig.cmake -G DEB` (oppure -G RPM, serve rpmbuild)
 set(CPACK_PACKAGE_NAME emuled)

@@ -97,7 +97,7 @@ struct Args { std::string profile, pathmaps, backup_dir, guard_slot; bool check 
 
 int Usage(const char *me)
 {
-	std::fprintf(stderr, "uso: %s                (senza modalita': il demone; opzioni: --profile, --web-dir, --api-port, --fake-profile, ...; vedi MANUALE)\n       %s [--profile DIR] (--check-profile | --scan-shared | --verify-hashes [--sample N] [--max-size-mb M] | --update-known [--force] | --recover [--force] | --guard-scan --backup-dir DIR | --guard-restore SLOT --backup-dir DIR [--force]) [--pathmap \"WIN=LINUX\"]...\n"
+	std::fprintf(stderr, "uso: %s                (senza modalita': il demone; opzioni: --profile, --web-dir, --api-port, --fake-profile, ...; vedi MANUAL)\n       %s [--profile DIR] (--check-profile | --scan-shared | --verify-hashes [--sample N] [--max-size-mb M] | --update-known [--force] | --recover [--force] | --guard-scan --backup-dir DIR | --guard-restore SLOT --backup-dir DIR [--force]) [--pathmap \"WIN=LINUX\"]...\n"
 		"  --reset-user     crea o reimposta nome utente e password dell'interfaccia web (da terminale; chiude le sessioni gia' aperte)\n"
 		"  --check-profile  sola lettura: valida i .met e riporta cosa si potrebbe recuperare\n"
 		"  --scan-shared    sola lettura: elenca i file condivisi, quanti sono gia' in known.met e quanti vanno calcolati\n"

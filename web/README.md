@@ -53,6 +53,7 @@ non condividono niente. I colori sono token CSS (`--bg`, `--accent`, ...): ogni 
 | `npm test` | test di unità (Vitest): formati (italiano e inglese), store, client API, WebSocket, traduzioni |
 | `npm run e2e:templates` | prova nel browser della scelta del template (pagina d'ingresso, Preferenze, avviso, emergenza): vedi la testa di `e2e/templates.mjs` |
 | `npm run e2e` | prova nel browser vero (Chrome + puppeteer-core) contro un demone acceso: vedi `e2e/flow.mjs` (usa `EMULED_URL=…/t/console/`) |
+| `npm run screenshots` | rifà gli screenshot del README (`docs/images/frontend-*.png`) e le anteprime dei template (`templates/*/preview.png`): avvia da solo un demone di prova offline con quattro download d'esempio (serve `../build/emuled` e `dist/templates`); poi `npm run build` |
 
 ## Com'è fatta
 

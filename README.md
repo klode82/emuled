@@ -202,7 +202,7 @@ The rest is asked by the web page: you create your account (username and passwor
 ## Using emuled
 
 - **Web UI**: <http://127.0.0.1:8765>. Pick the look in *Preferences → Appearance* and the language in *Preferences → Interface*. *About* shows the emuled version and the eMule version it is based on.
-- **Configuration**: `~/.emuled/config.yaml` (keys `config`, `api_port`, `api_bind`, `templates_dir`, `mediainfo`), environment variables `EMULED_*`, or command-line options. Full reference: [`docs/MANUALE.md`](docs/MANUALE.md) (section B5).
+- **Configuration**: `~/.emuled/config.yaml` (keys `config`, `api_port`, `api_bind`, `templates_dir`, `mediainfo`), environment variables `EMULED_*`, or command-line options. Full reference: [`docs/MANUAL.md`](docs/MANUAL.md) (section B5).
 - **Real network ports** are the usual eMule ones: TCP 55662, UDP 55672 (forward them on your router, or enable UPnP in the preferences).
 - **Existing eMule profile**: point `--profile` at it. Paths written by Windows can be translated with `--pathmap 'Y:\eMule=/home/you/eMule'`. Always try it on a *copy* first.
 - **Signing in**: the web UI uses a **username and password**. On the first start it asks you to create the account; it needs the *setup code* that emuled prints in the terminal (with the service: `journalctl --user -u emuled`; with Docker: `docker logs emuled`). You stay signed in on that browser. **Forgot the password?** Run `emuled --reset-user` in a terminal on the computer where emuled runs. Scripts and tools can still use the token in `~/.emuled/profile/emuled.token`.
@@ -305,7 +305,7 @@ git push origin master v0.1.0
 ## Documentation
 
 All in [`docs/`](docs/) (currently in Italian):
-[`MANUALE.md`](docs/MANUALE.md) glossary and reference · [`APIDOC.md`](docs/APIDOC.md) API · [`openapi.json`](docs/openapi.json) · [`TEMPLATES.md`](docs/TEMPLATES.md) · [`TEMPLATE-DA-CONSOLE.md`](docs/TEMPLATE-DA-CONSOLE.md) · [`ROADMAP.md`](ROADMAP.md)
+[`MANUAL.md`](docs/MANUAL.md) glossary and reference · [`APIDOC.md`](docs/APIDOC.md) API · [`openapi.json`](docs/openapi.json) · [`TEMPLATES.md`](docs/TEMPLATES.md) · [`TEMPLATE-DA-CONSOLE.md`](docs/TEMPLATE-DA-CONSOLE.md) · [`ROADMAP.md`](ROADMAP.md)
 
 ## Licence and third-party code
 

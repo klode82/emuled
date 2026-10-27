@@ -244,7 +244,7 @@ add_executable(emuled daemon/emuled.cpp)
 target_link_libraries(emuled emulecore)
 # Check of the real profile, READ-ONLY: must end with 0 (all healthy).
 add_test(NAME emuled_check_profilo_reale COMMAND emuled --profile /home/steveholmes/eMule/config --pathmap "Y:\\eMule=/home/steveholmes/eMule" --check-profile)
-set_tests_properties(emuled_check_profilo_reale PROPERTIES SKIP_REGULAR_EXPRESSION "non trovato")
+set_tests_properties(emuled_check_profilo_reale PROPERTIES SKIP_REGULAR_EXPRESSION "^emuled: profile '[^']*' not found")
 
 add_executable(test_daemon tests/test_daemon.cpp)
 target_link_libraries(test_daemon emulecore)

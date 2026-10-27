@@ -552,7 +552,7 @@ void CClientReqSocket::ProcessPacket(const BYTE *packet, uint32 size, UINT opcod
 		theStats.AddDownDataOverheadFileRequest(size);
 		if (size >= 16 && md4equ(client->GetUploadFileID(), packet))
 			theApp.uploadqueue->RemoveFromUploadQueue(client, _T("Remote client ended transfer."));
-		else
+		else if (size >= 16) // LINUX: a shorter packet made CheckFailedFileIdReqs read 16 bytes past it (found by the fuzzer)
 			client->CheckFailedFileIdReqs(packet);
 		return;
 	case OP_HASHSETREQUEST:

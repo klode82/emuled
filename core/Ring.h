@@ -103,7 +103,7 @@ void CRing<TYPE>::SetBuffer(UINT_PTR nSize)
 	m_nSize = nSize;
 	m_pHead = m_pData = dst;
 	m_pEnd = &dst[nSize];
-	m_pTail = &dst[m_nCount - 1];
+	m_pTail = m_nCount ? &dst[m_nCount - 1] : m_pEnd;		// empty ring: as in the constructor (dst - 1 is not a valid pointer)
 }
 
 template<class TYPE>

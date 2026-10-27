@@ -249,7 +249,7 @@ attribute		: TOK_STRING
 				/* --------- Error Handling --------- */
 
 				| int_opr
-					{ yyerrorf(GetResString(IDS_SEARCH_OPRERR), DbgGetSearchOperatorName($1)); return 1; }
+					{ yyerrorf(GetResString(IDS_SEARCH_OPRERR), (LPCTSTR)DbgGetSearchOperatorName($1)); return 1; }
 
 				| TOK_SIZE int_opr error
 					{ yyerrorf(GetResString(IDS_SEARCH_ATTRERR), _T("@size")); return 1; }

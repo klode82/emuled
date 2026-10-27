@@ -87,8 +87,8 @@ Typical uses: an always-on download box / NAS, a headless server, a container, o
 | Interface | Native window | Web UI on templates + REST/WebSocket API |
 | Protocol / file formats | eD2K, Kad, `known.met`, `*.part.met`, `preferences.dat`, … | **unchanged** and compatible |
 | Service | Desktop program | `systemd` user service, Docker image, `.deb`/`.rpm` |
-| Robustness | — | profile checker, atomic writes, guardian, memory-bug fixes found with sanitizers |
-| Tests | — | 44 C++ tests (ctest), 41 UI tests (vitest), browser end-to-end tests |
+| Robustness | — | profile checker, atomic writes, guardian, memory-bug fixes found with sanitizers and fuzzing |
+| Tests | — | 47 C++ tests (ctest), 41 UI tests (vitest), browser end-to-end tests |
 | Languages | eMule's own | web UI in 14 languages |
 
 Fixes made along the way include out-of-bounds reads in the original code (for example the key size in `clients.met` and `CPTR()` past the end of an empty string). The original sources are kept **untouched** in [`upstream/`](upstream/emule/0.72a-community) and you can compare them with `diff -ru upstream/emule/0.72a-community/srchybrid core`; the history of every change is in git.
@@ -267,7 +267,7 @@ emuled --profile … --guard-restore SLOT --backup-dir DIR [--force]
 ## Testing
 
 ```sh
-ctest --test-dir build --output-on-failure        # 44 C++ tests
+ctest --test-dir build --output-on-failure        # 47 C++ tests
 (cd web && npx vue-tsc --noEmit && npx vitest run)  # type check + UI tests
 (cd web && npm run e2e)                           # browser tests (needs Chrome and a test daemon, see web/e2e/flow.mjs)
 
@@ -275,6 +275,10 @@ ctest --test-dir build --output-on-failure        # 44 C++ tests
 cmake -S . -B build-asan -G Ninja -DEMULE_SANITIZE=address,undefined -DCMAKE_BUILD_TYPE=Debug
 cmake -S . -B build-tsan -G Ninja -DEMULE_SANITIZE=thread -DCMAKE_BUILD_TYPE=Debug
 setarch "$(uname -m)" -R build-tsan/test_known    # TSan needs ASLR off on some kernels
+
+# fuzzing of the parsers of remote data (clang; see docs/MANUAL.md, B7)
+cmake -S . -B build-fuzz -G Ninja -DCMAKE_CXX_COMPILER=clang++ -DEMULE_SANITIZE=address,undefined -DEMULED_FUZZ=ON
+ninja -C build-fuzz fuzz_kad_udp && build-fuzz/fuzz_kad_udp /tmp/kad-work tests/fuzz/corpus/kad_udp -max_total_time=300
 ```
 
 Tests and the test daemons never touch your real profile: they run with `--fake-profile --offline` on random ports.

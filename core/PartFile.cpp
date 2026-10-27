@@ -484,6 +484,7 @@ EPartFileLoadResult CPartFile::ImportShareazaTempfile(LPCTSTR /*in_directory*/, 
 EPartFileLoadResult CPartFile::LoadPartFile(LPCTSTR in_directory, LPCTSTR in_filename, EPartFileFormat *pOutCheckFileFormat)
 {
 	bool isnewstyle;
+	bool bFileSizeTooBig = false; // LINUX: the size tag is checked before SetFileSize allocates the part tables
 	EPartFileFormat partmettype = PMT_UNKNOWN;
 
 	typedef CMap<UINT, UINT, Gap_Struct, Gap_Struct&> CGapMap;
@@ -571,8 +572,12 @@ EPartFileLoadResult CPartFile::LoadPartFile(LPCTSTR in_directory, LPCTSTR in_fil
 					break;
 				case FT_FILESIZE:
 					ASSERT(newtag->IsInt64(true));
-					if (newtag->IsInt64(true))
-						SetFileSize(newtag->GetInt64());
+					if (newtag->IsInt64(true)) {
+						if ((uint64)newtag->GetInt64() > MAX_EMULE_FILE_SIZE)
+							bFileSizeTooBig = true;
+						else
+							SetFileSize(newtag->GetInt64());
+					}
 					break;
 				case FT_TRANSFERRED:
 					ASSERT(newtag->IsInt64(true));
@@ -721,7 +726,7 @@ EPartFileLoadResult CPartFile::LoadPartFile(LPCTSTR in_directory, LPCTSTR in_fil
 					{
 						ASSERT(newtag->IsStr());
 						CAICHHash hash;
-						if (DecodeBase32(newtag->GetStr(), hash) == CAICHHash::GetHashSize()) {
+						if (newtag->IsStr() && DecodeBase32(newtag->GetStr(), hash) == CAICHHash::GetHashSize()) {	// LINUX: a part.met with this tag not a string crashed here
 							m_FileIdentifier.SetAICHHash(hash);
 							m_pAICHRecoveryHashSet->SetMasterHash(hash, AICH_VERIFIED);
 						} else
@@ -800,7 +805,7 @@ EPartFileLoadResult CPartFile::LoadPartFile(LPCTSTR in_directory, LPCTSTR in_fil
 #endif
 	}
 
-	if (m_nFileSize > MAX_EMULE_FILE_SIZE) {
+	if (bFileSizeTooBig || m_nFileSize > MAX_EMULE_FILE_SIZE) {
 		LogError(LOG_STATUSBAR, GetResString(IDS_ERR_FILEERROR), (LPCTSTR)m_partmetfilename, (LPCTSTR)GetFileName(), _T("File size exceeds supported limit"));
 		return PLR_FAILED_OTHER;
 	}
@@ -4264,7 +4269,7 @@ bool CPartFile::GetNextRequestedBlock(CUpDownClient *sender, Requested_Block_Str
 						+ (critRequested ? 20101 : (20201 + almostRareBound - rareBound)) // Criterion 3
 						+ ((partSize > 0) ? 0 : 500)                 // Criterion 4
 						+ (5 * (100 - critCompletion))               // Criterion 4
-						+ (sameChunk ? 0ui16 : randomAdd)            // Criterion 5
+						+ (sameChunk ? (uint16)0 : randomAdd)            // Criterion 5
 						+ bandwidthScore;                            // Criterion 7
 				} else { // common chunk
 					// 30000..30100  requested common chunks

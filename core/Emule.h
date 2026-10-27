@@ -64,7 +64,7 @@ struct CEmuleDlgStub
 {
 	CServerWndStub serverWndObj; CServerWndStub *serverwnd = &serverWndObj;
 	// Server messages (welcome, warnings): in the GUI they are a separate list; in the daemon they go to the Log (later an API event, Phase 6)
-	void AddServerMessageLine(UINT /*flags*/, LPCTSTR fmt, ...) { char b[2048]; va_list ap; va_start(ap, fmt); vsnprintf(b, sizeof b, fmt, ap); va_end(ap); if (b[0]) AddLogLine(false, _T("[server] %s"), b); }
+	void AddServerMessageLine(UINT /*flags*/, LPCTSTR text) { if (text && *text) AddLogLine(false, _T("[server] %s"), text); }	// plain text, NOT a format: it is what the server sent (a "%s" or "%n" in it was interpreted before)
 	CKadWndStub kad; CKadWndStub *kademliawnd = &kad;
 	CSearchWndStub searchwndObj; CSearchWndStub *searchwnd = &searchwndObj;
 	CTransferWndStub transferObj; CTransferWndStub *transferwnd = &transferObj;

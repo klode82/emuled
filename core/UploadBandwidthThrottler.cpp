@@ -609,7 +609,7 @@ UINT UploadBandwidthThrottler::RunInternal()
 
 			// If we couldn't spend all allocated bandwidth in this loop,
 			// some of it is allowed to be saved and used the next loop
-			sint64 newSpendingRate = -SEC2MS((GetStandardListSize() + 1i64) * minFragSize);
+			sint64 newSpendingRate = -SEC2MS((GetStandardListSize() + 1LL) * minFragSize);
 			if (spendingRate < newSpendingRate) {
 				spendingRate = newSpendingRate;
 				lastTickReachedBandwidth = thisLoopTick;

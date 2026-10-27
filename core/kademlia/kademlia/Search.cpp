@@ -539,11 +539,11 @@ void CSearch::StorePacket()
 				if (m_uSearchTermsDataSize == 0) {
 					// JOHNTODO - Need to add ability to change start position.
 					// Start position range (0x0 to 0x7fff)
-					m_pfileSearchTerms.WriteUInt16(0x0000ui16);
+					m_pfileSearchTerms.WriteUInt16((uint16)0x0000);
 				} else {
 					// JOHNTODO - Need to add ability to change start position.
 					// Start position range (0x8000 to 0xffff)
-					m_pfileSearchTerms.WriteUInt16(0x8000ui16);
+					m_pfileSearchTerms.WriteUInt16((uint16)0x8000);
 					m_pfileSearchTerms.Write(m_pucSearchTermsData, m_uSearchTermsDataSize);
 				}
 			} else {

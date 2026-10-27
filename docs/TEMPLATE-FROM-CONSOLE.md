@@ -111,7 +111,7 @@ To try it live without touching the real profile:
 
     mkdir -p /tmp/prova/config
     build/emuled --fake-profile --offline --api-port 18765 --profile /tmp/prova/config --templates-dir web/dist/templates
-    # open http://127.0.0.1:18765/?template=mio   (the token is in /tmp/prova/config/emuled.token)
+    # open http://127.0.0.1:18765/t/mio/   (the token is in /tmp/prova/config/emuled.token)
 
 Development with instant reload: `TEMPLATE=mio EMULED_API=http://127.0.0.1:18765 npm run dev`.
 
@@ -124,7 +124,7 @@ To distribute it: a `.tar.gz` or `.zip` archive of the `dist/templates/mio/` fol
 
 | Symptom | Likely cause |
 |---|---|
-| `l'id deve essere "mio"` | `id:` in `template.yaml` is different from the folder name |
+| `the id must be "mio"` | `id:` in `template.yaml` is different from the folder name |
 | The template does not appear in the list | invalid manifest (look at the Log) or folder not built (`index.html` missing in `dist`) |
 | Blank page | `<RouterView />` missing in the shell, or an error in the browser console |
 | Colors that do not change | variable changed in only one of the three blocks of `tokens.css` |

@@ -79,6 +79,9 @@ typedef const WCHAR *LPCWSTR;
 // MSVC literal suffixes (e.g. 9728000ui64) used by the original source.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wliteral-suffix"
+#ifdef __clang__
+#pragma GCC diagnostic ignored "-Wreserved-user-defined-literal"
+#endif
 constexpr unsigned long long operator""ui64(unsigned long long v) { return v; }
 constexpr unsigned short operator""ui16(unsigned long long v) { return (unsigned short)v; }
 constexpr unsigned int operator""ui32(unsigned long long v) { return (unsigned int)v; }

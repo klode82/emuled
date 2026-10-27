@@ -19,7 +19,7 @@ Status of what the entries mention: **[used]** is already in the code; **[planne
   - B4. The modules of our code, class by class
   - B5. The `emuled` command
   - B6. The tests
-  - B7. Quality tools: ASan, UBSan, TSan
+  - B7. Quality tools: ASan, UBSan, TSan, fuzzing
   - B8. The libraries
   - B9. The project directories
   - B10. Porting rule for every file (checklist)
@@ -109,7 +109,7 @@ Status of what the entries mention: **[used]** is already in the code; **[planne
 
 **fsync** — A call that forces the operating system to write a file's data *really to disk* (otherwise it stays in the cache and a power cut loses it). *Here:* `SafeWriteMet` does `fsync` of the file and of the folder.
 
-**fuzzing** — Trying a program with huge amounts of random or malformed input to bring out errors. **[planned]** in Phase 9 with libFuzzer; a light version (20,000 randomly flipped bits) is already in `test_met`.
+**fuzzing** — Trying a program with huge amounts of random or malformed input to bring out errors. *Here:* `tests/fuzz/` feeds the parsers of everything a stranger can send (Kad and ed2k packets, `.met` files, `ed2k://` links, HTTP requests) to the real code under ASan+UBSan; see B7. A light version (20,000 randomly flipped bits) is also in `test_met`, and `fuzz_smoke` repeats a fixed set of mutations in every `ctest`.
 
 **gap / control packet / data packet** — In the protocol, a *control* packet is a short message (login, request, reply) and has priority; a *data* packet carries a piece of a file and can be split over several sends.
 
@@ -145,9 +145,9 @@ Status of what the entries mention: **[used]** is already in the code; **[planne
 
 **Latin-1** — ISO 8859-1 encoding: like cp1252 but bytes 0x80–0x9F are invisible control characters. `latin1` option of the codepage.
 
-**libcurl** — A library to download files over HTTP (updating `server.met`, `nodes.dat`, the IP filter). **[planned]**.
+**libcurl** — A library to download files over HTTP (updating `server.met`, `nodes.dat`, the IP filter). **[used]**.
 
-**libFuzzer** — LLVM's fuzzing tool. **[planned]**.
+**libFuzzer** — LLVM's fuzzing tool: it runs a function millions of times with inputs it mutates itself, keeping the ones that reach new code (*coverage-guided*). *Here:* the `fuzz_*` programs of `tests/fuzz/` (clang, `-DEMULED_FUZZ=ON`).
 
 **little-endian** — See *endianness*.
 
@@ -167,7 +167,7 @@ Status of what the entries mention: **[used]** is already in the code; **[planne
 
 **MFC** (*Microsoft Foundation Classes*) — The Windows C++ library on which eMule's interface is built (windows, `CString`, `CFile`, ...). It does not exist on Linux: that is why `compat/` exists.
 
-**miniupnpc** — A library to open the router's ports (UPnP). **[planned]**.
+**miniupnpc** — A library to open the router's ports (UPnP). **[used]**.
 
 **MSG_NOSIGNAL / SIGPIPE** — Writing to a closed connection makes the program receive the `SIGPIPE` signal, which normally terminates it. `MSG_NOSIGNAL` avoids that: the send returns an error. *Here:* always on in `Send`.
 
@@ -195,7 +195,7 @@ Status of what the entries mention: **[used]** is already in the code; **[planne
 
 **PARTSIZE** — 9,728,000 bytes (9,500 KB): the size of a **part**, the unit in which eMule divides, verifies and shares files.
 
-**Pinia** — A state manager for Vue. **[planned]** in Phase 7.
+**Pinia** — A state manager for Vue. **[used]**.
 
 **POSITION** — An MFC type for walking through lists and maps (`GetNext(pos)`). *Here:* reproduced in `compat/collections.h`.
 
@@ -231,7 +231,7 @@ Status of what the entries mention: **[used]** is already in the code; **[planne
 
 **slot** — The number of a download in Temp (`001`, `002`, ...). The Guardian tracks the slots; a slot can be taken by another download (state REPLACED).
 
-**SPA** (*Single Page Application*) — A web application that loads once and then updates the page by itself. **[planned]**, Vue 3.
+**SPA** (*Single Page Application*) — A web application that loads once and then updates the page by itself. **[used]**, Vue 3.
 
 **static_assert** — A check done by the compiler: if a condition is false the program does not compile. *Here:* it checks that `DWORD` is 4 bytes and that the structs have the size of the format.
 
@@ -239,7 +239,7 @@ Status of what the entries mention: **[used]** is already in the code; **[planne
 
 **symlink** — A symbolic link to another file. *Here:* in `compat/ci/` to resolve includes with wrong capitalisation and in `SafeWriteMet`, which writes to the real file and leaves the link.
 
-**systemd** — The Linux service manager: it will start `emuled` at boot. **[planned]** in Phase 6.
+**systemd** — The Linux service manager: it starts `emuled` at boot (`packaging/emuled.service`; `emuled --install-service` installs it for your user). **[used]**.
 
 **tag** — A "name = value" pair with a type, used everywhere in the `.met` files and in the ed2k packets (file name, size, gaps, ...). See B2.
 
@@ -261,7 +261,7 @@ Status of what the entries mention: **[used]** is already in the code; **[planne
 
 **UInt128** — A 128-bit number used by Kademlia for identifiers. *Here:* class `Kademlia::CUInt128` (ported).
 
-**UPnP** — A protocol by which a program asks the router to open a port. **[planned]**.
+**UPnP** — A protocol by which a program asks the router to open a port. **[used]**.
 
 **UTF-8 / UTF-16** — Two encodings of Unicode text: UTF-8 uses 1–4 bytes per character (ASCII stays 1 byte), UTF-16 uses 2 or 4 bytes. *Here:* all the internal text is UTF-8 (Bench #554); `shareddir.dat` is UTF-16.
 
@@ -269,7 +269,7 @@ Status of what the entries mention: **[used]** is already in the code; **[planne
 
 **verdict** — The outcome of a validator. *Unsupported* = format recognised but not handled (it is not proven to be broken); *IoError* = the file cannot be read, no judgement on its content.
 
-**Vite / Vue 3 / TypeScript** — Tools for the web interface: Vue is the framework, Vite the build tool, TypeScript the typed language. **[planned]** in Phase 7.
+**Vite / Vue 3 / TypeScript** — Tools for the web interface: Vue is the framework, Vite the build tool, TypeScript the typed language. **[used]**.
 
 **WebSocket** — A channel that stays open between browser and server to send events in real time (download progress, server state). *Here:* **[written]** on `/api/v1/events` (token in `?token=`); the daemon compares the state every second and sends `stats`, `server.state`, `kad.state`, `download.*`, `search.results` (see APIDOC section 6).
 
@@ -559,7 +559,7 @@ Without a config folder anywhere the daemon does not start and says so (exit cod
 
 ## B6. The tests
 
-`ctest --test-dir build --output-on-failure` runs 46 tests. The ones on the real profile work in **read-only** mode and are skipped if the folder is missing.
+`ctest --test-dir build --output-on-failure` runs 47 tests. The ones on the real profile work in **read-only** mode and are skipped if the folder is missing.
 
 | Test | What it checks |
 |---|---|
@@ -589,13 +589,14 @@ Without a config folder anywhere the daemon does not start and says so (exit cod
 | `real_profile` | **the real eMule Windows profile** (copy in `/home/steveholmes/eMule`, read-only; it skips itself if missing): byte-identical `known.met`, recomputed ed2k hashes of 8 shared files (up to 400 MB, 41 blocks each) equal to the Windows ones, and the daemon that **resumes the downloads left by Windows** (`.part.met` 0xE0) with the same percentages (0,0 %, 46,7 %, 83,6 %). It works on copies |
 | `indexed_load` | **Kad with index files already present** (`load_index.dat`, `key_index.dat`): loading writes no errors and leaves no leftovers. Regression test for the "Unable to replace Kad file" that appeared at every start |
 | `eventlog` | **the event log**: numbering that continues after clearing, circular buffer (the oldest lines are lost and it says so), "after the last seen", level filter, debug only with `verbose`, source from the prefix (`[server]`, `[api]`), link to `Log()`/`LogError()`, 8 threads writing together (with TSan) |
+| `fuzz_smoke` | **fixed fuzzing of the parsers** (see B7): every target of `tests/fuzz/` runs on its seed corpus (`tests/fuzz/corpus/`, including the inputs that crashed the code before the fixes) and on 300 deterministic mutations of each seed, in an empty network namespace. Skips itself (exit code 77) if the kernel does not allow the namespace (for example a container or Ubuntu 24.04 with AppArmor restricting unprivileged user namespaces) |
 | `daemon_config` | **the start-up settings**: reading the file (comments, quotes, unknown keys and wrong lines refused with the line number), invalid ports, precedence command line > environment > file; then the real daemon started only with `EMULED_CONFIG` and `EMULED_API_PORT`, only with `--conf`, and without a config folder (clear error, code 2) |
 | `api_http` | the API's HTTP/WebSocket server: token (and `?token=`), paths with parameters, 404/405/413/400, body, static files with attempts to escape the folder (`..`, `%2e%2e`), single page, WebSocket with the RFC 6455 key, masked and unmasked frames, ping/pong, messages from the server, two requests together |
 | `daemon_api` | **`emuled --run` as a real process** (offline) and its API: status, adding by hash and by link, duplicate (409), errors, pause, resume, deletion (the `.part` disappears), servers, the token created with 0600 permissions, **every path of the OpenAPI description exists**, clean stop with SIGTERM (exit code 0, `.part.met` saved) |
 | `prefs_paths` | a `preferences.ini` with Windows paths (`Y:\eMule\Incoming\`, `shareddir.dat`, skin): without a rule the current folder stays empty and the default folders are used; with a `--pathmap` rule the mapped path is used | **And `shareddir.dat` as eMule Windows writes it** (UTF-16 little endian with BOM, CRLF lines, with accents, Japanese and a surrogate pair): correct reading, saving again in UTF-16 (eMule Windows must be able to read it) and read back identical. Before, each line was read with a one-byte offset and **all the shared folders of the Windows profile were discarded**; and saving wrote UTF-8 after the UTF-16 BOM (a file unreadable for Windows). |
 | `download` | **real downloads and uploads** against a fake peer on an address of the machine: a fake ed2k server gives the high ID, the source is added by hand, the fake peer answers like an eMule client (HELLO, name, status, slot, 10 KB blocks). The real `CPartFile` writes the `.part`, checks the MD4 and completes in `Incoming/`: file identical byte for byte. Then the file is shared by itself and a fake client connects to our port and downloads 100.000 bytes from the real `CUploadQueue` |
 
-## B7. Quality tools: ASan, UBSan, TSan
+## B7. Quality tools: ASan, UBSan, TSan, fuzzing
 
 > TSan on this kernel requires turning off address randomization: `setarch x86_64 -R ctest ...`. ASan: `ASAN_OPTIONS=detect_leaks=0`. Builds with a sanitizer leave the assertions (`ASSERT`) active, which in the normal build (NDEBUG) are removed: this is why they find errors that the normal build does not see.
 
@@ -616,7 +617,60 @@ cmake -S . -B build-tsan -G Ninja -DEMULE_SANITIZE=thread -DCMAKE_BUILD_TYPE=Deb
 setarch "$(uname -m)" -R build-tsan/test_known      # on this kernel TSan requires ASLR turned off
 ```
 
-ASan+UBSan go together; **TSan goes alone** (it cannot be combined with ASan). Other quality tools: the compiler's `-Wformat` warning (it found the `%lX` defect with `long` of 32 or 64 bits), `-Wall`, **fuzzing** (planned), and the **golden tests** against eMule Windows.
+### Fuzzing the parsers (`tests/fuzz/`)
+
+**Why.** Everything a stranger can send is parsed by old code that trusts the lengths written in the data: Kad and ed2k packets (UDP and TCP), server lists, `nodes.dat`, `ed2k://` links, HTTP requests of the API. A fuzzer builds inputs by itself, looks at which lines of the program each one runs, and keeps mutating the ones that reach new lines. With ASan+UBSan active, any out-of-bounds access, use after free or undefined construct stops the run and saves the exact input.
+
+**Targets** (one program each, `fuzz_<name>`):
+
+| Target | What it feeds | Entry point |
+|---|---|---|
+| `packet` | eDonkey frames (also compressed) and tags | `Packet`, `UnPackPacket`, `CTag` |
+| `ed2k_link` | `ed2k://` links | `CED2KLink::CreateLinkFromUrl` |
+| `server_tcp` | the stream of an ed2k server | `CServerSocket::PacketReceived` |
+| `server_udp` | datagrams from a server (plain and obfuscated) | `CUDPSocket::OnReceive` through a real socket |
+| `client_udp` | datagrams from clients and Kad nodes (plain, packed, obfuscated) | `CClientUDPSocket::OnReceive` through a real socket |
+| `kad_udp` | Kad packets after decryption | `CKademlia::ProcessPacket` (the listener's dispatcher) |
+| `client_tcp` | the stream of a peer that has just connected | `CClientReqSocket::PacketReceived` |
+| `met` | the nine `.met`/`.dat` validators of `core/met` | `Validate*` |
+| `server_met`, `nodes_dat`, `part_met` | the files a downloaded list, a Kad bootstrap or a damaged Temp folder can hold | `CServerList::AddServerMetToList`, `CRoutingZone::ReadFile`, `CPartFile::LoadPartFile` |
+| `http` | raw bytes on the API port: HTTP/1.1, WebSocket, templates, static files, JSON bodies of the real routes | `HttpServer` with `RegisterRoutes`, over loopback |
+
+Not covered: the reassembly of the TCP stream into packets inside `CEMSocket` (it needs a connected socket pair; the `emsocket` test covers it), and the HTTP *client* that downloads lists from the web (`CHttpClientReqSocket`, `HttpFetch`).
+
+**No network, by construction.** A fuzzed packet can make the code connect to a "client", answer a Kad node or ask a server. Every fuzz program first moves itself into an **empty network namespace** (`unshare(CLONE_NEWUSER | CLONE_NEWNET)`: only a loopback and the fake address `10.200.0.1`) and **refuses to run** if the kernel does not allow it. Nothing can leave the machine. The API target replaces the two routes that act on your file system (`/fs/mkdir`, `PUT /directories`) with a refusal.
+
+**Running them** (clang is needed for libFuzzer):
+
+```
+cmake -S . -B build-fuzz -G Ninja -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+      -DEMULE_SANITIZE=address,undefined -DEMULED_FUZZ=ON
+ninja -C build-fuzz fuzz_kad_udp                       # or any fuzz_<target>
+mkdir -p /tmp/work/kad_udp
+ASAN_OPTIONS=detect_leaks=0 build-fuzz/fuzz_kad_udp /tmp/work/kad_udp tests/fuzz/corpus/kad_udp \
+      -max_total_time=300 -detect_leaks=0 -rss_limit_mb=2048 -artifact_prefix=/tmp/work/
+```
+
+The first folder is the working corpus (the fuzzer writes what it finds there), the second one holds the seeds of the project (read only). On a crash the input is saved as `/tmp/work/crash-<hash>`; replay it with `build-fuzz/fuzz_kad_udp /tmp/work/crash-<hash>`. After fixing the bug copy the file into `tests/fuzz/corpus/<target>/regress-<what>` so that `fuzz_smoke` keeps checking it. `EMULED_FUZZ=ON` also turns undefined behaviour into a stop (`-fno-sanitize-recover`).
+
+`tests/fuzz/make_corpus.py` rebuilds the hand-made seeds (one well-formed message for every opcode that matters). Without clang the **smoke test** still runs in every `ctest` (`ctest -R fuzz_smoke`); `build/test_fuzz_smoke tests/fuzz/corpus 3000` runs 3000 mutations per seed.
+
+**What it found** (each input is kept in the corpus as `regress-*`, so `fuzz_smoke` checks it at every `ctest`):
+
+| Where | Defect | Why it mattered |
+|---|---|---|
+| `CUDPSocket::OnReceive` (server UDP) | a datagram of 1 byte (`0xE3`) made the payload size `-1` (4 GB): read past a 5000-byte stack buffer | anyone could crash the daemon with a single UDP packet (the original eMule has the same flaw) |
+| `CClientReqSocket::ProcessPacket`, `OP_END_OF_DOWNLOAD` | a packet shorter than 16 bytes made `CheckFailedFileIdReqs` read 16 bytes of hash past it (heap over-read) | a connected peer could make the daemon read outside a heap block (an ASan stop; original flaw) |
+| `CEmuleDlgStub::AddServerMessageLine` (`core/Emule.h`) | the text a server sends (`OP_SERVERMESSAGE`) was used as a `printf` format: `%s`, `%n`… in it were interpreted | format-string defect reachable from any ed2k server; now the text is logged as text |
+| `CPartFile::LoadPartFile` | `FT_AICH_HASH` tag that is not a string: its integer value was used as a pointer | crash when loading a damaged or foreign `.part.met` |
+| `CPartFile::LoadPartFile` | a file size far above the 256 GB limit made it allocate the part tables (hundreds of GB) before the limit check | the daemon dies when it finds such a `.part.met` |
+| `CRing::SetCapacity`, `CClientUDPSocket::SendControlData` | pointer `dst - 1` of an empty ring; `memcpy(…, nullptr, 0)` of an empty packet | undefined behaviour, no visible effect on x86 |
+| `core/search/Parser.y`, `Scanner.l` | `CString` objects passed through `...` to the error function (the `%s` printed garbage) | wrong message for a search syntax error |
+| `compat/win_types.h`, `Opcodes.h`, … | MSVC literal suffixes (`9728000ui64`) that clang does not accept | needed to build with clang at all |
+
+**Known limit, not fixed.** `CServerConnect::ConnectionEstablished` deletes the socket (`DestroySocket(sender)`) when the connection is no longer in the "connecting" state, **from inside** the handler that called it (`OP_IDCHANGE` in `CServerSocket::ProcessPacket`), and the handler goes on using the deleted socket. In practice it needs a server socket that was already dropped to still receive a login answer while another server connected first; it is the original eMule design. The `server_tcp` target keeps the connection in the "connecting" state so it does not stop on this; fixing it means deferring the deletion (as `Safe_Delete` does for client sockets).
+
+ASan+UBSan go together; **TSan goes alone** (it cannot be combined with ASan). Other quality tools: the compiler's `-Wformat` warning (it found the `%lX` defect with `long` of 32 or 64 bits), `-Wall`, **fuzzing** (above), and the **golden tests** against eMule Windows.
 
 ## B8. The libraries
 

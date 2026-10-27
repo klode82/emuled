@@ -1,0 +1,8 @@
+GET /api/v1/events?token=tok HTTP/1.1
+Host: x
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==
+Sec-WebSocket-Version: 13
+
+Åãz kamnl&;3~âÄàÄ

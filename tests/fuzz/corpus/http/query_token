@@ -1,0 +1,3 @@
+GET /api/v1/status?token=tok HTTP/1.1
+Host: x
+

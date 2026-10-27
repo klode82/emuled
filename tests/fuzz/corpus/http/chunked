@@ -1,0 +1,10 @@
+POST /api/v1/downloads HTTP/1.1
+Host: x
+Authorization: Bearer tok
+Transfer-Encoding: chunked
+Content-Length: 15
+
+5
+hello
+0
+

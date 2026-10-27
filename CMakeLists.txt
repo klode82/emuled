@@ -21,6 +21,16 @@ if(EMULE_SANITIZE)
   add_link_options(-fsanitize=${EMULE_SANITIZE})
 endif()
 
+# Fuzzing (Bench 612): libFuzzer executables of tests/fuzz, clang only, off by default. The whole core is instrumented for coverage; use it together with
+# -DEMULE_SANITIZE=address,undefined. Undefined behaviour stops the run (-fno-sanitize-recover) so that the fuzzer keeps the input.
+option(EMULED_FUZZ "build the libFuzzer executables of tests/fuzz (clang only)" OFF)
+if(EMULED_FUZZ)
+  if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    message(FATAL_ERROR "EMULED_FUZZ needs clang (cmake -DCMAKE_CXX_COMPILER=clang++)")
+  endif()
+  add_compile_options(-fsanitize=fuzzer-no-link -fno-sanitize-recover=undefined)
+endif()
+
 # eMule includes with different case and backslashes: the symlinks in compat/ci are regenerated at every configuration.
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 execute_process(COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tools/fix_case.py RESULT_VARIABLE FIXCASE_RC)
@@ -280,6 +290,25 @@ add_test(NAME crash COMMAND test_crash)
 add_executable(test_net tests/test_net.cpp)
 target_link_libraries(test_net emulecore)
 add_test(NAME net COMMAND test_net)
+
+# Fuzzing (Bench 612). The smoke test is always built (ctest: fuzz_smoke): fixed mutations of the seed corpus, seconds, no clang needed.
+# The libFuzzer executables only with clang and -DEMULED_FUZZ=ON: tests/fuzz/README in docs/MANUAL.md, "fuzzing".
+add_library(fuzz_targets STATIC tests/fuzz/targets.cpp tests/fuzz/FuzzEnv.cpp)
+target_link_libraries(fuzz_targets emulecore)
+target_include_directories(fuzz_targets PRIVATE tests/fuzz)
+add_executable(test_fuzz_smoke tests/fuzz/fuzz_smoke.cpp)
+target_link_libraries(test_fuzz_smoke fuzz_targets)
+target_include_directories(test_fuzz_smoke PRIVATE tests/fuzz)
+add_test(NAME fuzz_smoke COMMAND test_fuzz_smoke ${CMAKE_SOURCE_DIR}/tests/fuzz/corpus)
+set_tests_properties(fuzz_smoke PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 300 ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0;UBSAN_OPTIONS=halt_on_error=1")
+if(EMULED_FUZZ)
+  foreach(t packet ed2k_link server_tcp server_udp client_udp kad_udp client_tcp met server_met nodes_dat part_met http)
+    add_executable(fuzz_${t} tests/fuzz/fuzz_main.cpp)
+    target_compile_definitions(fuzz_${t} PRIVATE FUZZ_TARGET_NAME="${t}")
+    target_include_directories(fuzz_${t} PRIVATE tests/fuzz)
+    target_link_libraries(fuzz_${t} fuzz_targets -fsanitize=fuzzer)
+  endforeach()
+endif()
 
 add_executable(test_packets tests/test_packets.cpp)
 target_link_libraries(test_packets emulecore)

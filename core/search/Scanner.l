@@ -320,7 +320,7 @@ number			{num1}|{num2}
 					    /* Strings prefixed with '@' are treated as 'invalid' meta-tag id. Otherwise they would be
 					     * silently used as string terms -> a typo would not be noticed by the user */
 					    if (yytext[0] == '@') {
-							yyerrorf(GetResString(IDS_SEARCH_UNKATTR), OptUtf8ToStr(yytext));
+							yyerrorf(GetResString(IDS_SEARCH_UNKATTR), (LPCTSTR)OptUtf8ToStr(yytext));
 						    yyterminate();
 						    /*NOT REACHED*/
 					    }

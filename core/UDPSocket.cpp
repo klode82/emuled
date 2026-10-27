@@ -155,7 +155,9 @@ void CUDPSocket::OnReceive(int nErrorCode)
 				DEBUG_ONLY(DebugLog(_T("Received encrypted packet from server %s, UDPKey %u, Challenge: %u"), (LPCTSTR)pServer->GetListName(), pServer->GetServerKeyUDP(), pServer->GetChallenge()));
 		}
 
-		if (pBuffer[0] == OP_EDONKEYPROT)
+		if (nPayLoadLen < 2) // LINUX: protocol and opcode are 2 bytes; a shorter datagram made the payload size negative (found by the fuzzer: a 1-byte datagram read past the buffer)
+			;
+		else if (pBuffer[0] == OP_EDONKEYPROT)
 			ProcessPacket(pBuffer + 2, nPayLoadLen - 2, pBuffer[1], sockAddr.sin_addr.s_addr, ntohs(sockAddr.sin_port));
 		else if (thePrefs.GetDebugServerUDPLevel() > 0)
 			Debug(_T("***NOTE: ServerUDPMessage from %s:%u - Unknown protocol 0x%02x, Encrypted: %s\n"), (LPCTSTR)ipstr(sockAddr.sin_addr), ntohs(sockAddr.sin_port) - 4, pBuffer[0], (nPayLoadLen == length) ? _T("Yes") : _T("No"));

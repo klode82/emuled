@@ -1,0 +1,6 @@
+POST /api/v1/servers HTTP/1.1
+Host: x
+Authorization: Bearer tok
+Content-Length: 44
+
+{"address":"1.2.3.4","port":4661,"name":"s"}

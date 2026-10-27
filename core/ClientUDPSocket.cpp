@@ -445,7 +445,8 @@ SocketSentBytes CClientUDPSocket::SendControlData(uint32 maxNumberOfBytesToSend,
 				? EncryptOverheadSize(cur_packet->bKad) : 0;
 			uchar *sendbuffer = new uchar[nLen + iLen];
 			memcpy(&sendbuffer[iLen], cur_packet->packet->GetUDPHeader(), 2);
-			memcpy(&sendbuffer[iLen + 2], cur_packet->packet->pBuffer, cur_packet->packet->size);
+			if (cur_packet->packet->size)	// LINUX: an empty packet has no buffer; memcpy with a null pointer is undefined even for 0 bytes
+				memcpy(&sendbuffer[iLen + 2], cur_packet->packet->pBuffer, cur_packet->packet->size);
 
 			if (iLen) {
 				nLen = EncryptSendClient(sendbuffer, nLen, cur_packet->pachTargetClientHashORKadID, cur_packet->bKad, cur_packet->nReceiverVerifyKey, (cur_packet->bKad ? Kademlia::CPrefs::GetUDPVerifyKey(cur_packet->dwIP) : 0u));

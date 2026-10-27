@@ -1,0 +1,6 @@
+POST /api/v1/searches HTTP/1.1
+Host: x
+Authorization: Bearer tok
+Content-Length: 52
+
+{"query":"fight club","method":"kad","type":"video"}

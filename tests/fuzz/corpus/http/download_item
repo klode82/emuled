@@ -1,0 +1,4 @@
+GET /api/v1/downloads/0123456789ABCDEF0123456789ABCDEF/details HTTP/1.1
+Host: x
+Authorization: Bearer tok
+

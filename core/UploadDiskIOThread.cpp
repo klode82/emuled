@@ -233,7 +233,7 @@ void CUploadDiskIOThread::StartCreateNextBlockPackage(UploadingToClient_Struct *
 			pOverlappedRead->oOverlap.InternalHigh = 0;
 			//pOverlappedRead->oOverlap.Offset = LODWORD(currentblock->StartOffset);
 			//pOverlappedRead->oOverlap.OffsetHigh = HIDWORD(currentblock->StartOffset);
-			*(uint64*)&pOverlappedRead->oOverlap.Offset = currentblock->StartOffset;
+			OvSetOffset(&pOverlappedRead->oOverlap, currentblock->StartOffset);		// LINUX: vedi PartFileWriteThread.cpp
 			pOverlappedRead->oOverlap.hEvent = 0;
 			pOverlappedRead->pFile = pFile;
 			pOverlappedRead->pUploadClientStruct = pUploadClientStruct;

@@ -28,6 +28,12 @@ bool ParseConfigFile(const std::string &path, std::map<std::string, std::string>
 std::string FindConfigFile(const std::string &explicitPath, const EnvGetter &env);
 // Crea ~/.emuled/config.yaml con i valori predefiniti (e la cartella, solo per l'utente) se non esiste nessun file di configurazione. Ritorna il percorso creato,
 // "" se non ha creato niente (file gia' presente, o HOME non indicata), false + err se non riesce a scrivere.
+// Il testo del file di configurazione (con i commenti) per questi tre valori: lo usano la creazione automatica e il Wizard da terminale.
+// Valori che arrivano da variabili d'ambiente (EMULED_WEB_DIR, EMULED_TEMPLATES_DIR, EMULED_MEDIAINFO) e che il Wizard non chiede: quando il file si CREA
+// vanno scritti dentro, perche' un servizio systemd non eredita l'ambiente del terminale. Vuoto = riga commentata col valore predefinito.
+struct ConfigExtras { std::string web_dir, templates_dir, mediainfo; };
+ConfigExtras ExtrasFromEnv(const EnvGetter &env);
+std::string DefaultConfigText(const std::string &bind, uint16_t port, const std::string &profile, const ConfigExtras &extras = ConfigExtras());
 bool EnsureDefaultConfigFile(const EnvGetter &env, std::string &created, std::string &err);
 // Applicano valori a s SOVRASCRIVENDO quelli gia' presenti: chiamare prima il file, poi l'ambiente, poi la riga di comando. false + err se un valore non vale.
 bool ApplyFile(DaemonSettings &s, const std::map<std::string, std::string> &kv, std::string &err);

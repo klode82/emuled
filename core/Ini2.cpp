@@ -283,9 +283,9 @@ int CIni::GetInt(LPCTSTR lpszEntry, int nDefault, LPCTSTR lpszSection)
 ULONGLONG CIni::GetUInt64(LPCTSTR lpszEntry, ULONGLONG nDefault, LPCTSTR lpszSection)
 {
 	TCHAR szDefault[MAX_PATH];
-	_sntprintf(szDefault, _countof(szDefault), _T("%llu"), nDefault);
+	_sntprintf(szDefault, _countof(szDefault), _T("%llu"), (unsigned long long)nDefault);
 	szDefault[_countof(szDefault) - 1] = _T('\0');
-	ULONGLONG nResult;
+	unsigned long long nResult;		// LINUX: ULONGLONG e' unsigned long, %llu vuole unsigned long long
 	if (_stscanf(GetString(lpszEntry, szDefault, lpszSection), _T("%llu"), &nResult) != 1)
 		return nDefault;
 	return nResult;

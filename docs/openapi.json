@@ -1186,6 +1186,810 @@
         }
       }
     },
+    "/api/v1/setup": {
+      "get": {
+        "summary": "Il primo avvio e' da completare?",
+        "description": "pending=true dopo la creazione del primo account, finche' il Wizard web non e' finito.",
+        "responses": {
+          "200": {
+            "description": "Stato",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "pending": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": [
+          "Stato"
+        ]
+      }
+    },
+    "/api/v1/setup/done": {
+      "post": {
+        "summary": "Il Wizard di primo avvio e' finito",
+        "description": "Segna il primo avvio come completato (pending=false).",
+        "responses": {
+          "200": {
+            "description": "Fatto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "pending": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": [
+          "Stato"
+        ]
+      }
+    },
+    "/api/v1/setup/import": {
+      "get": {
+        "summary": "Si puo' importare un profilo eMule?",
+        "description": "available=true solo durante il primo avvio (Wizard non finito) e se non si e' gia' importato; imported=true dopo l'importazione. candidates: cartelle del computer che sembrano la configurazione di un eMule (vecchie installazioni ~/.emuled*, ~/.config/emule, ~/eMule/config, Wine, /mnt, /media), solo se available.",
+        "responses": {
+          "200": {
+            "description": "Stato",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "available": {
+                      "type": "boolean"
+                    },
+                    "imported": {
+                      "type": "boolean"
+                    },
+                    "candidates": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": [
+          "Stato"
+        ]
+      },
+      "post": {
+        "summary": "Importa un profilo eMule esistente",
+        "description": "Copia (la cartella di origine non si modifica) i file di configurazione di un eMule, di solito di Windows: hash utente, chiave, crediti, file conosciuti, server, nodi Kad, preferenze. Corregge i percorsi Windows con le regole indicate (o proposte). I file vengono preparati e il demone si riavvia da solo: all'avvio li mette al loro posto (i file sostituiti vanno in pre-import-DATA/). Solo durante il primo avvio.",
+        "responses": {
+          "200": {
+            "description": "Preparato; il demone si riavvia fra meno di un secondo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "staged": {
+                      "type": "boolean"
+                    },
+                    "restarting": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Non e' il primo avvio, o si e' gia' importato",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Cartella non valida, spazio insufficiente o regole sbagliate",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": [
+          "Stato"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "path"
+                ],
+                "properties": {
+                  "path": {
+                    "type": "string"
+                  },
+                  "rules": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "win",
+                        "linux"
+                      ],
+                      "properties": {
+                        "win": {
+                          "type": "string"
+                        },
+                        "linux": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/setup/import/scan": {
+      "post": {
+        "summary": "Guarda un profilo eMule da importare",
+        "description": "Sola lettura. Elenca i file che verrebbero copiati, il nome utente, le cartelle (Incoming, Temp, condivise) e propone le regole dei percorsi Windows (es. Z:/eMule = /mnt/z/eMule) cercando sopra la cartella indicata. Con rules si ricalcola dove finirebbero le cartelle.",
+        "responses": {
+          "200": {
+            "description": "Esito",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "files": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "size": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    },
+                    "total_bytes": {
+                      "type": "integer"
+                    },
+                    "nick": {
+                      "type": "string"
+                    },
+                    "dirs": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "windows": {
+                            "type": "string"
+                          },
+                          "path": {
+                            "type": "string"
+                          },
+                          "mapped": {
+                            "type": "boolean"
+                          },
+                          "exists": {
+                            "type": "boolean"
+                          }
+                        }
+                      }
+                    },
+                    "rules": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "win": {
+                            "type": "string"
+                          },
+                          "linux": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Non e' il primo avvio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Non sembra una cartella di eMule, e' quella di emuled, o regole sbagliate",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": [
+          "Stato"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "path"
+                ],
+                "properties": {
+                  "path": {
+                    "type": "string"
+                  },
+                  "rules": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "win",
+                        "linux"
+                      ],
+                      "properties": {
+                        "win": {
+                          "type": "string"
+                        },
+                        "linux": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ports/test-url": {
+      "get": {
+        "summary": "Indirizzo del test delle porte di emule-project.net",
+        "description": "Come TriggerPortTest di eMule: https://porttest.emule-project.net/connectiontest.php con le porte TCP e UDP IN USO adesso, lang (identificatore di lingua di Windows: 1040 italiano, 1033 inglese; predefinito 1033) e obf=0, oppure obf=1 e clienthash=<hash utente> se l'offuscamento e' acceso. Il demone NON apre l'indirizzo: lo apre il browser su un clic dell'utente; il sito prova a collegarsi alle porte e il demone risponde.",
+        "responses": {
+          "200": {
+            "description": "Indirizzo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "url": {
+                      "type": "string"
+                    },
+                    "tcp": {
+                      "type": "integer"
+                    },
+                    "udp": {
+                      "type": "integer"
+                    },
+                    "obfuscation": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": [
+          "Stato"
+        ],
+        "parameters": [
+          {
+            "name": "lang",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/system/restart": {
+      "post": {
+        "summary": "Riavvia il demone",
+        "description": "Il demone si spegne in modo pulito (salva tutto) e riparte da solo, stesso processo e stessi argomenti (execv); serve per le porte nuove. Risponde subito e riparte dopo meno di un secondo. L'interfaccia aspetta che torni e ricarica la pagina.",
+        "responses": {
+          "200": {
+            "description": "Riavvio in corso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "restarting": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Riavvio non disponibile in questa modalita'",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": [
+          "Stato"
+        ]
+      }
+    },
+    "/api/v1/ports/check": {
+      "get": {
+        "summary": "Le porte sono libere?",
+        "description": "Prova a mettersi in ascolto (TCP) o ad aprire (UDP) le porte indicate, poi chiude. own=true: e' la porta che emuled usa gia' (nessun conflitto). Non cambia niente.",
+        "responses": {
+          "200": {
+            "description": "Esito",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "tcp": {
+                      "type": "object",
+                      "properties": {
+                        "port": {
+                          "type": "integer"
+                        },
+                        "valid": {
+                          "type": "boolean"
+                        },
+                        "free": {
+                          "type": "boolean"
+                        },
+                        "own": {
+                          "type": "boolean"
+                        }
+                      }
+                    },
+                    "udp": {
+                      "type": "object",
+                      "properties": {
+                        "port": {
+                          "type": "integer"
+                        },
+                        "valid": {
+                          "type": "boolean"
+                        },
+                        "free": {
+                          "type": "boolean"
+                        },
+                        "own": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": [
+          "Stato"
+        ],
+        "parameters": [
+          {
+            "name": "tcp",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "udp",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/fs": {
+      "get": {
+        "summary": "Sottocartelle di una cartella del computer del demone",
+        "description": "Per la finestra 'scegli una cartella'. Sono le cartelle del computer dove gira il demone (con Docker: del contenitore). Solo cartelle, mai file; le nascoste solo con hidden=1; al massimo 2000. Senza path parte dalla cartella dell'utente.",
+        "responses": {
+          "200": {
+            "description": "Elenco",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string"
+                    },
+                    "parent": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "home": {
+                      "type": "string"
+                    },
+                    "writable": {
+                      "type": "boolean"
+                    },
+                    "free_bytes": {
+                      "type": "integer"
+                    },
+                    "truncated": {
+                      "type": "boolean"
+                    },
+                    "entries": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "path": {
+                            "type": "string"
+                          },
+                          "readable": {
+                            "type": "boolean"
+                          },
+                          "writable": {
+                            "type": "boolean"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Percorso non assoluto o non e' una cartella (bad_path, not_a_directory)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Percorso non consentito (forbidden_path)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Cartella inesistente (dir_not_found)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": [
+          "Cartelle"
+        ],
+        "parameters": [
+          {
+            "name": "path",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "hidden",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "enum": [
+                0,
+                1
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/fs/mkdir": {
+      "post": {
+        "summary": "Crea una cartella",
+        "description": "Crea UNA cartella; quella che la contiene deve esistere.",
+        "responses": {
+          "201": {
+            "description": "Creata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Percorso non valido (bad_path, bad_dirname)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Percorso non consentito (forbidden_path)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "La cartella che la contiene non esiste (dir_not_found)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "La cartella esiste gia' (dir_exists)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": [
+          "Cartelle"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "path"
+                ],
+                "properties": {
+                  "path": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/status": {
       "get": {
         "summary": "Stato generale",

@@ -560,7 +560,7 @@ bool CUpDownClient::ProcessHelloTypePacket(CSafeMemFile &data)
 		UINT uAddHelloDataSize = (UINT)(data.GetLength() - data.GetPosition());
 		if (uAddHelloDataSize == sizeof(uint32)) {
 			uint32 test = data.ReadUInt32();
-			if (test == 'KDLM') {
+			if (test == 0x4B444C4D) {		// LINUX: 'KDLM' come costante (carattere multiplo non portabile)
 				m_bIsML = true;
 				if (bDbgInfo)
 					m_strHelloInfo += _T("\n  ***AddData: \"MLDK\"");
@@ -2619,7 +2619,7 @@ void CUpDownClient::ProcessChatMessage(CSafeMemFile &data, uint32 nLength)
 			// we have never sent a message to this client, and no message from him has ever passed our filters
 			if (GetChatCaptchaState() != CA_CHALLENGESENT) {
 				// we also aren't currently expecting a CAPTCHA response
-				if (m_fSupportsCaptcha != NULL) {
+				if (m_fSupportsCaptcha) {
 					// and he supports CAPTCHA, so send him on and store the message (without showing for now)
 					if (m_cCaptchasSent < 3) { // no more than 3 tries
 						m_strCaptchaPendingMsg = strMessage;

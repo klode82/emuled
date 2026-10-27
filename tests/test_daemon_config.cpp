@@ -116,6 +116,14 @@ int main(int argc, char **argv)
 			{ std::ofstream(created, std::ios::trunc) << "api_port: 1234\n"; }
 			CHECK(EnsureDefaultConfigFile(env3, created, err) && created.empty());		// c'e' gia': non si tocca
 			kv.clear(); CHECK(ParseConfigFile((home / ".emuled" / "config.yaml").string(), kv, err) && kv["api_port"] == "1234");
+			// cio' che arriva da variabili d'ambiente si scrive nel file creato (un servizio systemd non eredita l'ambiente del terminale)
+			fs::path home2 = base / "home2"; fs::create_directories(home2);
+			std::map<std::string, std::string> e4 = {{"HOME", home2.string()}, {"EMULED_TEMPLATES_DIR", "/x/template"}, {"EMULED_WEB_DIR", "/x/web"}, {"EMULED_MEDIAINFO", "/x/mi"}, {"EMULED_API_PORT", "9100"}, {"EMULED_API_BIND", "0.0.0.0"}};
+			EnvGetter env4 = [&](const char *n) -> const char * { auto it = e4.find(n); return it == e4.end() ? nullptr : it->second.c_str(); };
+			std::string created4; CHECK(EnsureDefaultConfigFile(env4, created4, err) && !created4.empty());
+			kv.clear(); CHECK(ParseConfigFile(created4, kv, err) && kv["templates_dir"] == "/x/template" && kv["web_dir"] == "/x/web" && kv["mediainfo"] == "/x/mi" && kv["api_port"] == "9100" && kv["api_bind"] == "0.0.0.0");
+			CHECK(fs::exists(home2 / ".emuled" / "profile"));		// profilo predefinito creato (EMULED_CONFIG non c'era)
+			{ std::string t = DefaultConfigText("127.0.0.1", 8765, "~/p"); kv.clear(); std::ofstream(base / "d.yaml") << t; CHECK(ParseConfigFile((base / "d.yaml").string(), kv, err) && !kv.count("templates_dir") && t.find("# templates_dir:") != std::string::npos && t.find("/usr/share/emuled/templates") != std::string::npos); }	// senza variabili: righe commentate
 		}
 	}
 

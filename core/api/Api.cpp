@@ -388,6 +388,7 @@ void RegisterRoutes(HttpServer &srv, double started_s, const DaemonHooks &hooks)
 {
 	RegisterTransferRoutes(srv, hooks);
 	RegisterPrefsRoutes(srv, hooks);
+	RegisterFsRoutes(srv);
 	RegisterLogRoutes(srv);
 	srv.Route("GET", "/api/v1/kad", [](const Request &) { return Ok(KadJson()); });
 	srv.Route("GET", "/api/v1/ping", [](const Request &) { return Ok({{"pong", true}}); });

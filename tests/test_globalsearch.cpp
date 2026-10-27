@@ -75,8 +75,8 @@ int main()
 		if (!ReadPkt(c, op, pl) || op != 0x01) { close(c); return; }
 		std::string m = "ciao"; uint16_t ml = 4; std::string mm((const char*)&ml, 2); mm += m;
 		std::string out = Pkt(0x38, mm) + Pkt(0x40, U32(0x0A0B0C0D) + U32(0x0D)) + Pkt(0x34, U32(10) + U32(20));
-		write(c, out.data(), out.size());
-		if (ReadPkt(c, op, pl) && op == 0x16) { tcpSearch = pl; std::string o2 = Pkt(0x33, U32(1) + Hit('\x0A', "Fight Club (TCP).avi", 700000000u, 5)); write(c, o2.data(), o2.size()); }
+		(void)!write(c, out.data(), out.size());
+		if (ReadPkt(c, op, pl) && op == 0x16) { tcpSearch = pl; std::string o2 = Pkt(0x33, U32(1) + Hit('\x0A', "Fight Club (TCP).avi", 700000000u, 5)); (void)!write(c, o2.data(), o2.size()); }
 		while (!stop) usleep(50000);
 		close(c);
 	});

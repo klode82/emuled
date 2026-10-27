@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 project(emule_linux CXX)
 
-set(EMULED_VERSION 0.1.0)		# versione di emuled (non quella di eMule): il workflow GitHub ne ricava il tag v<versione>
+set(EMULED_VERSION 0.2.0)		# versione di emuled (non quella di eMule): il workflow GitHub ne ricava il tag v<versione>
 set(EMULED_UPSTREAM "upstream/emule/0.72a-community")	# sorgenti originali di eMule (sola lettura); gli script in tools/ la leggono da qui
 set(EMULED_BASE_VERSION "eMule 0.72a-community")	# il codice da cui deriva
 add_compile_definitions(EMULED_VERSION="${EMULED_VERSION}" EMULED_BASE_VERSION="${EMULED_BASE_VERSION}")
@@ -76,6 +76,8 @@ add_library(emulecore STATIC
   ${FLEX_SearchScanner_OUTPUTS}
   core/net/KadProbe.cpp
   core/net/DaemonConfig.cpp
+  core/net/Wizard.cpp
+  core/net/Banner.cpp
   core/templates/Manifest.cpp
   core/templates/Registry.cpp
   core/CompletedDownloads.cpp
@@ -87,6 +89,8 @@ add_library(emulecore STATIC
   core/api/Api.cpp
   core/api/Auth.cpp
   core/api/AuthApi.cpp
+  core/api/FsApi.cpp
+  core/api/ImportApi.cpp
   core/api/Search.cpp
   core/api/ServerUpdate.cpp
   core/api/Content.cpp
@@ -176,6 +180,7 @@ add_library(emulecore STATIC
   core/guardian/Guardian.cpp
   core/net/EventLoop.cpp
   core/net/AsyncSocketEx.cpp
+  core/profile/Import.cpp
   core/profile/IniFile.cpp
   core/profile/Profile.cpp
   core/profile/ProfileCheck.cpp
@@ -308,6 +313,16 @@ add_test(NAME dgram_crypt COMMAND test_dgram_crypt)
 add_executable(test_auth tests/test_auth.cpp)
 target_link_libraries(test_auth emulecore)
 add_test(NAME auth COMMAND test_auth)
+
+add_executable(test_wizard tests/test_wizard.cpp)
+target_link_libraries(test_wizard emulecore)
+add_test(NAME wizard COMMAND test_wizard)
+add_executable(test_banner tests/test_banner.cpp)
+target_link_libraries(test_banner emulecore)
+add_test(NAME banner COMMAND test_banner)
+add_executable(test_import tests/test_import.cpp)
+target_link_libraries(test_import emulecore)
+add_test(NAME import COMMAND test_import)
 
 add_executable(test_kad_net tests/test_kad_net.cpp)
 target_link_libraries(test_kad_net emulecore)

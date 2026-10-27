@@ -81,7 +81,7 @@ void Log(UINT, LPCTSTR pszLine, ...)
 void DebugHexDump(const void *data, UINT lenData)
 {
 	for (UINT pos = 0; pos < lenData; pos += 16) {
-		UINT n = lenData - pos < 16 ? lenData - pos : 16; std::string line; char b[8];
+		UINT n = lenData - pos < 16 ? lenData - pos : 16; std::string line; char b[16];
 		snprintf(b, sizeof b, "%08X ", pos); line += b;
 		for (UINT i = 0; i < n; ++i) { snprintf(b, sizeof b, " %02X", ((const unsigned char*)data)[pos + i]); line += b; if (i == 7) line += ' '; }
 		line.append(60 > line.size() ? 60 - line.size() : 0, ' ');

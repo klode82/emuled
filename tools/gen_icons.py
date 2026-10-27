@@ -1,0 +1,40 @@
+#!/usr/bin/env python3
+"""Genera le icone derivate dall'icona principale docs/images/emuled_icon.png (1024x1024, RGBA):
+   - web/public/emuled_favicon.png (64x64)           la favicon dei template
+   - web/src/assets/emuled_logo_transparent.png (512x512)   il logo nell'interfaccia (accesso, Wizard, barre dei template)
+   - core/net/BannerArt.inc                           l'icona a caratteri (quadranti Unicode) mostrata all'avvio da riga di comando
+Uso: python3 tools/gen_icons.py      (serve Pillow e numpy)"""
+from pathlib import Path
+from PIL import Image
+import numpy as np
+
+ROOT = Path(__file__).resolve().parent.parent
+SRC = ROOT / "docs/images/emuled_icon.png"
+COLS, ROWS, THRESHOLD = 34, 17, 0.45		# dimensione in caratteri dell'icona e copertura minima per accendere un quarto di carattere
+QUAD = " ▘▝▀▖▌▞▛▗▚▐▜▄▙▟█"				# indice = bit: 1 alto-sx, 2 alto-dx, 4 basso-sx, 8 basso-dx
+
+
+def main():
+    icon = Image.open(SRC).convert("RGBA")
+    icon.resize((64, 64), Image.LANCZOS).save(ROOT / "web/public/emuled_favicon.png", optimize=True)
+    icon.resize((512, 512), Image.LANCZOS).save(ROOT / "web/src/assets/emuled_logo_transparent.png", optimize=True)
+
+    # icona a caratteri: solo le parti rosse (le linee), il fondo scuro resta vuoto
+    bb = icon.getchannel("A").point(lambda a: 255 if a > 40 else 0).getbbox()
+    im = icon.crop(bb); w, h = im.size; side = max(w, h)
+    sq = Image.new("RGBA", (side, side), (0, 0, 0, 0)); sq.paste(im, ((side - w) // 2, (side - h) // 2))
+    a = np.asarray(sq).astype(float)
+    red = ((a[..., 3] > 110) & (a[..., 0] > 120) & (a[..., 0] > a[..., 1] * 1.6)).astype("uint8") * 255
+    cov = np.asarray(Image.fromarray(red).resize((COLS * 2, ROWS * 2), Image.BOX)).astype(float) / 255 > THRESHOLD
+    lines = []
+    for y in range(ROWS):
+        lines.append("".join(QUAD[int(cov[y*2][x*2]) | int(cov[y*2][x*2+1]) << 1 | int(cov[y*2+1][x*2]) << 2 | int(cov[y*2+1][x*2+1]) << 3] for x in range(COLS)).rstrip())
+    out = "// Generato da tools/gen_icons.py (non modificare a mano): l'icona di emuled a caratteri, %d colonne per %d righe.\n" % (COLS, ROWS)
+    out += "static const int kBannerIconCols = %d;\nstatic const char *const kBannerIcon[] = {\n" % COLS
+    out += "".join('\t"%s",\n' % l for l in lines) + "};\n"
+    (ROOT / "core/net/BannerArt.inc").write_text(out, encoding="utf-8")
+    print("favicon, logo e", len(lines), "righe di icona a caratteri")
+
+
+if __name__ == "__main__":
+    main()

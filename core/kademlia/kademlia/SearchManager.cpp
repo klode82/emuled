@@ -33,6 +33,7 @@ their client on the eMule forum.
 #include "emule.h"
 #include "kademlia/kademlia/SearchManager.h"
 #include "kademlia/kademlia/Search.h"
+#include "kademlia/routing/Contact.h"
 #include "kademlia/kademlia/Tag.h"
 #include "kademlia/kademlia/Defines.h"
 #include "kademlia/kademlia/Kademlia.h"

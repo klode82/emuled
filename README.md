@@ -88,7 +88,7 @@ Typical uses: an always-on download box / NAS, a headless server, a container, o
 | Protocol / file formats | eD2K, Kad, `known.met`, `*.part.met`, `preferences.dat`, … | **unchanged** and compatible |
 | Service | Desktop program | `systemd` user service, Docker image, `.deb`/`.rpm` |
 | Robustness | — | profile checker, atomic writes, guardian, memory-bug fixes found with sanitizers |
-| Tests | — | 42 C++ tests (ctest), 38 UI tests (vitest), browser end-to-end tests |
+| Tests | — | 44 C++ tests (ctest), 41 UI tests (vitest), browser end-to-end tests |
 | Languages | eMule's own | web UI in 14 languages |
 
 Fixes made along the way include out-of-bounds reads in the original code (for example the key size in `clients.met` and `CPTR()` past the end of an empty string). The original sources are kept **untouched** in [`upstream/`](upstream/emule/0.72a-community) and you can compare them with `diff -ru upstream/emule/0.72a-community/srchybrid core`; the history of every change is in git.
@@ -185,6 +185,20 @@ cmake --build build --target emuled
 (cd build && cpack -G DEB)        # or: cpack -G RPM   (needs rpmbuild)
 ```
 
+## First start
+
+Install the package (or build from source), then run **`emuled`** in a terminal. On the first start, if nothing is configured yet, a short text **wizard** asks only what is needed to open the web interface:
+
+1. **Where to listen**: only this computer (`127.0.0.1`, recommended) or the whole network (`0.0.0.0`, with a warning);
+2. **The port** of the web interface (default `8765`). The wizard **checks that it is free** and, if another program uses it, suggests the next free one;
+3. **The folder** where emuled keeps its data (default `~/.emuled/profile`).
+
+It saves `~/.emuled/config.yaml` and then asks whether to **install emuled as a service** (a systemd *user* service: it starts by itself and keeps running in the background). If you say yes, it starts the service, waits until the web page answers, and tells you the address and the one-time **setup code**. If you say no, emuled starts in the terminal. The wizard is skipped when there is no terminal (systemd, Docker) or when you pass any option. Run **`emuled --setup`** to run it again.
+
+The rest is asked by the web page: you create your account (username and password), then a short **setup wizard** asks your name on the network, the TCP/UDP ports (it warns you, without blocking, if one is taken), protocol obfuscation, speed limits and the Incoming/Temp folders. New ports apply at the next restart of emuled. Folders are picked with a **browse dialog** that shows the folders of the computer running emuled (also available in Preferences).
+
+**Change the port later:** edit `api_port` in `~/.emuled/config.yaml` and restart (`systemctl --user restart emuled`), or set `EMULED_API_PORT`, or run `emuled --setup`. With Docker change the `-p` mapping. If the port is taken the daemon says so in its log (`journalctl --user -u emuled`).
+
 ## Using emuled
 
 - **Web UI**: <http://127.0.0.1:8765>. Pick the look in *Preferences → Appearance* and the language in *Preferences → Interface*. *About* shows the emuled version and the eMule version it is based on.
@@ -251,7 +265,7 @@ emuled --profile … --guard-restore SLOT --backup-dir DIR [--force]
 ## Testing
 
 ```sh
-ctest --test-dir build --output-on-failure        # 42 C++ tests
+ctest --test-dir build --output-on-failure        # 44 C++ tests
 (cd web && npx vue-tsc --noEmit && npx vitest run)  # type check + UI tests
 (cd web && npm run e2e)                           # browser tests (needs Chrome and a test daemon, see web/e2e/flow.mjs)
 

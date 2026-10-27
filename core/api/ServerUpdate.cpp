@@ -97,6 +97,7 @@ void Finish(Fetch &j)
 		return;
 	}
 	Remember(j.url);
+	theApp.serverlist->SaveServermetToFile();		// i server aggiunti da un indirizzo web si salvano subito (come l'aggiunta di un server solo, POST /servers): altrimenti li perdi se il demone non si ferma in modo pulito
 	const INT_PTR now = theApp.serverlist->GetServerCount();
 	g_state = {{"state", "done"}, {"url", j.url}, {"added", (int64_t)(now - before)}, {"total", (int64_t)now}};
 	AddLogLine(false, _T("Server: lista aggiornata da %s: %d nuovi, %d in tutto"), j.url.c_str(), (int)(now - before), (int)now);

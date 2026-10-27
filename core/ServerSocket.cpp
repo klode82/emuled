@@ -209,7 +209,7 @@ bool CServerSocket::ProcessPacket(const BYTE *packet, uint32 size, uint8 opcode)
 						iDynIP += _countof(sDynIP) - 1;
 						int iBracket = message.Find(_T(']'), iDynIP);
 						if (iBracket > 0) {
-							const CString &dynip(message.Mid(iDynIP, iBracket - iDynIP).Trim());
+							const CString dynip(message.Mid(iDynIP, iBracket - iDynIP).Trim());		// LINUX: copia (con "const CString &" restava un riferimento al temporaneo di Mid(), gia' distrutto)
 							if (!dynip.IsEmpty() && dynip.GetLength() < 51) {
 								// Verify that we really received a DN.
 								if (pServer && inet_addr((CStringA)dynip) == INADDR_NONE) {

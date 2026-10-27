@@ -43,7 +43,7 @@ std::string Hmac(const std::string &key, const std::string &msg)
 Auth::Auth(std::string dir)
 {
 	if (!dir.empty() && dir.back() != '/') dir += '/';
-	path_ = dir + "emuled.users";
+	path_ = dir + "emuled.users"; setup_path_ = dir + "emuled.setup";
 }
 
 bool Auth::ValidName(const std::string &n)
@@ -127,6 +127,9 @@ bool Auth::VerifyToken(const std::string &token, time_t now)
 	size_t bar = payload.find('|'); if (bar == std::string::npos || payload.substr(0, bar) != u.name) return false;
 	return std::atoll(payload.c_str() + bar + 1) > (long long)now;
 }
+
+bool Auth::SetupPending() { std::ifstream f(setup_path_); std::string s; return f && std::getline(f, s) && s == "pending"; }
+void Auth::MarkSetup(bool pending) { std::ofstream f(setup_path_, std::ios::trunc); f << (pending ? "pending\n" : "done\n"); ::chmod(setup_path_.c_str(), 0600); }
 
 bool Auth::AllowAttempt(const std::string &peer, time_t now)
 {

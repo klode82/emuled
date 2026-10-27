@@ -29,12 +29,16 @@ public:
 	bool AllowAttempt(const std::string &peer, time_t now);
 	void RecordFailure(const std::string &peer, time_t now);
 	void RecordSuccess(const std::string &peer);
+	// Wizard web di primo avvio: <profilo>/emuled.setup vale "pending" dopo la creazione del primo account e "done" a procedura finita; senza il file (profili
+	// di prima di questa funzione) non c'e' niente da fare.
+	bool SetupPending();
+	void MarkSetup(bool pending);
 	void SetIterations(unsigned n) { iter_override_ = n; }	// solo prove: meno giri di PBKDF2
 
 private:
 	struct User { std::string name, salt, hash, secret; unsigned iter = 0; };
 	bool Load(User &u);										// rilegge il file se e' cambiato
-	std::string path_;
+	std::string path_, setup_path_;
 	std::mutex m_;
 	User user_; bool loaded_ = false; long long stamp_ = -1;
 	unsigned iter_override_ = 0;

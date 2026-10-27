@@ -16,9 +16,12 @@
 #include "net/DownloadRun.h"
 #include "net/Daemon.h"
 #include "net/DaemonConfig.h"
+#include "net/Wizard.h"
+#include "net/Banner.h"
 #include "net/UpnpProbe.h"
 #include "api/Auth.h"
 #include <termios.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include <iostream>
 #include "Emule.h"
@@ -302,8 +305,43 @@ static int ResetUser(const std::string &profile)
 
 // Modalita' demone (predefinita, --run facoltativo): emuled [--profile CONFIG_DIR] [--tcp-port P] [--udp-port Q] [--no-kad] [--server IP:PORTA] [--fake-profile] [--add LINK]... [--pathmap "Y:\\eMule=/dir"]...
 //                    [--status-interval N] [--max-seconds N] [--verbose]
+// Wizard da terminale (Bench 871): parte da solo con "emuled" senza argomenti, da un terminale, se non c'e' ancora nessuna configurazione; "emuled --setup" lo rilancia.
+// Ritorna -1 se il demone deve continuare a partire, altrimenti il codice di uscita del programma.
+static int MaybeRunWizard(int argc, char **argv)
+{
+	const bool force = argc == 2 && std::string(argv[1]) == "--setup";
+	if (!force && argc != 1) return -1;												// con argomenti l'utente sa cosa fa
+	if (!isatty(STDIN_FILENO) || !isatty(STDOUT_FILENO)) return force ? (std::fprintf(stderr, "emuled --setup va eseguito da un terminale.\n"), 2) : -1;		// systemd, Docker, test: niente domande
+	const emule::net::EnvGetter env = [](const char *n) { return std::getenv(n); };
+	const char *home = std::getenv("HOME");
+	if (!home || !*home) return -1;
+	if (!force) {
+		// saltano il Wizard solo le variabili che decidono cio' che il Wizard chiede (configurazione, profilo, porta, indirizzo: Docker, servizi); EMULED_TEMPLATES_DIR, EMULED_WEB_DIR e EMULED_MEDIAINFO non lo toccano
+		for (const char *v : {"EMULED_CONF", "EMULED_CONFIG", "EMULED_API_PORT", "EMULED_API_BIND"}) if (std::getenv(v) && *std::getenv(v)) return -1;
+		if (!emule::net::FindConfigFile("", env).empty()) return -1;						// c'e' gia' una configurazione
+	}
+	emule::net::WizardEnv we; we.home = home; we.extras = emule::net::ExtrasFromEnv(env);
+	std::error_code ec; we.exe = fs::read_symlink("/proc/self/exe", ec).string();
+	const char *lang = std::getenv("EMULED_LANG");		// the Wizard always starts in English; the Italian texts are kept: EMULED_LANG=it
+	we.english = !(lang && std::string(lang).rfind("it", 0) == 0);
+	we.have_systemctl = fs::exists("/run/systemd/system", ec) && (fs::exists("/usr/bin/systemctl", ec) || fs::exists("/bin/systemctl", ec));
+	we.packaged_unit = we.exe == "/usr/bin/emuled" && fs::exists("/usr/lib/systemd/user/emuled.service", ec);
+	we.port_free = emule::net::IsPortFree; we.api_up = emule::net::ApiResponds;
+	we.run = [](const std::string &c) { int r = std::system(c.c_str()); return WIFEXITED(r) ? WEXITSTATUS(r) : 1; };
+	switch (emule::net::RunWizard(std::cin, std::cout, we, force)) {
+		case emule::net::WizardResult::Continue: return force ? 0 : -1;
+		case emule::net::WizardResult::ServiceStarted: return 0;
+		case emule::net::WizardResult::Aborted: return force ? 0 : 1;
+		default: return 1;
+	}
+}
+
+static char **g_argv = nullptr;		// per il riavvio del demone (execv)
+
 int RunDaemonCmd(int argc, char **argv)
 {
+	{ bool quiet = false; for (int i = 1; i < argc; ++i) if (std::string(argv[i]) == "--reset-user") quiet = true; if (!quiet) emule::net::PrintBanner(stdout); }		// header (version, eMule base version, project link); not for --reset-user, which prints only what was asked
+	if (int rc = MaybeRunWizard(argc, argv); rc >= 0) return rc;
 	emule::net::DaemonOptions o; std::string prof; bool resetUser = false;
 	// valori di avvio: file di configurazione, poi variabili d'ambiente; la riga di comando (sotto) vince su entrambi
 	{
@@ -358,11 +396,14 @@ int RunDaemonCmd(int argc, char **argv)
 	if (prof.empty()) { std::fprintf(stderr, "emuled --run vuole la cartella di configurazione: --profile CARTELLA, oppure EMULED_CONFIG, oppure config: ... nel file di configurazione (~/.emuled/config.yaml)\n"); return 2; }
 	o.config_dir = fs::absolute(prof).lexically_normal().string();
 	if (resetUser) return ResetUser(o.config_dir);
-	return emule::net::RunDaemon(o);
+	const int rc = emule::net::RunDaemon(o);
+	if (rc == emule::net::kRestartExit) { std::fflush(stdout); ::execv("/proc/self/exe", g_argv); std::perror("emuled: riavvio non riuscito"); return 1; }		// stesso processo, stessi argomenti
+	return rc;
 }
 
 int main(int argc, char **argv)
 {
+	g_argv = argv;
 	// Senza una modalita' di strumento (--check-profile, --probe-*, --search, ...) emuled e' il demone; --run resta valido ma non serve
 	static const char *const kTools[] = {"--check-ports", "--check-profile", "--download", "--guard-restore", "--guard-scan", "--probe-server", "--probe-server-met", "--probe-serverlist",
 		"--probe-kad", "--probe-search", "--probe-sources", "--recover", "--scan-shared", "--search", "--update-known", "--upnp-discover", "--verify-hashes"};

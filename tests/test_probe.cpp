@@ -38,7 +38,7 @@ int main()
 			return f + tagStr(0x01, name) + tagInt(0x02, size) + tagInt(0x15, src) + tagStr(0x03, "Video"); };
 		std::string res = U32(2) + hit('\x0A', "Fight Club ITA.avi", 734003200, 42) + hit('\x0B', "fight.club.sub.mkv", 1500000000u, 7);
 		std::string out = Pkt(0x38, m) + Pkt(0x40, U32(0x01020304) + U32(0x0F)) + Pkt(0x34, U32(1234) + U32(56789));
-		write(c, out.data(), out.size());
+		(void)!write(c, out.data(), out.size());
 				// opcode 0x16 (ricerca): la leggiamo e rispondiamo con 2 risultati
 		{
 			char h2[6]; size_t n2 = 0; while (n2 < 6) { ssize_t r = read(c, h2 + n2, 6 - n2); if (r <= 0) break; n2 += r; }
@@ -46,14 +46,14 @@ int main()
 			while (n2 < gotsearch.size()) { ssize_t r = read(c, &gotsearch[n2], gotsearch.size() - n2); if (r <= 0) break; n2 += r; }
 		}
 		std::string outres = Pkt(0x33, res);
-		write(c, outres.data(), outres.size());
+		(void)!write(c, outres.data(), outres.size());
 		{	// OP_GETSOURCES: la leggiamo e rispondiamo con 2 sorgenti (una con ID alto 1.2.3.4, una con ID basso)
 			char h3[6]; size_t n3 = 0; while (n3 < 6) { ssize_t r = read(c, h3 + n3, 6 - n3); if (r <= 0) break; n3 += r; }
 			uint32_t l3 = 0; memcpy(&l3, h3 + 1, 4); gotsrcop = (uint8_t)h3[5]; gotsrc.resize(l3 - 1); n3 = 0;
 			while (n3 < gotsrc.size()) { ssize_t r = read(c, &gotsrc[n3], gotsrc.size() - n3); if (r <= 0) break; n3 += r; }
 			uint16_t p1 = 4662, p2 = 4663;
 			std::string fs(16, '\x0A'); fs += (char)2; fs += U32(0x04030201); fs.append((const char*)&p1, 2); fs += U32(12345); fs.append((const char*)&p2, 2);
-			std::string o3 = Pkt(0x42, fs); write(c, o3.data(), o3.size());
+			std::string o3 = Pkt(0x42, fs); (void)!write(c, o3.data(), o3.size());
 		}
 		usleep(300000); close(c);
 	});

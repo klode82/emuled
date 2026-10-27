@@ -110,7 +110,7 @@ static std::string ErrorCode(int status, const std::string &m)
 		{"Kad e' gia' collegato", "kad_already_connected"}, {"non connesso a un server", "ed2k_not_connected"}, {"ne' un server", "no_network"},
 		{"il server e' gia' in lista", "server_exists"}, {"il file e' gia' in download", "already_downloading"}, {"metodo non consentito", "method_not_allowed"},
 		{"percorso inesistente", "route_not_found"}, {"link di streaming", "stream_expired"}, {"questa parte del file", "range_not_ready"}, {"nessuna interfaccia web", "no_web_ui"}, {"file non condiviso", "not_shared"}, {"download non trovato", "download_not_found"},
-		{"categoria non trovata", "category_not_found"}, {"percorso non consentito", "forbidden_path"}, {"corpo troppo grande", "body_too_large"}, {"errore interno", "internal"},
+		{"categoria non trovata", "category_not_found"}, {"percorso non consentito", "forbidden_path"}, {"cartella inesistente", "dir_not_found"}, {"la cartella esiste", "dir_exists"}, {"il percorso non e' una cartella", "not_a_directory"}, {"serve un percorso assoluto", "bad_path"}, {"nome di cartella", "bad_dirname"}, {"corpo troppo grande", "body_too_large"}, {"errore interno", "internal"},
 		{"nome utente o password errati", "bad_credentials"}, {"codice di impostazione", "bad_setup_code"}, {"l'account e' gia'", "account_exists"}, {"nome utente non valido", "bad_username"}, {"la password", "bad_password"},
 		{"temp:", "bad_directories"}, {"shared:", "bad_directories"}, {"la cartella", "bad_directories"}, {"cartella", "bad_directories"}, {"il percorso deve", "bad_directories"},
 	};

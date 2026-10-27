@@ -617,7 +617,7 @@ void CKeyEntry::ReadPublishTrackingDataFromFile(CDataIO *pData, bool bIncludesAI
 	ASSERT(m_pliPublishingIPs == NULL);
 	m_pliPublishingIPs = new CList<structPublishingIP>();
 	uint32 nIPCount = pData->ReadUInt32();
-	time_t tDbgLastTime = 0;
+	[[maybe_unused]] time_t tDbgLastTime = 0;		// LINUX: serve solo agli ASSERT (spenti in produzione)
 	for (uint32 i = 0; i < nIPCount; ++i) {
 		structPublishingIP sToAdd;
 		sToAdd.m_uIP = pData->ReadUInt32();

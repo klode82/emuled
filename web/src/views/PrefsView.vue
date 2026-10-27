@@ -6,14 +6,29 @@ import { usePrefs } from '@/stores/prefs'
 import { useTemplates } from '@/stores/templates'
 import { useUi, type Theme } from '@/stores/ui'
 import { PREFS, PREF_GROUPS, type PrefMeta } from '@/lib/prefsMeta'
-import { LANGS, setLang, type Lang } from '@/i18n'
+import { LANGS, WIN_LANGID, lang, setLang, type Lang } from '@/i18n'
+import { useSession } from '@/stores/session'
+import { errText } from '@/stores/toasts'
 import type { Category, Directories } from '@/types'
 import { useCore } from '@/stores/core'
 import Icon from '@/components/Icon.vue'
+import FolderPicker from '@/components/FolderPicker.vue'
 
 const { t, te, locale } = useI18n()
 const route = useRoute()
-const p = usePrefs(), ui = useUi(), tpl = useTemplates(), core = useCore()
+const p = usePrefs(), ui = useUi(), tpl = useTemplates(), core = useCore(), session = useSession()
+// riavvio del demone e prova delle porte da internet (il demone fa l'indirizzo, il browser lo apre su un clic dell'utente)
+const restarting = ref(false), daemonMsg = ref('')
+async function restartNow() {
+  if (!(await ui.ask({ title: t('prefs.daemon.confirmTitle'), text: t('prefs.daemon.confirmText'), confirm: t('prefs.daemon.confirm') }))) return
+  restarting.value = true; daemonMsg.value = ''
+  daemonMsg.value = await session.restartDaemon()		// se va bene la pagina si ricarica da sola
+  restarting.value = false
+}
+async function testPorts() {
+  daemonMsg.value = ''
+  try { window.open((await session.getApi().portsTestUrl(WIN_LANGID[lang()])).url, '_blank', 'noopener') } catch (e) { daemonMsg.value = errText(e) }
+}
 onMounted(async () => { await Promise.all([p.load(), p.loadDirs(), tpl.load()]); await nextTick(); if (route.hash) document.querySelector(route.hash)?.scrollIntoView() })
 const known = new Set(PREFS.map((m) => m.key))
 const groups = computed(() => PREF_GROUPS.map((g) => ({ name: g, items: PREFS.filter((m) => m.group === g && m.key in p.draft) })).filter((g) => g.items.length))
@@ -31,6 +46,11 @@ const THEMES: Theme[] = ['system', 'light', 'dark']
 
 // ---- cartelle: si lavora su una copia e si manda al demone solo cio' che e' cambiato
 const dd = reactive<Directories>({ incoming: '', temp: [], shared: [] })
+// finestra "scegli una cartella" (Bench 874): quale campo si sta riempiendo
+const pickTarget = ref<{ kind: 'incoming' | 'temp' | 'shared'; i: number } | null>(null)
+const pickStart = computed(() => { const k = pickTarget.value; return !k ? '' : k.kind === 'incoming' ? dd.incoming : dd[k.kind][k.i] ?? '' })
+function browse(k: { kind: 'incoming' | 'temp' | 'shared'; i: number }) { pickTarget.value = k }
+function picked(path: string) { const k = pickTarget.value; if (k) { if (k.kind === 'incoming') dd.incoming = path; else dd[k.kind][k.i] = path } pickTarget.value = null }
 const missing = (d: string) => !!p.dirs?.shared_missing?.includes(d)
 const dirsError = ref(''), dirsBusy = ref(false)
 watch(() => p.dirs, (d) => { if (d) { dd.incoming = d.incoming; dd.temp = [...d.temp]; dd.shared = [...d.shared] } }, { immediate: true })
@@ -67,7 +87,10 @@ const nChanges = computed(() => Object.keys(p.changes).length)
   <div class="flex max-w-3xl flex-col gap-6 p-4 pb-24">
     <h1 class="text-lg font-semibold">{{ t('nav.prefs') }}</h1>
     <p v-if="p.persisted === false" class="rounded-lg border border-line bg-soft px-4 py-3 text-sm text-warn" role="status">{{ t('prefs.tempIdentity') }}</p>
-    <p v-if="needRestart.length" class="rounded-lg border border-line bg-soft px-4 py-3 text-sm text-warn" role="status">{{ t('prefs.needRestart', { list: needRestart.join(', ') }) }}</p>
+    <div v-if="needRestart.length" class="flex flex-wrap items-center gap-3 rounded-lg border border-line bg-soft px-4 py-3 text-sm text-warn" role="status">
+      <span class="min-w-0 flex-1">{{ t('prefs.needRestart', { list: needRestart.join(', ') }) }}</span>
+      <button type="button" class="rounded-lg border border-warn px-3 py-1.5 text-xs font-medium hover:bg-sunk disabled:opacity-50" :disabled="restarting" @click="restartNow">{{ restarting ? t('prefs.daemon.restarting') : t('prefs.daemon.restartNow') }}</button>
+    </div>
 
     <section v-for="g in groups" :key="g.name" class="rounded-xl border border-line bg-surface">
       <h2 class="border-b border-line px-5 py-3 text-sm font-semibold">{{ t('prefs.groups.' + g.name) }}</h2>
@@ -93,15 +116,15 @@ const nChanges = computed(() => Object.keys(p.changes).length)
       <h2 class="border-b border-line px-5 py-3 text-sm font-semibold">{{ t('dirs.title') }}</h2>
       <div v-if="p.dirs" class="flex flex-col gap-5 px-5 py-4">
         <label class="flex flex-col gap-1 text-sm font-medium">{{ t('dirs.incoming') }}
-          <input v-model="dd.incoming" class="rounded-lg border border-line bg-bg px-3 py-2 font-mono text-xs font-normal" /><span class="text-xs font-normal text-mute">{{ t('dirs.incomingHint') }}</span></label>
+          <span class="flex gap-2"><input v-model="dd.incoming" class="min-w-0 flex-1 rounded-lg border border-line bg-bg px-3 py-2 font-mono text-xs font-normal" /><button type="button" class="shrink-0 rounded-lg border border-line px-3 py-2 text-xs font-normal hover:bg-sunk" @click="browse({ kind: 'incoming', i: 0 })">{{ t('picker.browse') }}</button></span><span class="text-xs font-normal text-mute">{{ t('dirs.incomingHint') }}</span></label>
         <fieldset class="flex flex-col gap-2"><legend class="pb-1 text-sm font-medium">{{ t('dirs.temp') }}</legend>
-          <div v-for="(_, i) in dd.temp" :key="i" class="flex items-center gap-2"><input v-model="dd.temp[i]" class="min-w-0 flex-1 rounded-lg border border-line bg-bg px-3 py-2 font-mono text-xs" :aria-label="t('dirs.tempN', { n: i + 1 })" />
+          <div v-for="(_, i) in dd.temp" :key="i" class="flex items-center gap-2"><input v-model="dd.temp[i]" class="min-w-0 flex-1 rounded-lg border border-line bg-bg px-3 py-2 font-mono text-xs" :aria-label="t('dirs.tempN', { n: i + 1 })" /><button type="button" class="shrink-0 rounded-lg border border-line px-3 py-2 text-xs font-normal hover:bg-sunk" @click="browse({ kind: 'temp', i })">{{ t('picker.browse') }}</button>
             <button class="rounded-md p-2 text-mute hover:bg-sunk hover:text-bad disabled:opacity-40" :disabled="dd.temp.length <= 1" :aria-label="t('common.remove')" @click="dd.temp.splice(i, 1)"><Icon name="trash" /></button></div>
           <button class="inline-flex w-fit items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-xs hover:bg-sunk" @click="dd.temp.push('')"><Icon name="plus" class="!size-3.5" />{{ t('dirs.addTemp') }}</button>
           <span class="text-xs text-mute">{{ t('dirs.tempHint') }}</span></fieldset>
         <fieldset class="flex flex-col gap-2"><legend class="pb-1 text-sm font-medium">{{ t('dirs.shared') }}</legend>
           <p v-if="!dd.shared.length" class="text-sm text-mute">{{ t('dirs.noShared') }}</p>
-          <div v-for="(_, i) in dd.shared" :key="i" class="flex items-center gap-2"><input v-model="dd.shared[i]" class="min-w-0 flex-1 rounded-lg border bg-bg px-3 py-2 font-mono text-xs" :class="missing(dd.shared[i]) ? 'border-warn' : 'border-line'" :aria-label="t('dirs.sharedN', { n: i + 1 })" /><span v-if="missing(dd.shared[i])" class="whitespace-nowrap text-xs text-warn">{{ t('dirs.missing') }}</span>
+          <div v-for="(_, i) in dd.shared" :key="i" class="flex items-center gap-2"><input v-model="dd.shared[i]" class="min-w-0 flex-1 rounded-lg border bg-bg px-3 py-2 font-mono text-xs" :class="missing(dd.shared[i]) ? 'border-warn' : 'border-line'" :aria-label="t('dirs.sharedN', { n: i + 1 })" /><button type="button" class="shrink-0 rounded-lg border border-line px-3 py-2 text-xs font-normal hover:bg-sunk" @click="browse({ kind: 'shared', i })">{{ t('picker.browse') }}</button><span v-if="missing(dd.shared[i])" class="whitespace-nowrap text-xs text-warn">{{ t('dirs.missing') }}</span>
             <button class="rounded-md p-2 text-mute hover:bg-sunk hover:text-bad" :aria-label="t('common.remove')" @click="dd.shared.splice(i, 1)"><Icon name="trash" /></button></div>
           <button class="inline-flex w-fit items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-xs hover:bg-sunk" @click="dd.shared.push('')"><Icon name="plus" class="!size-3.5" />{{ t('dirs.addShared') }}</button>
           <span class="text-xs text-mute">{{ t('dirs.sharedHint') }}</span></fieldset>
@@ -164,6 +187,18 @@ const nChanges = computed(() => Object.keys(p.changes).length)
       </div>
     </section>
 
+    <section class="rounded-xl border border-line bg-surface" aria-labelledby="daemon">
+      <h2 id="daemon" class="border-b border-line px-5 py-3 text-sm font-semibold">{{ t('prefs.daemon.title') }}</h2>
+      <div class="flex flex-col gap-5 px-5 py-4 text-sm">
+        <div class="flex flex-col items-start gap-2"><p class="text-mute">{{ t('prefs.daemon.restartText') }}</p>
+          <button type="button" class="rounded-lg border border-line px-4 py-2 hover:bg-sunk disabled:opacity-50" :disabled="restarting" @click="restartNow">{{ restarting ? t('prefs.daemon.restarting') : t('prefs.daemon.restartButton') }}</button></div>
+        <div class="flex flex-col items-start gap-2"><h3 class="font-medium">{{ t('prefs.daemon.testTitle') }}</h3>
+          <p class="text-mute">{{ t('prefs.daemon.testText', { tcp: core.status?.ports.tcp ?? '…', udp: core.status?.ports.udp ?? '…' }) }}</p>
+          <button type="button" class="rounded-lg border border-line px-4 py-2 hover:bg-sunk" @click="testPorts">{{ t('prefs.daemon.testButton') }}</button></div>
+        <p v-if="daemonMsg" class="rounded-lg border border-bad px-3 py-2 text-bad" role="alert">{{ daemonMsg }}</p>
+      </div>
+    </section>
+
     <section class="rounded-xl border border-line bg-surface" aria-labelledby="about">
       <h2 id="about" class="border-b border-line px-5 py-3 text-sm font-semibold">{{ t('about.title') }}</h2>
       <dl class="grid gap-x-6 gap-y-2 px-5 py-3 text-sm sm:grid-cols-[auto_1fr]">
@@ -178,5 +213,6 @@ const nChanges = computed(() => Object.keys(p.changes).length)
       <div class="mx-auto flex max-w-3xl items-center justify-between gap-3"><p class="text-sm" role="status">{{ t('prefs.unsaved', nChanges) }}</p>
         <div class="flex gap-2"><button class="rounded-lg border border-line px-4 py-2 text-sm hover:bg-sunk" @click="p.reset()">{{ t('common.cancel') }}</button><button class="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-onaccent" :disabled="p.saving || anyInvalid" @click="p.save()">{{ p.saving ? t('common.saving') : t('common.save') }}</button></div></div>
     </div>
+    <FolderPicker :open="pickTarget !== null" :start="pickStart" :need-write="pickTarget?.kind !== 'shared'" @close="pickTarget = null" @pick="picked" />
   </div>
 </template>

@@ -35,6 +35,7 @@ struct DaemonOptions
 	std::string templates_dir;				// cartella in piu' dove cercare template d'interfaccia (sviluppo, Docker); vuoto = solo quelle standard
 };
 
+constexpr int kRestartExit = 75;			// RunDaemon ritorna questo valore se il demone ha chiesto di essere riavviato: chi lo ha lanciato rilancia il programma
 int RunDaemon(const DaemonOptions &opt);	// ritorna il codice di uscita del processo
 
 } // namespace emule::net

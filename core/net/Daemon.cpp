@@ -13,6 +13,7 @@
 #include <sys/stat.h>
 #include "profile/Profile.h"
 #include "profile/ProfileCheck.h"
+#include "profile/Import.h"
 #include "guardian/Guardian.h"
 #include "net/SourceWatchdog.h"
 #include "net/DirWatcher.h"
@@ -48,6 +49,8 @@ namespace fs = std::filesystem;
 namespace emule::net {
 
 static std::atomic<bool> g_stop{false};
+static std::atomic<bool> g_restart{false};
+static std::atomic<double> g_restart_at{0};		// istante in cui riavviare (un attimo dopo, cosi' la risposta dell'API parte)
 static void OnSignal(int) { g_stop = true; }
 static std::atomic<bool> g_hup{false};
 static void OnHup(int) { g_hup = true; }		// SIGHUP: ricontrolla le cartelle condivise (come premere "Ricontrolla")
@@ -99,7 +102,7 @@ int RunDaemon(const DaemonOptions &opt)
 	auto lock = profile::ProfileLock::Acquire(cfg, lockErr);
 	if (!lock) { std::fprintf(stderr, "emuled: %s\n", lockErr.c_str()); return 2; }
 
-	g_stop = false; std::signal(SIGINT, OnSignal); std::signal(SIGTERM, OnSignal); std::signal(SIGHUP, OnHup);
+	g_stop = false; g_restart = false; g_restart_at = 0; std::signal(SIGINT, OnSignal); std::signal(SIGTERM, OnSignal); std::signal(SIGHUP, OnHup);
 	std::signal(SIGPIPE, SIG_IGN);
 	int rc = 0;
 	{
@@ -107,6 +110,7 @@ int RunDaemon(const DaemonOptions &opt)
 		emule::EventLog::Instance().Attach();		// il registro degli eventi raccoglie tutto cio' che eMule scrive
 		if (opt.verbose) emule::log::SetSink([](emule::log::Level, const std::string &t) { std::printf("[log] %s\n", t.c_str()); std::fflush(stdout); });
 
+		if (!opt.fake_profile) { std::string il; if (profile::ApplyStagedImport(cfg, il)) std::printf("%s", il.c_str()); }		// importazione preparata prima del riavvio (Bench 875): PRIMA di leggere il profilo
 		// regole di mappatura dei percorsi di Windows e preferenze del profilo
 		profile::PathMap pm; for (auto &r : opt.pathmaps) pm.Add(r.first, r.second);
 		thePrefs.SetPathMapper([pm](const CString &p) -> CString { bool mapped = false; std::string s = pm.ToLinux((LPCTSTR)p, &mapped); return mapped ? CString(s.c_str()) : CString(); });
@@ -201,6 +205,7 @@ int RunDaemon(const DaemonOptions &opt)
 			else if (opt.kad && thePrefs.GetNetworkKademlia()) kadStart();		// come eMule: parte da solo se il profilo lo vuole (NetworkKademlia) e non c'e' --no-kad; altrimenti a comando (API)
 		}
 		emule::api::DaemonHooks hooks; hooks.mediainfo = opt.mediainfo;
+		hooks.restart = [] { g_restart_at = NowS() + 0.8; };
 		// UPnP (miniupnpc): chiede al router di inoltrare le porte TCP e UDP. Parte da solo se la preferenza e' accesa, e si accende/spegne da API senza riavvio.
 		std::unique_ptr<CUPnPImplMiniLib> upnp; uint64_t upnpTimer = 0; std::atomic<int> upnpResult{-1};		// -1 in corso/spento, 0 ok, 1 fallito
 		auto upnpStart = [&] {
@@ -287,7 +292,8 @@ int RunDaemon(const DaemonOptions &opt)
 			emule::api::RegisterRoutes(api, NowS(), hooks);
 			auth = std::make_unique<emule::api::Auth>(cfg);
 			emule::api::RegisterAuthRoutes(api, *auth, token);
-			if (!api.Start(opt.api_bind, opt.api_port)) { std::printf("  errore: API non avviata: %s\n", api.LastError().c_str()); ok = false; rc = 1; }
+			emule::api::RegisterImportRoutes(api, *auth, cfg, hooks.restart);
+			if (!api.Start(opt.api_bind, opt.api_port)) { std::printf("  errore: API non avviata: %s\n  (se la porta e' occupata da un altro programma: cambia api_port in ~/.emuled/config.yaml, oppure lancia 'emuled --setup' da un terminale, poi riavvia)\n", api.LastError().c_str()); ok = false; rc = 1; }
 			else events = std::make_unique<emule::api::EventPublisher>(api, NowS(), hooks);
 			if (ok) std::printf("  API: http://%s:%u/api/v1/  (token in %s%s)\n", opt.api_bind.c_str(), (unsigned)api.port(), opt.api_token.empty() ? (cfg + "emuled.token").c_str() : "riga di comando", created.empty() ? "" : "; creato ora");
 			if (ok && auth && !auth->Configured())
@@ -316,13 +322,14 @@ int RunDaemon(const DaemonOptions &opt)
 			while (!g_stop && (opt.max_seconds <= 0 || NowS() - t0 < opt.max_seconds)) {
 				loop.RunOnce(100); theApp.emuledlg->DrainMessages();
 				if (g_hup.exchange(false)) rescan("SIGHUP");
+				{ const double ra = g_restart_at; if (ra > 0 && NowS() >= ra) { g_restart = true; g_stop = true; } }
 				if (opt.status_interval_s > 0 && NowS() - lastStatus >= opt.status_interval_s) {
 					lastStatus = NowS();
 					CServerConnect &sc = *theApp.serverconnect;
-					std::printf("[stato] server: %s%s; Kad: %s; download: %u%.0s, %.1f KB/s giu, %.1f KB/s su\n"
+					std::printf("[stato] server: %s%s; Kad: %s; download: %u, %.1f KB/s giu, %.1f KB/s su\n"
 						, sc.IsConnected() ? "connesso" : (sc.IsConnecting() ? "in connessione" : "NON connesso"), sc.IsConnected() ? (sc.IsLowID() ? " (ID basso)" : " (ID alto)") : ""
 						, udp ? (Kademlia::CKademlia::IsConnected() ? "connesso" : "in avvio") : "spento"
-						, (unsigned)theApp.downloadqueue->GetFileCount(), (unsigned)0
+						, (unsigned)theApp.downloadqueue->GetFileCount()
 						, theApp.downloadqueue->GetDatarate() / 1024.0, theApp.uploadqueue->GetDatarate() / 1024.0);
 					std::fflush(stdout);
 				}
@@ -348,7 +355,7 @@ int RunDaemon(const DaemonOptions &opt)
 		emule::EventLog::Instance().Detach();
 		emule::log::SetSink(nullptr);
 	}
-	return rc;
+	return g_restart ? kRestartExit : rc;
 }
 
 } // namespace emule::net

@@ -81,7 +81,7 @@ Ogni richiesta porta `Authorization: Bearer TOKEN`; il WebSocket lo prende da `?
 
 ## Lingue (i18n)
 
-Italiano, inglese e altre 12 lingue (spagnolo, cinese, hindi, arabo, francese, portoghese, russo, tedesco, giapponese, coreano, turco, indonesiano). Si sceglie dalle Preferenze o dalla schermata di accesso e si ricorda nel browser; la prima volta si usa la lingua del browser, altrimenti l'italiano.
+Italiano, inglese e altre 12 lingue (spagnolo, cinese, hindi, arabo, francese, portoghese, russo, tedesco, giapponese, coreano, turco, indonesiano). Si sceglie dalle Preferenze o dalla schermata di accesso e si ricorda nel browser; la prima volta si parte SEMPRE in inglese (anche con un browser in italiano), poi la cambia l'utente.
 
 - Nessun testo sta nei componenti: ci sono solo chiavi (`t('transfers.emptyTitle')`). I testi sono in `src/i18n/it.ts`; `en.ts` e le altre 12 lingue (`es zh hi ar fr pt ru de ja ko tr id`) hanno **le stesse chiavi** (il tipo TypeScript lo impone).
 - Il test `i18n` controlla anche: nessun testo vuoto, stessi segnaposto (`{n}`) e stesse forme plurali in tutte le lingue, e che ogni chiave usata nel codice esista.

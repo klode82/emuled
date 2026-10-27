@@ -1,5 +1,5 @@
 // Traduzioni: italiano (lingua di riferimento), inglese e le 12 altre piu' diffuse (es, zh, hi, ar, fr, pt, ru, de, ja, ko, tr, id). Per aggiungere una lingua: copiare it.ts, tradurre, registrarla in LANGS.
-// La lingua si sceglie nelle Preferenze (o dalla schermata di accesso) e si ricorda nel browser; la prima volta si usa quella del browser.
+// La lingua si sceglie nelle Preferenze (o dalla schermata di accesso) e si ricorda nel browser; la prima volta si parte SEMPRE in inglese (poi la cambia l'utente).
 import { createI18n } from 'vue-i18n'
 import it from './it'
 import en from './en'
@@ -22,18 +22,17 @@ export type Lang = (typeof LANGS)[number]['code']
 const KEY = 'emuled.lang'
 const RTL = new Set<string>(['ar'])		// lingue scritte da destra a sinistra
 
-export function detectLang(stored: string | null, browser: readonly string[]): Lang {
-  const ok = (c: string): c is Lang => LANGS.some((l) => l.code === c)
-  if (stored && ok(stored)) return stored
-  for (const b of browser) { const c = b.toLowerCase().split('-')[0]; if (ok(c)) return c }
-  return 'it'
+export function detectLang(stored: string | null): Lang {
+  return stored && LANGS.some((l) => l.code === stored) ? (stored as Lang) : 'en'
 }
+// Identificatore di lingua di Windows (LANGID): lo vuole il test delle porte di emule-project.net, come in eMule (thePrefs.GetLanguageID)
+export const WIN_LANGID: Record<Lang, number> = { it: 1040, en: 1033, es: 1034, zh: 2052, hi: 1081, ar: 1025, fr: 1036, pt: 1046, ru: 1049, de: 1031, ja: 1041, ko: 1042, tr: 1055, id: 1057 }
 const read = () => { try { return localStorage.getItem(KEY) } catch { return null } }
 
 export const i18n = createI18n({
   legacy: false,
-  locale: detectLang(read(), typeof navigator !== 'undefined' ? navigator.languages ?? [navigator.language] : []),
-  fallbackLocale: 'it',
+  locale: detectLang(read()),
+  fallbackLocale: 'en',
   messages: { it, en, es, zh, hi, ar, fr, pt, ru, de, ja, ko, tr, id },
 })
 export const te = (key: string) => i18n.global.te(key)		// esiste una traduzione per questa chiave?

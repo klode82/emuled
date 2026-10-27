@@ -45,8 +45,12 @@ void RegisterAuthRoutes(HttpServer &srv, Auth &auth, const std::string &setup_co
 		if (!Auth::ValidPassword(pw, err)) return Response::Error(400, "la password non va bene: " + err);
 		if (!auth.SetUser(name, pw, err)) return Response::Error(500, "errore interno: " + err);
 		auth.RecordSuccess(r.peer);
+		auth.MarkSetup(true);		// il primo avvio non e' finito: l'interfaccia mostra il Wizard
 		return Session(auth, name, 201);
 	});
+	// Wizard web di primo avvio (Bench 873): serve il gettone. pending = l'account e' stato appena creato e le impostazioni di base non sono ancora state confermate.
+	srv.Route("GET", "/api/v1/setup", [&auth](const Request &) { return Ok({{"pending", auth.SetupPending()}}); });
+	srv.Route("POST", "/api/v1/setup/done", [&auth](const Request &) { auth.MarkSetup(false); return Ok({{"pending", false}}); });
 	srv.Route("POST", "/api/v1/auth/login", [&auth](const Request &r) {
 		json j; if (!Body(r, j)) return Response::Error(400, "serve un oggetto JSON");
 		const time_t now = time(nullptr);

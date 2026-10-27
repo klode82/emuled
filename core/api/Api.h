@@ -13,11 +13,14 @@ namespace emule::api {
 // Registra le rotte /api/v1/... su server. started = istante di avvio del demone (per "uptime").
 // Cio' che solo il demone sa fare: avviare e fermare Kad a caldo (vuoti = non disponibile)
 struct DaemonHooks { std::function<bool()> kad_start; std::function<void()> kad_stop; std::function<bool()> save_prefs; std::function<void(bool)> upnp_apply; std::function<void()> shared_changed; std::string mediainfo; std::function<nlohmann::json()> upnp_state;
-	std::function<nlohmann::json(bool rescan)> templates; };		// templates(rescan): l'elenco dei template d'interfaccia (rileggendo le cartelle se rescan); vuoto = nessun registro	// save_prefs: scrive le preferenze nel profilo; vuoto o false = solo in memoria (identita' o porte temporanee)
+	std::function<nlohmann::json(bool rescan)> templates;
+	std::function<void()> restart; };		// restart: riavvia il demone (spegne in modo pulito e riparte; Import API)		// templates(rescan): l'elenco dei template d'interfaccia (rileggendo le cartelle se rescan); vuoto = nessun registro	// save_prefs: scrive le preferenze nel profilo; vuoto o false = solo in memoria (identita' o porte temporanee)
 void RegisterRoutes(HttpServer &server, double started_s, const DaemonHooks &hooks = {});
 void RegisterTransferRoutes(HttpServer &server, const DaemonHooks &hooks);
 void RegisterPrefsRoutes(HttpServer &server, const DaemonHooks &hooks);
+void RegisterFsRoutes(HttpServer &server);		// elenco delle cartelle del computer del demone (FsApi.cpp)
 class Auth;
+void RegisterImportRoutes(HttpServer &server, Auth &auth, const std::string &profile_dir, std::function<void()> restart);	// importazione di un profilo eMule esistente (ImportApi.cpp)
 void RegisterAuthRoutes(HttpServer &server, Auth &auth, const std::string &setup_code);	// account dell'interfaccia web (Auth.h)
 void RegisterLogRoutes(HttpServer &server);
 void Audit(const std::string &text);	// annota nel registro un'azione fatta via API (riga "[api] ...")	// GET/DELETE /log

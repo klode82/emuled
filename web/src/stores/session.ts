@@ -41,13 +41,14 @@ export const useSession = defineStore('session', () => {
   function startPoll() { if (!poll) poll = setInterval(() => void refreshAll(), 5000) }
   function stopPoll() { if (poll) { clearInterval(poll); poll = null } }
 
-  async function login(raw: string): Promise<boolean> {
+  async function login(raw: string, quiet = false): Promise<boolean> {		// quiet: tentativo con il token salvato, non scritto dall'utente
     busy.value = true; error.value = ''
     const candidate = new Api(raw.trim())
     try {
       await candidate.status()
     } catch (e) {
       busy.value = false
+      if (quiet && e instanceof ApiError && e.status === 401) { token.value = ''; write(''); return false }		// token di una vecchia installazione o scaduto: si dimentica, senza dare un errore che l'utente non ha causato
       error.value = e instanceof ApiError && e.status === 401 ? t('login.invalidToken') : e instanceof Error ? e.message : String(e)
       return false
     }
@@ -69,9 +70,25 @@ export const useSession = defineStore('session', () => {
     try { const r = await authSetup(code.trim(), username.trim(), password); busy.value = false; return await login(r.token) }
     catch (e) { busy.value = false; error.value = errText(e); return false }
   }
-  async function resume() { if (token.value && !ready.value) await login(token.value) }
+  async function resume() { if (token.value && !ready.value) await login(token.value, true) }
+  // Riavvia il demone e aspetta che torni; poi ricarica la pagina. Ritorna '' se e' andato a buon fine, altrimenti il messaggio d'errore.
+  async function restartDaemon(): Promise<string> {
+    const a = getApi()
+    try {
+      const before = (await a.status()).uptime_s
+      await a.systemRestart()
+      const t0 = Date.now(); let sawDown = false
+      await new Promise((r) => setTimeout(r, 1500))
+      while (Date.now() - t0 < 90000) {
+        try { const s = await a.status(); if (sawDown || s.uptime_s < before) { location.reload(); return '' } }
+        catch { sawDown = true }		// sta ripartendo
+        await new Promise((r) => setTimeout(r, 1000))
+      }
+      return t('prefs.daemon.restartFailed')
+    } catch (e) { return e instanceof Error ? e.message : String(e) }
+  }
   function logout(msg = '') {
     events?.stop(); events = null; stopPoll(); api = null; ready.value = false; link.value = 'closed'; token.value = ''; write(''); error.value = msg
   }
-  return { token, ready, link, error, busy, getApi, login, loginUser, setupAccount, resume, logout }
+  return { token, ready, link, error, busy, getApi, login, loginUser, setupAccount, resume, logout, restartDaemon }
 })

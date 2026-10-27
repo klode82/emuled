@@ -9,6 +9,9 @@
 #include "util/Paths.h"
 #include <filesystem>
 #include <unistd.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
 #include <nlohmann/json.hpp>
 #include <functional>
 #include <limits>
@@ -123,6 +126,26 @@ std::string ApplyCat(Category_Struct *c, const json &b)
 	if (b.contains("color")) { if (!b["color"].is_number_integer()) return "color: intero (-1 = predefinito)"; c->color = (COLORREF)b["color"].get<int64_t>(); }
 	return std::string();
 }
+// Si puo' mettere in ascolto su questa porta (TCP) o aprirla (UDP)? Prova davvero, poi chiude. Serve al Wizard web per avvisare, senza bloccare, se una porta e' occupata.
+bool PortUsable(bool tcp, int port)
+{
+	int fd = ::socket(AF_INET, (tcp ? SOCK_STREAM : SOCK_DGRAM) | SOCK_CLOEXEC, 0);
+	if (fd < 0) return false;
+	if (tcp) { int one = 1; ::setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof one); }
+	sockaddr_in a{}; a.sin_family = AF_INET; a.sin_port = htons((uint16_t)port); a.sin_addr.s_addr = htonl(INADDR_ANY);
+	const bool ok = ::bind(fd, (sockaddr *)&a, sizeof a) == 0 && (!tcp || ::listen(fd, 1) == 0);
+	::close(fd);
+	return ok;
+}
+json PortState(const Request &r, const char *key, bool tcp, int own)
+{
+	auto it = r.query.find(key); if (it == r.query.end()) return nullptr;
+	int p = std::atoi(it->second.c_str());
+	if (p < 1 || p > 65535) return {{"port", p}, {"valid", false}, {"free", false}, {"own", false}};
+	const bool mine = p == own;		// la porta che il demone ha gia' in uso e' sua: non e' un conflitto
+	return {{"port", p}, {"valid", true}, {"own", mine}, {"free", mine || PortUsable(tcp, p)}};
+}
+
 } // namespace
 
 void RegisterPrefsRoutes(HttpServer &srv, const DaemonHooks &hooks)
@@ -150,6 +173,29 @@ void RegisterPrefsRoutes(HttpServer &srv, const DaemonHooks &hooks)
 		return Ok({{"preferences", AllPrefs()}, {"saved", saved}, {"restart_required", restart}});
 	});
 
+	// GET /api/v1/ports/check?tcp=P&udp=Q: dice se le porte sono libere (o sono quelle che il demone usa gia'); non cambia niente
+	srv.Route("GET", "/api/v1/ports/check", [](const Request &r) {
+		json j = json::object();
+		if (json t = PortState(r, "tcp", true, thePrefs.GetPort()); !t.is_null()) j["tcp"] = t;
+		if (json u = PortState(r, "udp", false, thePrefs.GetUDPPort()); !u.is_null()) j["udp"] = u;
+		return Ok(j);
+	});
+	// GET /api/v1/ports/test-url?lang=ID: l'indirizzo del test delle porte di emule-project.net, come TriggerPortTest di eMule (OtherFunctions.cpp). Il demone NON lo apre:
+	// lo apre il browser dell'utente, su un suo clic. Il sito prova a collegarsi alle porte IN USO adesso (TCP e UDP) e il demone risponde (OP_PORTTEST). Con l'offuscamento
+	// acceso nell'indirizzo c'e' anche l'hash utente (serve al sito per l'offuscamento della prova). lang e' l'identificatore di lingua di Windows (1040 italiano, 1033 inglese).
+	srv.Route("GET", "/api/v1/ports/test-url", [](const Request &r) {
+		int lang = 1033; auto it = r.query.find("lang"); if (it != r.query.end()) { int v = std::atoi(it->second.c_str()); if (v >= 1 && v <= 65535) lang = v; }
+		const bool obf = thePrefs.IsCryptLayerPreferred();
+		std::string url = "https://porttest.emule-project.net/connectiontest.php?tcpport=" + std::to_string(thePrefs.GetPort()) + "&udpport=" + std::to_string(thePrefs.GetUDPPort()) + "&lang=" + std::to_string(lang);
+		url += obf ? "&obf=1&clienthash=" + S(md4str(thePrefs.GetUserHash())) : "&obf=0";
+		return Ok({{"url", url}, {"tcp", thePrefs.GetPort()}, {"udp", thePrefs.GetUDPPort()}, {"obfuscation", obf}});
+	});
+	// POST /api/v1/system/restart: il demone si spegne in modo pulito (salva tutto) e riparte da solo, stesso processo e stessi argomenti. Serve per le porte nuove.
+	srv.Route("POST", "/api/v1/system/restart", [hooks](const Request &) {
+		if (!hooks.restart) return Response::Error(501, "il riavvio non e' disponibile in questa modalita'");
+		hooks.restart();
+		return Ok({{"restarting", true}});
+	});
 	srv.Route("GET", "/api/v1/directories", [](const Request &) { return Ok(DirsJson()); });
 	srv.Route("PUT", "/api/v1/directories", [hooks](const Request &r) {
 		json b = json::parse(r.body, nullptr, false);

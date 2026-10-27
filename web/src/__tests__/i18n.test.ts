@@ -39,8 +39,8 @@ describe('traduzioni', () => {
     expect(missing).toEqual([])
     for (const p of prefixes) expect(Object.keys(A).some((k) => k.startsWith(p)), `prefisso ${p}`).toBe(true)
   })
-  it('scelta della lingua: salvata, poi quella del browser, poi italiano', () => {
-    expect(detectLang('en', ['it-IT'])).toBe('en'); expect(detectLang(null, ['nl-NL', 'en-GB'])).toBe('en'); expect(detectLang('xx', ['nl'])).toBe('it'); expect(detectLang(null, [])).toBe('it')
+  it('scelta della lingua: quella salvata, altrimenti sempre inglese (anche con un browser in italiano)', () => {
+    expect(detectLang('it')).toBe('it'); expect(detectLang('de')).toBe('de'); expect(detectLang(null)).toBe('en'); expect(detectLang('xx')).toBe('en')
   })
   it('plurali e segnaposto funzionano nelle due lingue', () => {
     setLang('it'); expect(t('toast.added', 1)).toBe('Download aggiunto'); expect(t('toast.added', 3)).toBe('3 download aggiunti'); expect(t('transfers.selected', 2)).toBe('2 selezionati')

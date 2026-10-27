@@ -28,6 +28,9 @@ int main()
 	CHECK(sha1("abc") == "A9993E364706816ABA3E25717850C26C9CD0D89D");
 	CHECK(sha1("") == "DA39A3EE5E6B4B0D3255BFEF95601890AFD80709");
 
+	{ CSHA h; h.Add("abc", 3); h.Finish(); SHA1 d; h.GetHash(&d);		// HashToHexString: 40 caratteri (prima scriveva oltre il buffer da 20)
+	  CHECK(CSHA::HashToHexString(&d) == "A9993E364706816ABA3E25717850C26C9CD0D89D"); CHECK(CSHA::HashToHexString(&d, true) == "urn:sha1:A9993E364706816ABA3E25717850C26C9CD0D89D"); }
+
 	byte h[16]; CHECK(strmd4("31D6CFE0D16AE931B73C59D7E0C089C0", h) && md4str(h) == "31D6CFE0D16AE931B73C59D7E0C089C0");
 	CString f; f.Format("%u-%I64u-%s", 7u, (unsigned long long)1ull << 40, "x"); CHECK(f == "7-1099511627776-x");
 	f.Format("%08lX|%lu|%ld|%5lu|%%|%llu", (ULONG)0xDEADBEEF, (ULONG)4000000000u, (LONG)-5, (ULONG)42, 1ull << 40);	// "long" a 32 bit come su Windows

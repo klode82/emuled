@@ -65,6 +65,9 @@ inline void Post(Port *p, DWORD bytes, ULONG_PTR key, LPOVERLAPPED ov)
 inline uint64_t OvOffset(const OVERLAPPED *ov) { return ((uint64_t)ov->OffsetHigh << 32) | ov->Offset; }
 }
 
+// LINUX: scrive l'offset a 64 bit nei due campi (il cast a uint64* violava lo strict aliasing)
+inline void OvSetOffset(OVERLAPPED *ov, uint64_t off) { ov->Offset = (DWORD)(off & 0xFFFFFFFFu); ov->OffsetHigh = (DWORD)(off >> 32); }
+
 inline HANDLE CreateIoCompletionPort(HANDLE hFile, HANDLE hExisting, ULONG_PTR key, DWORD)
 {
 	using namespace iocp_detail;

@@ -65,6 +65,31 @@ L'interfaccia web si usa con nome utente e password. L'account sta nel file `emu
 
 Il gettone di sessione si usa come il token del file (`Authorization: Bearer s1.…`, oppure `?token=` per il WebSocket). Nel browser sta alla stessa chiave `localStorage['emuled.token']`.
 
+### Primo avvio — `GET /api/v1/setup`, `POST /api/v1/setup/done`, `GET /api/v1/ports/check`
+
+Servono al **Wizard web** di primo avvio (nome sulla rete, porte, offuscamento, limiti, cartelle), che l'interfaccia mostra a schermo intero dopo la creazione del primo account.
+- `GET /api/v1/setup` → `{"pending": true|false}`. `pending` diventa `true` quando si crea il primo account (`auth/setup`) e resta tale finché non si conferma. Un profilo che non ha mai avuto il Wizard (di prima di questa funzione) risponde `false`.
+- `POST /api/v1/setup/done` → `{"pending": false}`: l'interfaccia lo chiama quando l'utente finisce il Wizard.
+- `GET /api/v1/ports/check?tcp=P&udp=Q` → `{"tcp": {"port": P, "valid": true, "free": true, "own": false}, "udp": {...}}`. Prova davvero a mettersi in ascolto (TCP) o ad aprire (UDP) la porta, poi chiude. `own: true` = è la porta che emuled ha già in uso, quindi non è un conflitto (`free` è `true`). Si può passare solo `tcp` o solo `udp`. Non cambia niente: il Wizard lo usa per **avvisare**, senza bloccare. Le porte vere si impostano con `PATCH /api/v1/preferences` (`tcp_port`, `udp_port`, valgono al riavvio).
+
+### Riavvio e prova delle porte — `POST /api/v1/system/restart`, `GET /api/v1/ports/test-url`
+
+- `POST /api/v1/system/restart` → `200 {"restarting": true}`. Il demone si spegne in modo pulito (salva tutto) e **riparte da solo**, stesso processo e stessi argomenti (`execv`: vale con systemd, Docker o da terminale). Risponde subito e riparte dopo meno di un secondo; per sapere che è tornato basta richiamare `GET /status` (`uptime_s` ricomincia da zero). Serve per le porte nuove (`restart_required` di `PATCH /preferences`). `501` se il riavvio non è disponibile.
+- `GET /api/v1/ports/test-url?lang=1040` → `{"url": "https://porttest.emule-project.net/connectiontest.php?tcpport=P&udpport=Q&lang=1040&obf=0", "tcp": P, "udp": Q, "obfuscation": false}`. È l'indirizzo che usa eMule (`TriggerPortTest`) con le porte **in uso adesso**: se le hai appena cambiate, riavvia prima. Con l'offuscamento acceso l'indirizzo ha `obf=1&clienthash=<hash utente>`. `lang` è l'identificatore di lingua di Windows (1040 italiano, 1033 inglese, predefinito). **Il demone non apre l'indirizzo**: lo apre il browser, su un clic dell'utente; il sito prova a collegarsi alle porte TCP e UDP e il demone risponde (`OP_PORTTEST`).
+
+### Importare un eMule esistente — `GET /api/v1/setup/import`, `POST /api/v1/setup/import/scan`, `POST /api/v1/setup/import`
+
+Per chi ha già eMule (di solito su Windows): il Wizard web può portare qui identità, crediti, file conosciuti, server, nodi Kad e preferenze. **Solo durante il primo avvio** (Wizard non finito) e una volta sola: dopo `409`.
+- `GET /api/v1/setup/import` → `{"available": true, "imported": false, "candidates": ["/home/utente/.emuled.old/profile"]}`. `candidates` (solo se `available`): le cartelle del computer che sembrano la configurazione di un eMule — vecchie installazioni `~/.emuled*`, `~/.config/emule`, `~/eMule/config`, eMule sotto Wine, `/mnt` e `/media` —, escluso il profilo in uso.
+- `POST /api/v1/setup/import/scan` `{"path": "/mnt/z/eMule/config", "rules": [...]}` → `{"files": [{"name", "size"}], "total_bytes", "nick", "dirs": [{"windows": "Z:\\eMule\\Incoming\\", "path": "/mnt/z/eMule/Incoming/", "mapped": true, "exists": true}], "rules": [{"win": "Z:/eMule", "linux": "/mnt/z/eMule"}]}`. **Sola lettura.** Senza `rules` il demone le propone cercando, sopra la cartella indicata, il punto dove le cartelle di Windows esistono davvero. Errori: `422` (non sembra una cartella di eMule — mancano `preferences.ini`, `known.met` e `clients.met` —, oppure è la cartella di emuled stesso, oppure una regola non vale), `409` (non è il primo avvio).
+- `POST /api/v1/setup/import` `{"path": "...", "rules": [{"win": "Z:\\eMule", "linux": "/mnt/z/eMule"}]}` → `200 {"staged": true, "restarting": true}`. Copia i file in `<profilo>/import-ready/` correggendo i percorsi in `preferences.ini`, `shareddir.dat` (resta UTF-16) e `Category.ini`; poi **il demone si riavvia da solo** (stesso processo, stessi argomenti) e all'avvio, prima di leggere il profilo, mette i file al loro posto. I file sostituiti vanno in `<profilo>/pre-import-AAAAMMGG-hhmmss/`. Non si copiano i download in corso (`Temp/`) né gli indici Kad. Un'importazione interrotta prima della fine si butta all'avvio. Errori: `422` come sopra o spazio insufficiente.
+
+### Cartelle del computer — `GET /api/v1/fs`, `POST /api/v1/fs/mkdir`
+
+Servono alla finestra «Scegli una cartella» del Wizard e delle Preferenze (Incoming, Temp, cartelle condivise). **Sono le cartelle del computer dove gira il demone**, non quelle del PC del browser: con Docker sono quelle del contenitore e dei volumi montati. Come ogni altra chiamata richiedono il gettone; il demone vede solo ciò che l'utente con cui gira può vedere. Mai il contenuto dei file.
+- `GET /api/v1/fs?path=/percorso&hidden=0|1` → `{"path": "/percorso", "parent": "/" | null, "home": "/home/utente", "writable": true, "free_bytes": 123, "truncated": false, "entries": [{"name": "Download", "path": "/percorso/Download", "readable": true, "writable": true}]}`. Senza `path` parte dalla cartella dell'utente. Il percorso si normalizza (`..` e collegamenti simbolici vengono risolti). Solo sottocartelle, in ordine alfabetico senza distinguere maiuscole; le nascoste (che iniziano con `.`) solo con `hidden=1`; al massimo 2000 (`truncated`). Errori: `400 bad_path` (non assoluto), `400 not_a_directory`, `404 dir_not_found`, `403 forbidden_path`.
+- `POST /api/v1/fs/mkdir` `{"path": "/percorso/nuova"}` crea **una** cartella (quella che la contiene deve esistere) e risponde `201 {"path": ...}`. Errori: `409 dir_exists`, `404 dir_not_found`, `400 bad_path`/`bad_dirname`, `403 forbidden_path`.
+
 ### `GET /api/v1/status` — lo stato generale
 
 `version` e' la versione del protocollo/client eMule (quella che si annuncia in rete); `emuled_version` e' la versione di emuled; `base_version` e' il codice eMule da cui deriva.
@@ -270,7 +295,7 @@ Gli eventi nascono da un confronto periodico, quindi la latenza massima è 1 s.
 
 ### `POST /api/v1/servers/update` — aggiorna la lista da un indirizzo
 
-Corpo `{"url": "https://esempio.org/server.met"}`. Scarica il file (solo `http` e `https`, certificato verificato, al massimo 8 MB e 60 s, fino a 5 redirect) e lo **unisce** alla lista: i server nuovi si aggiungono, nessuno si toglie. Risponde **202**; l'esito si legge con `GET /api/v1/servers/update`: `state` è `running`, `done` (con `added`, i server nuovi, e `total`) o `failed` (con `error`). **422** se l'indirizzo non è http(s); **409** se un aggiornamento è già in corso. L'indirizzo riuscito si ricorda in `AC_ServerMetURLs.dat` (come eMule); `GET /api/v1/servers/urls` li elenca.
+Corpo `{"url": "https://esempio.org/server.met"}`. Scarica il file (solo `http` e `https`, certificato verificato, al massimo 8 MB e 60 s, fino a 5 redirect) e lo **unisce** alla lista: i server nuovi si aggiungono, nessuno si toglie. Risponde **202**; l'esito si legge con `GET /api/v1/servers/update`: `state` è `running`, `done` (con `added`, i server nuovi, e `total`) o `failed` (con `error`). **422** se l'indirizzo non è http(s); **409** se un aggiornamento è già in corso. L'indirizzo riuscito si ricorda in `AC_ServerMetURLs.dat` (come eMule); `GET /api/v1/servers/urls` li elenca. Alla fine **riscrive subito `server.met`** (prima i server arrivati da un indirizzo web si salvavano solo allo spegnimento pulito del demone).
 
 ### `POST /api/v1/kad/bootstrap` — ripopola Kad
 

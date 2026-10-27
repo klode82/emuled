@@ -71,6 +71,36 @@ std::string FindConfigFile(const std::string &explicitPath, const EnvGetter &env
 	return std::string();
 }
 
+ConfigExtras ExtrasFromEnv(const EnvGetter &env)
+{
+	auto get = [&](const char *n) { const char *v = env(n); return (v && *v) ? std::string(v) : std::string(); };
+	ConfigExtras x; x.web_dir = get("EMULED_WEB_DIR"); x.templates_dir = get("EMULED_TEMPLATES_DIR"); x.mediainfo = get("EMULED_MEDIAINFO");
+	return x;
+}
+
+std::string DefaultConfigText(const std::string &bind, uint16_t port, const std::string &profile, const ConfigExtras &x)
+{
+	return std::string("# emuled: configurazione di BASE del demone (non quella di eMule: quella sta nella cartella del profilo, preferences.ini / .dat).\n"
+		 "# Formato: chiave: valore. Precedenza: riga di comando > variabili EMULED_* > questo file.\n"
+		 "\n"
+		 "# cartella del profilo (preferenze, server.met, known.met, Temp, ...). Per usare quello di eMule Windows copiato qui: mettere il suo percorso.\n"
+		 "config: " + profile + "\n"
+		 "\n"
+		 "# indirizzo e porta dell'API / interfaccia web (solo questo computer: 127.0.0.1)\n"
+		 "api_bind: " + bind + "\n"
+		 "api_port: " + std::to_string(port) + "\n"
+		 "\n"
+		 "# cartella dell'interfaccia web compilata (web/dist); senza, l'API risponde ma non serve la pagina\n"
+		 + (x.web_dir.empty() ? std::string("# web_dir: /percorso/di/web/dist\n") : "web_dir: " + x.web_dir + "\n") +
+		 "\n"
+		 "# template d'interfaccia: quelli di serie stanno in /usr/share/emuled/templates e i tuoi in ~/.emuled/templates (si cercano da soli).\n"
+		 "# templates_dir e' una cartella IN PIU' dove cercarli (sviluppo, Docker con una cartella montata). web_dir serve invece UNA sola interfaccia a \"/\" (senza scelta).\n"
+		 + (x.templates_dir.empty() ? std::string("# templates_dir: /percorso/dei/template   (predefinita: nessuna, oltre a /usr/share/emuled/templates e ~/.emuled/templates)\n") : "templates_dir: " + x.templates_dir + "\n") +
+		 "\n"
+		 "# programma mediainfo per la scheda Contenuto dei file (vuoto = si cerca nel PATH); installarlo: sudo apt install mediainfo\n"
+		 + (x.mediainfo.empty() ? std::string("# mediainfo: /usr/bin/mediainfo\n") : "mediainfo: " + x.mediainfo + "\n"));
+}
+
 bool EnsureDefaultConfigFile(const EnvGetter &env, std::string &created, std::string &err)
 {
 	created.clear();
@@ -80,28 +110,18 @@ bool EnsureDefaultConfigFile(const EnvGetter &env, std::string &created, std::st
 	const std::string dir = home + "/.emuled", path = dir + "/config.yaml";
 	fs::create_directories(dir, ec);
 	::chmod(dir.c_str(), 0700);
-	fs::create_directories(dir + "/profile", ec);		// il profilo predefinito: il demone vuole che la cartella esista
-	::chmod((dir + "/profile").c_str(), 0700);
+	// cio' che arriva da variabili d'ambiente si scrive nel file: un servizio systemd non eredita l'ambiente del terminale
+	auto get = [&](const char *n) { const char *v = env(n); return (v && *v) ? std::string(v) : std::string(); };
+	std::string bind = get("EMULED_API_BIND"), profile = get("EMULED_CONFIG"); uint16_t port = 8765;
+	if (bind.empty()) bind = "127.0.0.1";
+	if (std::string p = get("EMULED_API_PORT"); !p.empty()) ParsePort(p, port);
+	if (profile.empty()) {
+		profile = "~/.emuled/profile";
+		fs::create_directories(dir + "/profile", ec);		// il profilo predefinito: il demone vuole che la cartella esista
+		::chmod((dir + "/profile").c_str(), 0700);
+	}
 	std::ofstream f(path, std::ios::trunc);
-	f << "# emuled: configurazione di BASE del demone (non quella di eMule: quella sta nella cartella del profilo, preferences.ini / .dat).\n"
-		 "# Formato: chiave: valore. Precedenza: riga di comando > variabili EMULED_* > questo file.\n"
-		 "\n"
-		 "# cartella del profilo (preferenze, server.met, known.met, Temp, ...). Per usare quello di eMule Windows copiato qui: mettere il suo percorso.\n"
-		 "config: ~/.emuled/profile\n"
-		 "\n"
-		 "# indirizzo e porta dell'API / interfaccia web (solo questo computer: 127.0.0.1)\n"
-		 "api_bind: 127.0.0.1\n"
-		 "api_port: 8765\n"
-		 "\n"
-		 "# cartella dell'interfaccia web compilata (web/dist); senza, l'API risponde ma non serve la pagina\n"
-		 "# web_dir: /percorso/di/web/dist\n"
-		 "\n"
-		 "# template d'interfaccia: quelli di serie stanno in /usr/share/emuled/templates e i tuoi in ~/.emuled/templates (si cercano da soli).\n"
-		 "# templates_dir e' una cartella IN PIU' dove cercarli (sviluppo, Docker con una cartella montata). web_dir serve invece UNA sola interfaccia a \"/\" (senza scelta).\n"
-		 "# templates_dir: /percorso/dei/template\n"
-		 "\n"
-		 "# programma mediainfo per la scheda Contenuto dei file (vuoto = si cerca nel PATH); installarlo: sudo apt install mediainfo\n"
-		 "# mediainfo: /usr/bin/mediainfo\n";
+	f << DefaultConfigText(bind, port, profile, ExtrasFromEnv(env));
 	f.close();
 	if (!f) { err = "non riesco a creare " + path; return false; }
 	created = path; return true;

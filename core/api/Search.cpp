@@ -199,11 +199,12 @@ Response StartSearch(const json &b, ActiveSearch *reuse)
 	catch (const CString &e) { return Response::Error(422, std::string("ricerca rifiutata: ") + (LPCTSTR)e); }
 	s->started = s->lastGrowth = NowS();
 	Audit(std::string(reuseId ? "search refreshed (" : "search started (") + scope + "): " + query);
-	ActiveSearch *added;
+	ActiveSearch *added = nullptr;
 	if (reuseId) {		// la scheda resta dov'e' e con lo stesso id
 		s->id = reuseId;
 		for (auto &p : g_history) if (p->id == reuseId) { p = std::move(s); added = p.get(); break; }
-	} else { s->id = g_nextId++; g_history.push_back(std::move(s)); added = g_history.back().get(); }
+	} else s->id = g_nextId++;
+	if (!added) { g_history.push_back(std::move(s)); added = g_history.back().get(); }		// nuova, o la scheda da riusare non c'e' piu'
 	g_liveId = added->id;
 	SaveAll();
 	return Ok(SearchJson(*added, false), 202);

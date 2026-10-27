@@ -1,6 +1,6 @@
 // Client dell'API REST di emuled. Il token e' un Bearer; con 401 si avvisa chi ascolta (la sessione torna alla schermata di accesso).
 import { t } from '@/i18n'
-import type { LogPage, Category, Directories, Download, Parts, Source, ServerPriority, NewSearch, Preferences, PrefsPatchResult, Search, Server, Shared, Status, Uploads, KadState, Priority, ServerUpdate, KadBootstrap, Details, Content, FileNames, FileComments, StreamLink, TemplateList, Blocks } from '@/types'
+import type { ImportRule, ImportScan, FsList, PortsCheck, LogPage, Category, Directories, Download, Parts, Source, ServerPriority, NewSearch, Preferences, PrefsPatchResult, Search, Server, Shared, Status, Uploads, KadState, Priority, ServerUpdate, KadBootstrap, Details, Content, FileNames, FileComments, StreamLink, TemplateList, Blocks } from '@/types'
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public code = '') { super(message) }
@@ -113,6 +113,16 @@ export class Api {
   patchPreferences = (b: Preferences) => this.patch<PrefsPatchResult>('/preferences', b)
   log = (q: { after?: number; limit?: number; level?: string }) => this.get<LogPage>('/log?' + new URLSearchParams(Object.entries(q).filter(([, v]) => v !== undefined).map(([k, v]) => [k, String(v)])).toString())
   clearLog = () => this.del<{ removed: number }>('/log')
+  fs = (path?: string, hidden = false) => this.get<FsList>(`/fs?${path ? `path=${encodeURIComponent(path)}&` : ''}hidden=${hidden ? 1 : 0}`)
+  fsMkdir = (path: string) => this.post<{ path: string }>('/fs/mkdir', { path })
+  setupStatus = () => this.get<{ pending: boolean }>('/setup')
+  importStatus = () => this.get<{ available: boolean; imported: boolean; candidates?: string[] }>('/setup/import')
+  importScan = (path: string, rules?: ImportRule[]) => this.post<ImportScan>('/setup/import/scan', { path, rules })
+  importRun = (path: string, rules: ImportRule[]) => this.post<{ staged: boolean; restarting: boolean }>('/setup/import', { path, rules })
+  portsTestUrl = (lang: number) => this.get<{ url: string; tcp: number; udp: number; obfuscation: boolean }>(`/ports/test-url?lang=${lang}`)
+  systemRestart = () => this.post<{ restarting: boolean }>('/system/restart')
+  setupDone = () => this.post<{ pending: boolean }>('/setup/done')
+  portsCheck = (tcp: number, udp: number) => this.get<PortsCheck>(`/ports/check?tcp=${tcp}&udp=${udp}`)
   directories = () => this.get<Directories>('/directories')
   putDirectories = (b: Partial<Directories>) => this.put<{ directories: Directories; saved: boolean }>('/directories', b as Json)
   categories = () => this.get<Category[]>('/categories')

@@ -58,14 +58,14 @@ int main()
 		loginPayload = pl; gotLogin = true;
 		auto str = [](const std::string &s) { uint16_t l = (uint16_t)s.size(); return std::string((const char*)&l, 2) + s; };
 		std::string out = Pkt(0x38, str("Benvenuto nel server di prova")) + Pkt(0x40, U32(0x0A0B0C0D) + U32(0x0D)) + Pkt(0x34, U32(321) + U32(654));
-		write(c, out.data(), out.size());
+		(void)!write(c, out.data(), out.size());
 		if (ReadPkt(c, op, pl) && op == 0x16) {		// OP_SEARCHREQUEST
 			searchPayload = pl; gotSearch = true;
 			auto tagStr = [](uint8_t id, const std::string &s) { std::string t; t += (char)0x82; t += (char)id; uint16_t l = (uint16_t)s.size(); t.append((const char*)&l, 2); return t + s; };
 			auto tagInt = [](uint8_t id, uint32_t v) { std::string t; t += (char)0x83; t += (char)id; t.append((const char*)&v, 4); return t; };
 			auto hit = [&](char hb, const std::string &name, uint32_t sz, uint32_t src) { std::string f(16, hb); f += U32(0x11223344); uint16_t p = 4662; f.append((const char*)&p, 2); f += U32(3); return f + tagStr(1, name) + tagInt(2, sz) + tagInt(0x15, src); };
 			std::string res = U32(2) + hit('\x0A', "Fight Club ITA.avi", 734003200, 42) + hit('\x0B', "fight.club.sub.mkv", 1500000, 7) + std::string(1, '\x01');
-			std::string o2 = Pkt(0x33, res); write(c, o2.data(), o2.size());
+			std::string o2 = Pkt(0x33, res); (void)!write(c, o2.data(), o2.size());
 		}
 		usleep(500000); close(c);
 	});

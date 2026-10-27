@@ -4257,7 +4257,7 @@ bool CPartFile::GetNextRequestedBlock(CUpDownClient *sender, Requested_Block_Str
 					//ASSERT(cur_chunk.frequency >= rareBound);
 
 					// used to slightly lessen the importance of frequency
-					uint16 randomAdd = (uint16)((3 * RAND_MAX / 2 + (uint32)rand() *(almostRareBound - rareBound)) / RAND_MAX);
+					uint16 randomAdd = (uint16)((3ull * RAND_MAX / 2 + (uint64)rand() * (almostRareBound - rareBound)) / RAND_MAX);		// LINUX: 64 bit (RAND_MAX vale 2^31-1, non 32767: in 32 bit andava in overflow)
 					//AddDebugLogLine(DLP_VERYLOW, false, _T("RandomAdd: %i, (%i-%i=%i)"), randomAdd, rareBound, almostRareBound, almostRareBound-rareBound);
 
 					cur_chunk.rank = (cur_chunk.frequency)           // Criterion 1

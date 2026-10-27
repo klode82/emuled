@@ -131,7 +131,7 @@ void CPartFileWriteThread::WriteBuffers()
 			pOvWrite->oOverlap.InternalHigh = 0;
 			//pOvWrite->oOverlap.Offset = LODWORD(currentblock->StartOffset);
 			//pOvWrite->oOverlap.OffsetHigh = HIDWORD(currentblock->StartOffset);
-			*(uint64*)&pOvWrite->oOverlap.Offset = pBuffer->start;
+			OvSetOffset(&pOvWrite->oOverlap, pBuffer->start);		// LINUX: Offset e OffsetHigh a parte (il cast a uint64* violava lo strict aliasing)
 			pOvWrite->oOverlap.hEvent = 0;
 			pOvWrite->pFile = pFile;
 			pOvWrite->pBuffer = pBuffer;

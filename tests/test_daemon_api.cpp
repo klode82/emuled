@@ -109,6 +109,63 @@ int main(int argc, char **argv)
 			const std::string sess = su["token"].get<std::string>();
 			Http(port, "GET", "/api/v1/status", sess, "", s); CHECK(s == 200);						// la sessione vale come il token del file
 			Http(port, "GET", "/api/v1/status", token, "", s); CHECK(s == 200);						// e il token del file vale ancora (script, strumenti)
+			{	// Wizard web (Bench 873): dopo il primo account il primo avvio e' "da completare" finche' non lo si conferma; serve il gettone
+				Http(port, "GET", "/api/v1/setup", "", "", s); CHECK(s == 401);
+				json sp = json::parse(Http(port, "GET", "/api/v1/setup", sess, "", s), nullptr, false); CHECK(s == 200 && sp["pending"] == true);
+				{	// importazione di un profilo eMule (Bench 875): solo scansione qui (l'importazione vera riavvia il demone: la prova e' in test_import)
+					namespace fsx = std::filesystem; const fsx::path imp = fsx::path(cfg).parent_path() / "import_prova";
+					fsx::create_directories(imp); { std::ofstream(imp / "preferences.ini") << "[eMule]\r\nNick=Pippo\r\nIncomingDir=Z:\\eMule\\IncomingProva\\\r\n"; }
+					Http(port, "GET", "/api/v1/setup/import", "", "", s); CHECK(s == 401);
+					json ia = json::parse(Http(port, "GET", "/api/v1/setup/import", sess, "", s), nullptr, false); CHECK(s == 200 && ia["available"] == true && ia["imported"] == false);
+					json is = json::parse(Http(port, "POST", "/api/v1/setup/import/scan", sess, "{\"path\":\"" + imp.string() + "\"}", s), nullptr, false);
+					CHECK(s == 200 && is["nick"] == "Pippo" && is["files"].size() == 1 && is["dirs"].size() == 1 && is["dirs"][0]["mapped"] == false);
+					Http(port, "POST", "/api/v1/setup/import/scan", sess, "{\"path\":\"" + cfg + "\"}", s); CHECK(s == 422);			// il profilo di emuled stesso
+					Http(port, "POST", "/api/v1/setup/import/scan", sess, "{\"path\":\"/non/esiste\"}", s); CHECK(s == 422);
+					Http(port, "POST", "/api/v1/setup/import/scan", sess, "{\"path\":\"" + imp.string() + "\",\"rules\":[{\"win\":\"Z:\\\\eMule\",\"linux\":\"relativo\"}]}", s); CHECK(s == 422);
+					is = json::parse(Http(port, "POST", "/api/v1/setup/import/scan", sess, "{\"path\":\"" + imp.string() + "\",\"rules\":[{\"win\":\"Z:\\\\eMule\",\"linux\":\"/mnt/z/eMule\"}]}", s), nullptr, false);
+					CHECK(s == 200 && is["dirs"][0]["mapped"] == true && is["dirs"][0]["path"] == "/mnt/z/eMule/IncomingProva/");
+				}
+				sp = json::parse(Http(port, "POST", "/api/v1/setup/done", sess, "{}", s), nullptr, false); CHECK(s == 200 && sp["pending"] == false);
+				sp = json::parse(Http(port, "GET", "/api/v1/setup", sess, "", s), nullptr, false); CHECK(sp["pending"] == false);
+				{ json ia = json::parse(Http(port, "GET", "/api/v1/setup/import", sess, "", s), nullptr, false); CHECK(ia["available"] == false); Http(port, "POST", "/api/v1/setup/import/scan", sess, "{\"path\":\"/tmp\"}", s); CHECK(s == 409); }	// a Wizard finito non si importa piu'
+				{	// test delle porte di emule-project.net: l'indirizzo lo costruisce il demone (con le porte IN USO), lo apre il browser
+					json tu = json::parse(Http(port, "GET", "/api/v1/ports/test-url?lang=1040", sess, "", s), nullptr, false);
+					const std::string u = tu.value("url", "");
+					CHECK(s == 200 && u.rfind("https://porttest.emule-project.net/connectiontest.php?tcpport=" + tcp + "&udpport=" + udp + "&lang=1040", 0) == 0 && (u.find("&obf=0") != std::string::npos || u.find("&obf=1&clienthash=") != std::string::npos));
+					Http(port, "GET", "/api/v1/ports/test-url", "", "", s); CHECK(s == 401);
+				}
+				// controllo delle porte: una porta TCP occupata da un altro programma non e' libera, una libera si'; quella che il demone usa gia' e' "own"
+				int lf = ::socket(AF_INET, SOCK_STREAM, 0); sockaddr_in la{}; la.sin_family = AF_INET; la.sin_addr.s_addr = htonl(INADDR_ANY);
+				CHECK(::bind(lf, (sockaddr *)&la, sizeof la) == 0 && ::listen(lf, 1) == 0); socklen_t ll = sizeof la; ::getsockname(lf, (sockaddr *)&la, &ll);
+				const std::string busy = std::to_string(ntohs(la.sin_port));
+				json pc = json::parse(Http(port, "GET", "/api/v1/ports/check?tcp=" + busy + "&udp=" + udp, sess, "", s), nullptr, false);
+				CHECK(s == 200 && pc["tcp"]["free"] == false && pc["tcp"]["own"] == false && pc["udp"]["own"] == true && pc["udp"]["free"] == true);
+				pc = json::parse(Http(port, "GET", "/api/v1/ports/check?tcp=" + tcp + "&udp=0", sess, "", s), nullptr, false);
+				CHECK(pc["tcp"]["own"] == true && pc["tcp"]["free"] == true && pc["udp"]["valid"] == false);
+				::close(lf);
+				{	// elenco delle cartelle del computer del demone (Bench 874): solo sottocartelle, nascoste solo a richiesta, crea una cartella, errori chiari
+					namespace fsx = std::filesystem; const fsx::path root = fsx::path(cfg).parent_path() / "fs_prova";
+					fsx::remove_all(root); fsx::create_directories(root / "Beta"); fsx::create_directories(root / "alfa"); fsx::create_directories(root / ".nascosta"); std::ofstream(root / "file.txt") << "x";
+					const std::string rp = fsx::canonical(root).string();
+					Http(port, "GET", "/api/v1/fs?path=" + rp, "", "", s); CHECK(s == 401);
+					json fl = json::parse(Http(port, "GET", "/api/v1/fs?path=" + rp, sess, "", s), nullptr, false);
+					CHECK(s == 200 && fl["path"] == rp && fl["writable"] == true && fl["parent"].is_string() && fl["entries"].size() == 2 && fl["entries"][0]["name"] == "alfa" && fl["entries"][1]["name"] == "Beta" && fl["entries"][0]["path"] == rp + "/alfa");
+					fl = json::parse(Http(port, "GET", "/api/v1/fs?hidden=1&path=" + rp, sess, "", s), nullptr, false); CHECK(fl["entries"].size() == 3);
+					Http(port, "GET", "/api/v1/fs?path=" + rp + "/file.txt", sess, "", s); CHECK(s == 400);
+					Http(port, "GET", "/api/v1/fs?path=" + rp + "/non-c-e", sess, "", s); CHECK(s == 404);
+					Http(port, "GET", "/api/v1/fs?path=relativo", sess, "", s); CHECK(s == 400);
+					json up = json::parse(Http(port, "GET", "/api/v1/fs?path=" + rp + "/alfa/..", sess, "", s), nullptr, false); CHECK(up["path"] == rp);		// ".." si risolve
+					json root0 = json::parse(Http(port, "GET", "/api/v1/fs?path=/", sess, "", s), nullptr, false); CHECK(s == 200 && root0["parent"].is_null());
+					Http(port, "POST", "/api/v1/fs/mkdir", sess, "{\"path\":\"" + rp + "/Nuova\"}", s); CHECK(s == 201 && fsx::is_directory(root / "Nuova"));
+					Http(port, "POST", "/api/v1/fs/mkdir", sess, "{\"path\":\"" + rp + "/Nuova\"}", s); CHECK(s == 409);
+					Http(port, "POST", "/api/v1/fs/mkdir", sess, "{\"path\":\"" + rp + "/manca/dentro\"}", s); CHECK(s == 404);
+					Http(port, "POST", "/api/v1/fs/mkdir", sess, "{\"path\":\"relativa\"}", s); CHECK(s == 400);
+					Http(port, "POST", "/api/v1/fs/mkdir", sess, "{\"path\":\"" + rp + "/..\"}", s); CHECK(s == 400);
+					Http(port, "POST", "/api/v1/fs/mkdir", "", "{\"path\":\"" + rp + "/X\"}", s); CHECK(s == 401);
+					fsx::remove_all(root);
+				}
+				pc = json::parse(Http(port, "GET", "/api/v1/ports/check?tcp=" + busy, sess, "", s), nullptr, false); CHECK(pc["tcp"]["free"] == true && !pc.contains("udp"));		// ora e' libera
+			}
 			Http(port, "GET", "/api/v1/status", sess.substr(0, sess.size() - 2) + "00", "", s); CHECK(s == 401);
 			Http(port, "POST", "/api/v1/auth/setup", "", "{\"setup_code\":\"" + token + "\",\"username\":\"altro\",\"password\":\"password-lunga\"}", s); CHECK(s == 409);	// non si crea un secondo account
 			as = json::parse(Http(port, "GET", "/api/v1/auth/status", "", "", s), nullptr, false); CHECK(as["configured"] == true && as["setup_required"] == false);
@@ -337,8 +394,11 @@ int main(int argc, char **argv)
 		  Http(port, "POST", "/api/v1/kad/bootstrap", token, "{\"address\":\"1.2.3.4:4672\"}", s); CHECK(s == 409);		// offline: Kad non disponibile
 		  size_t nBefore = json::parse(Http(port, "GET", "/api/v1/servers", token, "", s)).size();
 		  Http(port, "DELETE", "/api/v1/servers/203.0.113.77:4661", token, "", s); CHECK(s == 200);
+		  const auto metSize = [&] { std::error_code ec; return std::filesystem::file_size(base / "config" / "server.met", ec); };
+		  const auto sizeAfterDelete = metSize();
 		  r = Http(port, "POST", "/api/v1/servers/update", token, "{\"url\":\"" + base_url + "/server.met\"}", s); CHECK(s == 202 && json::parse(r)["state"] == "running");
 		  { json j = waitJob("done"); CHECK(j["added"] == 1 && j["total"].get<size_t>() == nBefore); }
+		  CHECK(metSize() > sizeAfterDelete);		// i server arrivati da un indirizzo web sono gia' scritti in server.met (prima si salvavano solo allo spegnimento)
 		  CHECK(json::parse(Http(port, "GET", "/api/v1/servers", token, "", s)).size() == nBefore);
 		  Http(port, "POST", "/api/v1/servers/update", token, "{\"url\":\"" + base_url + "/manca\"}", s); CHECK(s == 202);
 		  { json j = waitJob("failed"); CHECK(j["error"].is_string() && !j["error"].get<std::string>().empty()); }

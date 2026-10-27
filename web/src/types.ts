@@ -100,4 +100,16 @@ export interface Source {
 }
 export interface Part { index: number; size: number; missing: number; sources: number; state: 'empty' | 'partial' | 'complete' | 'corrupted'; verified?: boolean }
 export interface Parts { part_size: number; size: number; count: number; hashset?: boolean; parts: Part[] }
+export interface FsEntry { name: string; path: string; readable: boolean; writable: boolean }
+export interface FsList { path: string; parent: string | null; home: string; writable: boolean; entries: FsEntry[]; truncated: boolean; free_bytes?: number }
+export interface PortCheck { port: number; valid: boolean; free: boolean; own: boolean }
+export interface PortsCheck { tcp?: PortCheck; udp?: PortCheck }
 export interface Directories { incoming: string; temp: string[]; shared: string[]; shared_missing?: string[] }
+
+// Importazione di un profilo eMule esistente (Bench 875)
+export interface ImportRule { win: string; linux: string }
+export interface ImportScan {
+  files: { name: string; size: number }[]; total_bytes: number; nick: string
+  dirs: { windows: string; path: string; mapped: boolean; exists: boolean }[]
+  rules: ImportRule[]
+}

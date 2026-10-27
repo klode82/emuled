@@ -8,6 +8,7 @@ A community fork of [eMule 0.72a-community](https://github.com/irwir/eMule), por
 
 [![License: GPL v2+](https://img.shields.io/badge/license-GPL--2.0--or--later-blue.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/klode82/emuled?include_prereleases&label=release)](https://github.com/klode82/emuled/releases)
+[![Downloads](https://img.shields.io/github/downloads/klode82/emuled/total?label=downloads)](https://github.com/klode82/emuled/releases)
 [![Release workflow](https://img.shields.io/github/actions/workflow/status/klode82/emuled/release.yml?label=release%20build)](https://github.com/klode82/emuled/actions/workflows/release.yml)
 ![Status: alpha](https://img.shields.io/badge/status-alpha-orange)
 ![Based on eMule 0.72a-community](https://img.shields.io/badge/based%20on-eMule%200.72a--community-informational)

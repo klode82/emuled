@@ -1,0 +1,13 @@
+#!/bin/sh
+# On REMOVAL of the package (not on upgrade) stop emuled for the users who have it running as a systemd user service:
+# the program is about to be deleted. Used as the .deb "prerm" and as the .rpm "%preun" script. It never fails the removal.
+# The service stays enabled in the user's configuration (harmless: systemd ignores a unit that no longer exists); profile and ~/.emuled are not touched.
+case "$1" in
+	remove|0) ;;								# deb: "remove"; rpm: number of copies left (0 = removal, 1 = upgrade)
+	*) exit 0 ;;
+esac
+command -v loginctl >/dev/null 2>&1 || exit 0
+loginctl list-users --no-legend 2>/dev/null | while read -r uid _; do
+	systemctl --user --machine="${uid}@.host" stop emuled.service >/dev/null 2>&1 || true
+done
+exit 0

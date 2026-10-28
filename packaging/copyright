@@ -1,0 +1,51 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: emuled
+Upstream-Contact: klode82 <klode82@gmail.com>
+Source: https://github.com/klode82/emuled
+Comment: emuled is a port to Linux of eMule 0.72a-community (https://github.com/irwir/eMule).
+ Third-party components and the licence check of the source files are described in /usr/share/doc/emuled/NOTICE.md.
+
+Files: *
+Copyright: 2002-2026 Merkur (eMule project, https://www.emule-project.net) and the eMule community
+           2026 klode82 and the emuled contributors
+License: GPL-2+
+
+Files: core/MD4.cpp core/MD5Sum.h
+Copyright: 1990-1992 RSA Data Security, Inc. All rights reserved.
+License: RSA-MD
+ License to copy and use this software is granted provided that it is identified as the
+ "RSA Data Security, Inc. MD4/MD5 Message-Digest Algorithm" in all material mentioning or referencing
+ this software or this function. License is also granted to make and use derivative works provided that
+ such works are identified as "derived from the RSA Data Security, Inc. MD4/MD5 Message-Digest Algorithm"
+ in all material mentioning or referencing the derived work. RSA Data Security, Inc. makes no
+ representations concerning either the merchantability of this software or the suitability of this
+ software for any particular purpose. It is provided "as is" without express or implied warranty of any kind.
+ These notices must be retained in any copies of any part of this documentation and/or software.
+
+Files: usr/share/emuled/templates/*/assets/*.woff usr/share/emuled/templates/*/assets/*.woff2
+Copyright: The authors of DM Sans, IBM Plex Sans, IBM Plex Mono, Manrope and Public Sans (packaged by Fontsource)
+License: OFL-1.1
+ The fonts are licensed under the SIL Open Font License, Version 1.1 (https://openfontlicense.org).
+
+Files: usr/share/emuled/templates/*/assets/*.js
+Copyright: The emuled contributors; Vue, Pinia, vue-router, vue-i18n and Tailwind CSS authors
+License: GPL-2+ and MIT
+ The web interface is GPL-2+; the JavaScript libraries bundled with it are under the MIT licence
+ (exact list and versions: web/package-lock.json in the source).
+
+Files: usr/bin/emuled
+Copyright: Thomas Bernard (miniupnpc, linked statically in the .deb)
+License: BSD-3-Clause
+ The full text of the miniupnpc licence is at https://github.com/miniupnp/miniupnp/blob/master/miniupnpc/LICENSE.
+
+License: GPL-2+
+ This program is free software; you can redistribute it and/or modify it under the terms of the GNU General
+ Public License as published by the Free Software Foundation; either version 2 of the License, or (at your
+ option) any later version.
+ .
+ This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
+ implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+ for more details.
+ .
+ On Debian systems, the complete text of the GNU General Public License version 2 can be found in
+ /usr/share/common-licenses/GPL-2.

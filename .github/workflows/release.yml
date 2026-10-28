@@ -10,7 +10,13 @@ permissions:
   packages: write
 jobs:
   deb:
-    runs-on: ubuntu-24.04
+    # amd64 and arm64 (Raspberry Pi 3/4/5 with a 64-bit system, Bench 911): native GitHub runners, free on public repositories
+    strategy:
+      matrix:
+        include:
+          - { arch: amd64, runner: ubuntu-24.04 }
+          - { arch: arm64, runner: ubuntu-24.04-arm }
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v5
       - name: Tag matches EMULED_VERSION
@@ -32,7 +38,7 @@ jobs:
             docker run --rm -v "$PWD/build":/pkgs:ro $img bash -c 'apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq /pkgs/*.deb && test -d /usr/share/emuled/templates/console && emuled --offline --max-seconds 3 --api-port 18790'
           done
       - uses: actions/upload-artifact@v4
-        with: { name: deb, path: build/*.deb }
+        with: { name: "deb-${{ matrix.arch }}", path: build/*.deb }
 
   rpm:
     runs-on: ubuntu-24.04
@@ -72,7 +78,7 @@ jobs:
     steps:
       # only the packages: the Docker build also leaves a *.dockerbuild artifact that cannot be downloaded
       - uses: actions/download-artifact@v4
-        with: { name: deb, path: artifacts }
+        with: { pattern: "deb-*", merge-multiple: true, path: artifacts }
       - uses: actions/download-artifact@v4
         with: { name: rpm, path: artifacts }
       - uses: softprops/action-gh-release@v2

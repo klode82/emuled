@@ -1,5 +1,5 @@
-# Servizio systemd "utente" installato dai pacchetti .deb/.rpm in /usr/lib/systemd/user/.
-# Come utente normale: systemctl --user enable --now emuled   (config in ~/.emuled/config.yaml, creato al primo avvio)
+# systemd "user" service installed by the .deb/.rpm packages in /usr/lib/systemd/user/.
+# As a normal user: emuled --install-service   (or: systemctl --user enable --now emuled; configuration in ~/.emuled/config.yaml, created at first start)
 [Unit]
 Description=emuled - eMule for Linux (web interface on 127.0.0.1:8765)
 After=network-online.target

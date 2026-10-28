@@ -90,7 +90,7 @@ Typical uses: an always-on download box / NAS, a headless server, a container, o
 | Protocol / file formats | eD2K, Kad, `known.met`, `*.part.met`, `preferences.dat`, … | **unchanged** and compatible |
 | Service | Desktop program | `systemd` user service, Docker image, `.deb`/`.rpm` |
 | Robustness | — | profile checker, atomic writes, guardian, memory-bug fixes found with sanitizers and fuzzing |
-| Tests | — | 47 C++ tests (ctest), 43 UI tests (vitest), browser end-to-end tests |
+| Tests | — | 48 tests (ctest), 43 UI tests (vitest), browser end-to-end tests |
 | Languages | eMule's own | web UI in 14 languages |
 
 Fixes made along the way include out-of-bounds reads in the original code (for example the key size in `clients.met` and `CPTR()` past the end of an empty string). The original sources are kept **untouched** in [`upstream/`](upstream/emule/0.72a-community) and you can compare them with `diff -ru upstream/emule/0.72a-community/srchybrid core`; the history of every change is in git.
@@ -123,7 +123,8 @@ sudo dnf install ./emuled-<version>-1.x86_64.rpm
 Then, **as a normal user (not root)**, run `emuled` in a terminal: the first time it asks a few questions and can install itself as a service. All the steps are in [First start](#first-start).
 
 - **Upgrade**: installing a newer package over an installed one upgrades it and restarts the `emuled` user service of every logged-in user who has it running (`packaging/postinst`); your profile and `~/.emuled` are not touched. A first install starts nothing.
-- **Remove**: run `emuled --uninstall-service` first (it stops the service and removes the unit emuled wrote for you), then `sudo apt remove emuled` / `sudo dnf remove emuled`. Your profile and `~/.emuled/config.yaml` stay.
+- **Remove**: `sudo apt remove emuled` / `sudo dnf remove emuled` stops the running service of logged-in users (`packaging/prerm`). Run `emuled --uninstall-service` first to also remove the unit emuled wrote for you. Your profile and `~/.emuled/config.yaml` stay.
+- **Help**: `man emuled` lists the options; the full manual is in `/usr/share/doc/emuled/`.
 - **Private repository**: the release files can only be downloaded after signing in, for example `gh release download -R klode82/emuled -p '*.deb'` (use `'*.rpm'` for Fedora).
 
 ### Docker
@@ -276,7 +277,7 @@ emuled --profile … --guard-restore SLOT --backup-dir DIR [--force]
 ## Testing
 
 ```sh
-ctest --test-dir build --output-on-failure        # 47 C++ tests
+ctest --test-dir build --output-on-failure        # 48 tests
 (cd web && npx vue-tsc --noEmit && npx vitest run)  # type check + UI tests
 (cd web && npm run e2e)                           # browser tests (needs Chrome and a test daemon, see web/e2e/flow.mjs)
 

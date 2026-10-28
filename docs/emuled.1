@@ -1,0 +1,198 @@
+.\" Manual page of emuled. Keep it aligned with `emuled --help` and docs/MANUAL.md (section B5): the test "manpage" checks the options.
+.TH EMULED 1 "2026-10-28" "emuled" "User Commands"
+.SH NAME
+emuled \- eMule for Linux: eD2K/Kademlia daemon with a REST/WebSocket API and a web interface
+.SH SYNOPSIS
+.B emuled
+.RI [ options ]
+.br
+.B emuled \-\-setup
+.br
+.B emuled \-\-install\-service
+|
+.B \-\-uninstall\-service
+.br
+.B emuled
+.RB [ \-\-profile
+.IR DIR ]
+.B \-\-reset\-user
+.br
+.B emuled
+.RB [ \-\-profile
+.IR DIR ]
+.RB ( \-\-check\-profile " | " \-\-scan\-shared " | " \-\-verify\-hashes " | " \-\-update\-known " | " \-\-recover " | " \-\-guard\-scan " | " \-\-guard\-restore )
+.RB [ \-\-pathmap
+.IR WIN=LINUX ]...
+.SH DESCRIPTION
+.B emuled
+is the engine of eMule rebuilt as a Linux daemon. It keeps the eMule protocol and the profile file formats of eMule for Windows,
+and is driven from a web page (or any HTTP client) through a REST and WebSocket API, by default on
+.IR http://127.0.0.1:8765 .
+.PP
+Run without options from a terminal, when no configuration exists yet, it starts a short
+.B wizard
+that asks the listen address, the port and the data folder, writes
+.I ~/.emuled/config.yaml
+and can install emuled as a systemd user service. Without a terminal (systemd, Docker) or with any option, the wizard is skipped.
+.PP
+The first time the web page is opened it asks to create an account, with the one-time setup code that emuled prints
+(with the service:
+.BR "journalctl \-\-user \-u emuled" ).
+.SH SERVICE AND ACCOUNT
+.TP
+.B \-\-setup
+Run the terminal wizard again (an existing configuration is kept as a .bak copy).
+.TP
+.B \-\-install\-service
+Install and start the systemd user service without questions: writes
+.I ~/.config/systemd/user/emuled.service
+unless the package already provides the unit, then runs
+.BR "systemctl \-\-user enable \-\-now emuled" .
+.TP
+.B \-\-uninstall\-service
+Stop and disable the service and remove the unit written by emuled. The profile and the configuration are not touched.
+.TP
+.B \-\-reset\-user
+Create or reset the user name and password of the web interface (asked in the terminal). Sessions already open are closed.
+.SH DAEMON OPTIONS
+Command-line options win over environment variables, which win over the configuration file.
+.TP
+.BI \-\-conf " FILE"
+Configuration file to read instead of
+.IR ~/.emuled/config.yaml .
+.TP
+.BI \-\-profile " DIR"
+Profile folder (the eMule "config" folder, with
+.IR preferences.dat ).
+.TP
+.BI \-\-api\-port " PORT"
+Port of the API and of the web interface (default 8765).
+.TP
+.BI \-\-api\-bind " ADDRESS"
+Address to listen on (default 127.0.0.1). With 0.0.0.0 the API is reachable from the whole network.
+.TP
+.BI \-\-api\-token " TOKEN"
+Use this token instead of the one in
+.IR <profile>/emuled.token .
+.TP
+.B \-\-no\-api
+Do not start the API and the web interface.
+.TP
+.BI \-\-templates\-dir " DIR"
+Extra folder of web interface templates (for development).
+.TP
+.BI \-\-web\-dir " DIR"
+Serve a single web interface from this folder instead of the templates.
+.TP
+.BI \-\-tcp\-port " PORT" "\fR, \fP\-\-udp\-port " PORT
+eD2K ports for this run (the usual ones are 55662 TCP and 55672 UDP).
+.TP
+.BI \-\-server " IP:PORT"
+Connect to this server.
+.TP
+.B \-\-no\-kad
+Do not start Kademlia.
+.TP
+.B \-\-offline
+Do not connect to any network (for tests).
+.TP
+.B \-\-fake\-profile
+Temporary identity and preferences that are not saved (for tests).
+.TP
+.BI \-\-add " LINK"
+Add an ed2k:// link at start (can be repeated).
+.TP
+.BI \-\-pathmap " WIN=LINUX"
+Translate a Windows path written in the profile, for example
+.BR "\-\-pathmap 'Y:\e\eMule=/home/you/eMule'" .
+Can be repeated.
+.TP
+.BI \-\-max\-seconds " N"
+Stop after N seconds.
+.TP
+.BI \-\-status\-interval " N"
+Print a status line every N seconds.
+.TP
+.B \-\-verbose
+More messages in the terminal.
+.SH PROFILE TOOLS
+They work on the profile given with
+.BR \-\-profile .
+The read-only ones do not take the lock and never write.
+.TP
+.B \-\-check\-profile
+Read-only: validate the .met files and say what could be recovered. Exit code 0 all healthy, 1 damaged, 2 usage error.
+.TP
+.B \-\-scan\-shared
+Read-only: list the shared files, how many are already known and how many must be hashed.
+.TP
+.B \-\-verify\-hashes \fR[\fB\-\-sample\fR \fIN\fR] [\fB\-\-max\-size\-mb\fR \fIM\fR]
+Read-only: recompute the ed2k and AICH hashes of a sample of the shared files and compare them with known.met.
+.TP
+.B \-\-update\-known \fR[\fB\-\-force\fR]
+Hash the new shared files and update known.met safely.
+.TP
+.B \-\-recover \fR[\fB\-\-force\fR]
+Restore damaged .met files from their .bak copies (the damaged file becomes .corrupt).
+.TP
+.BI \-\-guard\-scan " " \-\-backup\-dir " DIR"
+Save the healthy .part.met files of Temp in DIR (reads Temp only).
+.TP
+.BI \-\-guard\-restore " SLOT " \-\-backup\-dir " DIR" " \fR[\fP\-\-force\fR]"
+Restore a damaged download slot from the most advanced healthy copy.
+.TP
+.B \-\-force
+With \-\-recover and \-\-update\-known: go on even if files were modified in the last 2 minutes (another eMule may be active).
+.PP
+Network diagnostic probes (\-\-search, \-\-download, \-\-probe\-kad, \-\-probe\-server, \-\-check\-ports, \-\-upnp\-discover, ...)
+go out on the real network and are described in the manual.
+.SH ENVIRONMENT
+.TP
+.B EMULED_CONF
+Configuration file (like \-\-conf).
+.TP
+.B EMULED_CONFIG
+Profile folder (like \-\-profile).
+.TP
+.BR EMULED_API_PORT ", " EMULED_API_BIND
+Port and address of the API.
+.TP
+.BR EMULED_TEMPLATES_DIR ", " EMULED_WEB_DIR ", " EMULED_MEDIAINFO
+Templates folder, single web interface folder, path of the mediainfo program.
+.TP
+.B EMULED_LANG
+With a value starting with "it" the terminal wizard speaks Italian.
+.TP
+.B NO_COLOR
+No colours in the start-up header.
+.SH FILES
+.TP
+.I ~/.emuled/config.yaml
+Base configuration (keys config, api_port, api_bind, web_dir, templates_dir, mediainfo).
+.TP
+.I ~/.emuled/profile/
+Default profile: eMule files, emuled.token, emuled.users.
+.TP
+.I ~/.emuled/templates/
+Web interface templates of the user.
+.TP
+.I ~/.emuled/logs/emuled.log
+Log file.
+.TP
+.I /usr/share/emuled/templates/
+Built-in templates.
+.TP
+.I /usr/lib/systemd/user/emuled.service
+User service installed by the package.
+.SH SIGNALS
+.TP
+.B SIGHUP
+Recheck the shared folders
+.RB ( "systemctl \-\-user reload emuled" ).
+.TP
+.BR SIGTERM ", " SIGINT
+Orderly shutdown (files are saved).
+.SH SEE ALSO
+.BR systemctl (1),
+.BR journalctl (1).
+Full manual: /usr/share/doc/emuled/MANUAL.md; API: /usr/share/doc/emuled/APIDOC.md; https://github.com/klode82/emuled

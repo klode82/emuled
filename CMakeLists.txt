@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 project(emule_linux CXX)
 
-set(EMULED_VERSION 0.3.3)		# versione di emuled (non quella di eMule): il workflow GitHub ne ricava il tag v<versione>
+set(EMULED_VERSION 0.3.3)		# emuled version (not eMule's): the GitHub workflow and tools/release.sh derive the tag v<version> from it
 set(EMULED_UPSTREAM "upstream/emule/0.72a-community")	# sorgenti originali di eMule (sola lettura); gli script in tools/ la leggono da qui
 set(EMULED_BASE_VERSION "eMule 0.72a-community")	# il codice da cui deriva
 add_compile_definitions(EMULED_VERSION="${EMULED_VERSION}" EMULED_BASE_VERSION="${EMULED_BASE_VERSION}")
@@ -44,6 +44,8 @@ pkg_check_modules(CURL REQUIRED IMPORTED_TARGET libcurl)
 find_package(ZLIB REQUIRED)
 
 # The eMule code is written for MSVC. The workarounds are here, in one place only.
+# MSVC/x86 char is signed; on ARM (arm64 packages, Bench 911) it is unsigned by default: keep it signed everywhere
+add_compile_options(-fsigned-char)
 add_compile_options(-Wall -Wno-unknown-pragmas -Wno-reorder -Wno-sign-compare -Wno-parentheses -Wno-misleading-indentation -Wno-write-strings -Wno-int-to-pointer-cast)
 
 # Core library. Sources are added as they get ported (Bench, phases 1-5).
@@ -213,7 +215,7 @@ endif()
 find_package(Threads REQUIRED)
 # For a single .deb installable on several distributions (Ubuntu 24.04, Debian 13): miniupnpc changes library version between them
 # (libminiupnpc17 / 18), so it is embedded in the binary. The other packages have the same name on both.
-option(EMULED_STATIC_MINIUPNPC "incorpora miniupnpc nel binario (pacchetto .deb unico)" OFF)
+option(EMULED_STATIC_MINIUPNPC "link miniupnpc statically into the binary (single .deb package)" OFF)
 if(EMULED_STATIC_MINIUPNPC)
   find_library(MINIUPNPC_LIB NAMES libminiupnpc.a REQUIRED)
 else()
@@ -438,6 +440,9 @@ add_executable(test_indexed_load tests/test_indexed_load.cpp)
 target_link_libraries(test_indexed_load emulecore)
 add_test(NAME indexed_load COMMAND test_indexed_load)
 
+# The man page names only options the program knows, and documents all of them except the network probes (Bench 910)
+add_test(NAME manpage COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/check_manpage.py ${CMAKE_SOURCE_DIR})
+
 # ---- installation (Bench 849; the real package is task 615): the daemon and the built-in templates, built with `npm run build` in web/
 install(TARGETS emuled RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 if(EXISTS ${CMAKE_SOURCE_DIR}/web/dist/templates)
@@ -446,24 +451,44 @@ else()
   message(WARNING "web/dist/templates is missing: `cmake --install` will not install the built-in templates. Build them with: cd web && npm install && npm run build")
 endif()
 install(FILES packaging/emuled-pkg.service DESTINATION lib/systemd/user RENAME emuled.service)
-install(FILES README.md NOTICE.md LICENSE docs/MANUAL.md docs/TEMPLATES.md DESTINATION share/doc/emuled)
+install(FILES README.md NOTICE.md LICENSE packaging/copyright docs/MANUAL.md docs/TEMPLATES.md docs/TEMPLATE-FROM-CONSOLE.md docs/APIDOC.md docs/openapi.json
+  DESTINATION share/doc/emuled)
+# man page (Bench 910) and a short changelog (lintian expects changelog.gz for a native package): both compressed at configure time
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/pkgdoc)
+string(TIMESTAMP EMULED_CHANGELOG_DATE "%a, %d %b %Y %H:%M:%S +0000" UTC)
+file(WRITE ${CMAKE_BINARY_DIR}/pkgdoc/changelog "emuled (${EMULED_VERSION}) unstable; urgency=medium\n\n  * Release ${EMULED_VERSION}: https://github.com/klode82/emuled/releases/tag/v${EMULED_VERSION}\n\n -- klode82 <klode82@gmail.com>  ${EMULED_CHANGELOG_DATE}\n")
+configure_file(docs/emuled.1 ${CMAKE_BINARY_DIR}/pkgdoc/emuled.1 COPYONLY)
+foreach(f changelog emuled.1)
+  file(ARCHIVE_CREATE OUTPUT ${CMAKE_BINARY_DIR}/pkgdoc/${f}.gz PATHS ${CMAKE_BINARY_DIR}/pkgdoc/${f} FORMAT raw COMPRESSION GZip)
+endforeach()
+install(FILES ${CMAKE_BINARY_DIR}/pkgdoc/changelog.gz DESTINATION share/doc/emuled)
+install(FILES ${CMAKE_BINARY_DIR}/pkgdoc/emuled.1.gz DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
 
 # ---- packages (task 615): `cmake -S . -B build -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build --target emuled && cpack --config build/CPackConfig.cmake -G DEB` (or -G RPM, needs rpmbuild)
 set(CPACK_PACKAGE_NAME emuled)
 set(CPACK_STRIP_FILES ON)
 set(CPACK_PACKAGE_VERSION ${EMULED_VERSION})
-set(CPACK_PACKAGE_CONTACT "klode82@gmail.com")
+set(CPACK_PACKAGE_CONTACT "klode82 <klode82@gmail.com>")		# Debian "Maintainer": Name <email>
 set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/klode82/emuled")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "emuled - eMule for Linux (daemon with REST API and web interface)")
+set(CPACK_PACKAGE_DESCRIPTION "emuled is the eD2K/Kademlia engine of eMule rebuilt as a Linux daemon, with no desktop GUI.
+It is driven from a web interface (interchangeable templates, 14 languages) or any HTTP client through a local REST and
+WebSocket API. It keeps the protocol and the profile file formats of eMule for Windows, so it talks to the same network
+and can use an existing eMule profile. It runs as a systemd user service; run emuled once from a terminal to set it up.")
+set(CPACK_RPM_PACKAGE_DESCRIPTION "${CPACK_PACKAGE_DESCRIPTION}")
 set(CPACK_RESOURCE_FILE_LICENSE ${CMAKE_SOURCE_DIR}/LICENSE)
 set(CPACK_PACKAGING_INSTALL_PREFIX /usr)
 set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
 set(CPACK_DEBIAN_PACKAGE_SECTION net)
+set(CPACK_DEBIAN_PACKAGE_RECOMMENDS "ca-certificates")		# https downloads of server lists and nodes.dat
+set(CPACK_DEBIAN_PACKAGE_SUGGESTS "mediainfo")			# file details in the web interface
 set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
-set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA ${CMAKE_SOURCE_DIR}/packaging/postinst)		# on upgrade: restart the user service (see the script)
+set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA ${CMAKE_SOURCE_DIR}/packaging/postinst ${CMAKE_SOURCE_DIR}/packaging/prerm)		# upgrade: restart the user service; removal: stop it
 set(CPACK_RPM_PACKAGE_LICENSE "GPLv2+")
 set(CPACK_RPM_PACKAGE_AUTOREQ ON)
+set(CPACK_RPM_PACKAGE_SUGGESTS "mediainfo")
 set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
 set(CPACK_RPM_POST_INSTALL_SCRIPT_FILE ${CMAKE_SOURCE_DIR}/packaging/postinst)
-set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION /usr/lib/systemd /usr/lib/systemd/user /usr/share/doc)
+set(CPACK_RPM_PRE_UNINSTALL_SCRIPT_FILE ${CMAKE_SOURCE_DIR}/packaging/prerm)
+set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION /usr/lib/systemd /usr/lib/systemd/user /usr/share/doc /usr/share/man /usr/share/man/man1)
 include(CPack)

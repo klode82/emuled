@@ -1,6 +1,28 @@
 #!/usr/bin/env python3
 """Generates docs/openapi.json (OpenAPI 3.0.3) for the emuled API. The description lives here, in Python, so that the shared texts are written only once."""
 import json
+import re
+
+# The Preferences schema comes from the table of core/api/Prefs.cpp (one row per key), so it cannot drift from the code.
+def prefs_schema():
+    src = open("core/api/Prefs.cpp", encoding="utf-8").read()
+    num = lambda x: 1000000 if x.strip() == "kKb" else int(x)
+    props = {}
+    for m in re.finditer(r'\b(B|I|BM|IM|SM|PW)\("([a-z0-9_]+)"([^\n]*)|Pref\{"([a-z0-9_]+)", "(\w+)", ([\w-]+), ([\w-]+)', src):
+        if m.group(4):
+            key, t, lo, hi = m.group(4), m.group(5), num(m.group(6)), num(m.group(7))
+            props[key] = {"type": "boolean"} if t == "bool" else {"type": "integer", "minimum": lo, "maximum": hi} if t == "int" else {"type": "string"}
+            continue
+        kind, key, rest = m.group(1), m.group(2), m.group(3)
+        if kind in ("B", "BM"): props[key] = {"type": "boolean"}
+        elif kind in ("I", "IM"):
+            a = [x.strip() for x in rest.lstrip(",").split(",")]
+            props[key] = {"type": "integer", "minimum": num(a[0]), "maximum": num(a[1])}
+        elif kind == "SM": props[key] = {"type": "string"}
+        else:
+            props[key] = {"type": "string", "writeOnly": True, "description": "password: never returned"}
+            props[key + "_set"] = {"type": "boolean", "readOnly": True, "description": "whether " + key + " is set"}
+    return {"type": "object", "description": "eMule's preferences, grouped by page in APIDOC.md section 9. Only the keys to change are sent with PATCH.", "properties": props, "additionalProperties": False, "example": {"nick": "eMuleLinux", "max_upload_kbps": 50}}
 def resp(desc, schema=None, ref=None):
     r = {"description": desc}
     if ref: r["content"] = {"application/json": {"schema": {"$ref": "#/components/schemas/" + ref}}}
@@ -118,7 +140,8 @@ paths = {
  "/api/v1/servers": {
    "get": op("List of ed2k servers", "The list of servers (server.met).", {"200": resp("List", schema={"type": "array", "items": {"$ref": "#/components/schemas/Server"}}), "401": ERR("Token")}, tags=["Server"]),
    "post": op("Add a server", "Body: \"address\" (address:port, a DNS name also works), \"name\", \"priority\" (low, normal, high), \"static\". server.met is rewritten. 409 if it is already there; 422 if the address is not allowed (local, 0.0.0.0 or filtered).", {"201": resp("Added", ref="Server"), "400": ERR("Invalid body"), "409": ERR("Already in the list"), "422": ERR("Invalid or not allowed address"), "401": ERR("Token")},
-     body={"type": "object", "required": ["address"], "properties": {"address": {"type": "string", "example": "176.123.5.89:4725"}, "name": {"type": "string"}, "priority": {"type": "string", "enum": ["low", "normal", "high"], "default": "normal"}, "static": {"type": "boolean", "default": False}}}, tags=["Server"])},
+     body={"type": "object", "required": ["address"], "properties": {"address": {"type": "string", "example": "176.123.5.89:4725"}, "name": {"type": "string"}, "priority": {"type": "string", "enum": ["low", "normal", "high"], "default": "normal"}, "static": {"type": "boolean", "default": False}}}, tags=["Server"]),
+   "delete": op("Empty the server list", "Removes every server (eMule: \"Remove all\") and rewrites server.met empty. A connection attempt is stopped; the connection to the current server stays until it closes.", {"200": resp("How many were removed", schema={"type": "object", "properties": {"removed": {"type": "integer"}}}), "401": ERR("Token")}, tags=["Server"])},
  "/api/v1/servers/{addr}": {
    "patch": op("Edit a server", "Priority, fixed server (static) and/or name. server.met is rewritten.", {"200": resp("The server", ref="Server"), "400": ERR("Invalid address or body"), "404": ERR("Server not in the list"), "422": ERR("Invalid value"), "401": ERR("Token")}, params=[ADDR],
      body={"type": "object", "properties": {"priority": {"type": "string", "enum": ["low", "normal", "high"]}, "static": {"type": "boolean"}, "name": {"type": "string"}}}, tags=["Server"]),
@@ -153,8 +176,7 @@ schemas = {
      "speed": {"type": "integer", "description": "bytes per second"}, "session_uploaded": {"type": "integer", "format": "int64"}, "score": {"type": "integer"}}},
  "Uploads": {"type": "object", "properties": {"uploading": {"type": "array", "items": {"$ref": "#/components/schemas/UploadClient"}}, "waiting": {"type": "array", "items": {"$ref": "#/components/schemas/UploadClient"}}, "speed": {"type": "integer"}}},
  "Kad": {"type": "object", "properties": {"indexed": {"type": "object", "description": "Kad indexes hosted by us (with Kad running)", "properties": {"keywords": {"type": "integer"}, "sources": {"type": "integer"}, "notes": {"type": "integer"}}}, "published": {"type": "object", "description": "shared files announced to Kad at least once (with Kad running)", "properties": {"files": {"type": "integer", "description": "shared files overall"}, "sources": {"type": "integer", "description": "announced as a source"}, "notes": {"type": "integer", "description": "with the comment/rating announced"}}}, "running": {"type": "boolean"}, "connected": {"type": "boolean"}, "tcp_firewalled": {"type": "boolean"}, "udp_firewalled": {"type": "boolean"}, "udp_verified": {"type": "boolean"}, "contacts": {"type": "integer"}, "users": {"type": "integer"}}},
- "Preferences": {"type": "object", "description": "Keys: nick, tcp_port, udp_port, max_download_kbps, max_upload_kbps (0 = unlimited), max_connections, max_connections_per_5s, max_sources_per_file, network_ed2k, network_kademlia, auto_connect, reconnect, add_servers_from_server, add_servers_from_clients, use_server_priorities, safe_server_connect, static_servers_only, dead_server_retries, crypt_supported, crypt_requested, crypt_required, secure_ident, credit_system, add_new_downloads_paused, auto_up_priority, auto_down_priority, transfer_full_chunks, remove_finished_downloads, verbose_log, save_log_to_disk, save_debug_to_disk, comment_filter (text: words separated by |, in lowercase; comments containing them are discarded)",
-     "additionalProperties": {"oneOf": [{"type": "boolean"}, {"type": "integer"}, {"type": "string"}]}, "example": {"nick": "eMuleLinux", "max_upload_kbps": 50}},
+ "Preferences": prefs_schema(),
  "NewCategory": {"type": "object", "properties": {"title": {"type": "string"}, "comment": {"type": "string"}, "incoming_path": {"type": "string", "description": "folder for completed files (empty = the default one)"}, "priority": {"type": "integer", "minimum": 0, "maximum": 5, "description": "0 low, 1 normal, 2 high, 3 highest, 4 very low, 5 automatic"},
      "auto_cat": {"type": "string", "description": "words that assign the category to new downloads"}, "regexp": {"type": "string"}, "color": {"type": "integer", "description": "-1 = default"}}},
  "Category": {"type": "object", "properties": {"id": {"type": "integer"}, "title": {"type": "string"}, "comment": {"type": "string"}, "incoming_path": {"type": "string"}, "priority": {"type": "integer"}, "auto_cat": {"type": "string"}, "regexp": {"type": "string"}, "color": {"type": "integer"}}},

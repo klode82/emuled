@@ -231,6 +231,10 @@ Body with one or more fields: `priority` (`low`, `normal`, `high`: with "use ser
 
 If it is the server you are connected to, it disconnects you first. It answers with the removed server.
 
+### `DELETE /api/v1/servers` — empty the whole list
+
+Like "Remove all" in eMule's server list: every server is removed and `server.met` is rewritten empty. A connection attempt in progress is stopped; the connection to the current server stays until it closes. It answers `{"removed": N}`. To get a list again use `POST /api/v1/servers/update` (from an address) or add servers one by one.
+
 ### `POST /api/v1/servers/connect` — connect
 
 With `{"address": "176.123.5.89:4725"}` to that server; without a body to any one. It answers **202** at once: the result is read from `/status` (`ed2k.connected`). **404** if the server is not in the list.
@@ -330,37 +334,103 @@ Stops Kad and saves the contacts. It answers 200 even if it was already stopped.
 ## 9. Preferences
 
 ### `GET /api/v1/preferences` — read
-A flat key/value object. The keys (the same as in eMule's Preferences dialog):
+A flat key/value object. The keys are eMule's preferences (same members and same `preferences.ini` keys), listed here by the page of eMule's Preferences dialog where they live; the web interface shows the same pages as tabs. Options marked **not active yet** are kept in the profile (compatible with eMule for Windows) but emuled does not use them yet. *From restart* = the change applies after the daemon restarts.
+
+**Passwords are write-only**: `proxy_password` and `smtp_password` are never returned; `GET` shows `proxy_password_set` / `smtp_password_set` (true/false) instead, and `PATCH` accepts the new value (an empty text clears it). eMule stores them in plain text in `preferences.ini`, and so does emuled.
 
 | Key | Type | Meaning |
 |---|---|---|
+| **General** | | |
 | `nick` | text | the name you appear under to others |
-| `tcp_port`, `udp_port` | integer | listening ports (1–65535; UDP also 0 = off). *They apply after restart.* |
+| `online_signature` | yes/no | writes `onlinesig.dat` with your status (*not active yet*) |
+| `check_new_version`, `check_new_version_days` | yes/no, integer 2–7 | check for a new version every N days (*not active yet*) |
+| **Display** | | |
+| `remove_finished_downloads` | yes/no | remove finished downloads from the list |
+| `store_searches` | yes/no | remember open searches across restarts (*not active yet*) |
+| **Connection** | | |
+| `download_capacity_kbps` | integer ≥ 1 | line download capacity in kB/s (graph scale; *not active yet*) |
+| `upload_capacity_kbps` | integer | line upload capacity in kB/s; **0 = unknown** (used to size the upload slots) |
 | `max_download_kbps`, `max_upload_kbps` | integer | limit in kB/s; **0 = unlimited** |
-| `max_connections` | integer | connections open at once (maximum) |
-| `max_connections_per_5s` | integer | new connections every 5 seconds (protects the router) |
+| `tcp_port`, `udp_port` | integer | listening ports (1–65535; UDP also 0 = off). *From restart* |
+| `upnp_enabled` | yes/no | UPnP: asks the router to forward the TCP and UDP ports (it turns on and off at once, without restart; the state is in `GET /status`, field `upnp`) |
 | `max_sources_per_file` | integer | sources kept for each download |
+| `max_connections` | integer | connections open at once (maximum) |
 | `network_ed2k`, `network_kademlia` | yes/no | which networks to use (Kad: *from restart*) |
 | `auto_connect` | yes/no | connect to a server at start (*from restart*) |
 | `reconnect` | yes/no | reconnect if the server drops |
+| `show_overhead` | yes/no | count protocol messages (overhead) separately in the statistics |
+| **Proxy** (*not active yet*) | | |
+| `proxy_enabled` | yes/no | use a proxy. **It cannot be set to `true`** (422): the proxy layer is not in emuled yet and would break every connection |
+| `proxy_type` | integer 0–5 | 0 none, 1 SOCKS4, 2 SOCKS4a, 3 SOCKS5, 4 HTTP 1.0, 5 HTTP 1.1 |
+| `proxy_host`, `proxy_port` | text, integer | proxy address and port |
+| `proxy_auth`, `proxy_user`, `proxy_password` | yes/no, text, text (write-only) | proxy login |
+| **Server** | | |
+| `dead_server_retries` | integer | failed attempts after which a server is removed |
+| `auto_update_server_list` | yes/no | download the server list at start from the addresses in `addresses.dat` |
 | `add_servers_from_server`, `add_servers_from_clients` | yes/no | add to the list the servers reported by servers and clients |
 | `use_server_priorities` | yes/no | choose servers by priority |
+| `smart_lowid_check` | yes/no | on a low ID, try another server before giving up |
+| `server_source_reask_minutes` | integer 1–60 | how often each file asks the connected server for sources, in minutes (eMule: fixed 15); `preferences.ini` key `ServerSourceReaskMinutes` |
 | `safe_server_connect` | yes/no | "safe" connection: one server at a time |
 | `static_servers_only` | yes/no | connect only to fixed servers |
-| `dead_server_retries` | integer | failed attempts after which a server is removed |
-| `crypt_supported`, `crypt_requested`, `crypt_required` | yes/no | protocol obfuscation (RC4): supported, preferred, required (*from restart*) |
-| `secure_ident` | yes/no | secure identification of clients (signature of credits) (*from restart*) |
-| `credit_system` | yes/no | credit system (whoever gave you data moves ahead in the queue) |
+| `manual_servers_high_priority` | yes/no | servers added by hand get high priority (*not active yet*) |
+| **Files** | | |
 | `add_new_downloads_paused` | yes/no | new downloads start paused |
-| `auto_up_priority`, `auto_down_priority` | yes/no | automatic priority for new files |
+| `advanced_time_remaining` | yes/no | remaining time from the average speed (eMule key `UseSimpleTimeRemainingcomputation`, inverted) |
+| `preview_chunks_first` | yes/no | download the first and last parts first (preview) |
+| `auto_down_priority`, `auto_up_priority` | yes/no | automatic priority for new downloads / new shared files |
 | `transfer_full_chunks` | yes/no | finish the current block before moving to the next client |
-| `remove_finished_downloads` | yes/no | remove finished downloads from the list |
-| `upnp_enabled` | yes/no | UPnP: asks the router to forward the TCP and UDP ports (it turns on and off at once, without restart; the state is in `GET /status`, field `upnp`) |
-| `upnp_close_on_exit` | yes/no | UPnP: removes the rules from the router when the daemon stops |
-| `verbose_log` | yes/no | also write debug messages to the log (there are many: useful for hunting a problem) |
+| `start_next_paused` | integer 0–3 | when a download finishes start: 0 nothing, 1 the next paused one, 2 preferably of the same category, 3 only of the same category |
+| `filename_cleanup`, `filename_cleanup_filter` | yes/no, text | clean the names of new files; parts to remove, separated by `\|` |
+| `remember_downloaded_files`, `remember_cancelled_files` | yes/no | warn when adding again a file already downloaded / cancelled |
+| **Notifications** (*not active yet*) | | |
+| `notify_download_finished`, `notify_new_download`, `notify_chat`, `notify_log`, `notify_important_error`, `notify_new_version` | yes/no | events to notify |
+| `email_enabled`, `email_to`, `email_from` | yes/no, text, text | send an email (finished downloads, important errors) |
+| `smtp_server`, `smtp_port` | text, integer | outgoing mail server (port 0 = not set) |
+| `smtp_security` | integer 0–2 | 0 none, 1 SSL/TLS, 2 STARTTLS |
+| `smtp_auth` | integer 0–2 | 0 none, 1 PLAIN, 2 LOGIN |
+| `smtp_user`, `smtp_password` | text, text (write-only) | SMTP login |
+| **Statistics** | | |
+| `stats_graph_interval_s`, `stats_tree_interval_s` | integer (s) | update interval of graphs (0–200) and statistics (0–100); 0 = never |
+| `stats_average_minutes` | integer 1–100 | minutes used for the average speed |
+| **Messages and comments** | | |
+| `messages_friends_only` | yes/no | accept messages from friends only |
+| `advanced_spam_filter` | yes/no | discard messages that look like automatic advertising |
+| `chat_captchas` | yes/no | ask a captcha to whoever writes to you the first time |
+| `message_filter` | text | words separated by `\|` that make a message be discarded |
+| `comment_filter` | text | anti-spam filter for comments: words separated by `\|` (lowercase) that make a comment from another user be discarded; default: `http://\|https://\|ftp://\|www.\|ftp.`; may be empty |
+| **Security** | | |
+| `ip_filter_level`, `filter_servers_by_ip` | integer 0–255, yes/no | IP filter level and whether it applies to servers (*not active yet*) |
+| `secure_ident` | yes/no | secure identification of clients (signature of credits) (*from restart*) |
+| `crypt_supported`, `crypt_requested`, `crypt_required` | yes/no | protocol obfuscation (RC4): supported, preferred, required (*from restart*) |
+| `search_spam_filter` | yes/no | hide fake search results (*not active yet*) |
+| `see_shares` | integer 0–2 | who can see your shared files: 0 everybody, 1 friends, 2 nobody |
+| **Scheduler** (*not active yet*) | | |
+| `scheduler_enabled` | yes/no | use the scheduler |
+| **Advanced** (eMule's "Extended" page) | | |
+| `max_connections_per_5s` | integer | new connections every 5 seconds (protects the router) |
+| `max_half_connections` | integer | connections started but not yet accepted (an old Windows XP limit) |
+| `fast_connection_reject` | yes/no | reject extra connections at once |
+| `server_keepalive_minutes` | integer 0–1440 | refresh the server connection every N minutes; 0 = never |
+| `credit_system` | yes/no | credit system (whoever gave you data moves ahead in the queue) |
+| `filter_lan_ips` | yes/no | ignore servers and sources with local-network addresses |
+| `a4af_save_cpu` | yes/no | fewer A4AF ("ask for another file") checks |
+| `own_hostname` | text | host name for your own ed2k links |
+| `sparse_part_files`, `allocate_full_file` | yes/no | `.part` files as sparse files; otherwise reserve the whole size at once |
+| `check_disk_space`, `min_free_disk_space_mb` | yes/no, integer 0–4095 (MB) | stop downloading below this free space |
+| `safe_file_writing` | integer 0–2 | flush `.met`/`.dat` files to disk: 0 never, 1 on shutdown, 2 always |
+| `extract_metadata` | integer 0–1 | read media data (ID3 tags) of shared files (*not active yet*) |
+| `file_buffer_kib` | integer 16–1536 (KiB) | data kept in memory per file before writing |
+| `upload_queue_size` | integer 2000–10000 | users that can wait in the upload queue |
 | `save_log_to_disk` | yes/no | also write the log to the file `logs/emuled.log` of the profile (it stays after a restart or a sudden stop; at 20 MB it moves to `emuled.log.1`) |
-| `comment_filter` | text | anti-spam filter for comments: words separated by `\|` (lowercase) that make a comment from another user be discarded; default: `http://\|https://\|ftp://\|www.\|ftp.` |
+| `verbose_log` | yes/no | also write debug messages to the log (there are many: useful for hunting a problem) |
+| `log_level` | integer 1–5 | debug detail (5 = everything) |
 | `save_debug_to_disk` | yes/no | also write the debug lines to the file (applies only with `verbose_log` on) |
+| `log_source_exchange`, `log_banned_clients`, `log_ratings`, `log_secure_ident`, `log_filtered_ips`, `log_file_saving`, `log_a4af`, `log_updown_events` | yes/no | extra debug topics |
+| `uss_enabled`, `uss_min_upload_kbps`, `uss_ping_tolerance_percent`, `uss_ping_tolerance_ms`, `uss_use_ms_tolerance`, `uss_going_up_divider`, `uss_going_down_divider`, `uss_pings` | yes/no, integers | Upload SpeedSense: finds the upload limit from the ping (*not active yet*) |
+| `upnp_close_on_exit` | yes/no | UPnP: removes the rules from the router when the daemon stops |
+
+The folders and the categories have their own routes (`/directories`, section 10).
 
 ### `PATCH /api/v1/preferences` — change
 Body: only the keys to change, e.g. `{"max_upload_kbps": 50}`. **Everything is checked first**: if a key does not exist or a value is not valid (type, limits) it answers **422** and changes nothing. Answer: `preferences` (all of them, updated), `restart_required` (the changed keys that apply from the next start) and `saved`.

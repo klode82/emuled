@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 project(emule_linux CXX)
 
-set(EMULED_VERSION 0.3.5)		# emuled version (not eMule's): the GitHub workflow and tools/release.sh derive the tag v<version> from it
+set(EMULED_VERSION 0.3.6)		# emuled version (not eMule's): the GitHub workflow and tools/release.sh derive the tag v<version> from it
 set(EMULED_UPSTREAM "upstream/emule/0.72a-community")	# sorgenti originali di eMule (sola lettura); gli script in tools/ la leggono da qui
 set(EMULED_BASE_VERSION "eMule 0.72a-community")	# il codice da cui deriva
 add_compile_definitions(EMULED_VERSION="${EMULED_VERSION}" EMULED_BASE_VERSION="${EMULED_BASE_VERSION}")
@@ -442,6 +442,7 @@ add_test(NAME indexed_load COMMAND test_indexed_load)
 
 # The man page names only options the program knows, and documents all of them except the network probes (Bench 910)
 add_test(NAME manpage COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/check_manpage.py ${CMAKE_SOURCE_DIR})
+add_test(NAME prefs_sync COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/check_prefs.py ${CMAKE_SOURCE_DIR})		# same preference keys in the API table, the web pages, APIDOC and openapi.json
 
 # ---- installation (Bench 849; the real package is task 615): the daemon and the built-in templates, built with `npm run build` in web/
 install(TARGETS emuled RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})

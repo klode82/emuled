@@ -52,13 +52,13 @@ share nothing. Colors are CSS tokens (`--bg`, `--accent`, ...): each template re
 | `npm run typecheck` | type check only |
 | `npm test` | unit tests (Vitest): formats (Italian and English), stores, API client, WebSocket, translations |
 | `npm run e2e:templates` | browser test of the template choice (entry page, Preferences, warning, emergency): see the top of `e2e/templates.mjs` |
-| `npm run e2e` | test in the real browser (Chrome + puppeteer-core) against a running daemon: see `e2e/flow.mjs` (uses `EMULED_URL=…/t/console/`) |
+| `npm run e2e` | test in the real browser (Chrome + puppeteer-core) against a running daemon: see `e2e/flow.mjs` (uses `EMULED_URL=…/t/console/`, or the root with `--web-dir dist/templates/console` when the package is installed: the built-in templates in `/usr/share` win over `--templates-dir`). It creates the account and skips the Wizard on a fresh profile, and goes through every Preferences tab |
 | `npm run screenshots` | redoes the README screenshots (`docs/images/frontend-*.png`) and the template previews (`templates/*/preview.png`): it starts an offline test daemon by itself with four sample downloads (needs `../build/emuled` and `dist/templates`); then `npm run build` |
 
 ## How it is made
 
 ```
-src/lib/        API client (api.ts), WebSocket with reconnection (events.ts), formats (format.ts), texts (labels.ts, prefsMeta.ts), shell.ts, transferActions.ts
+src/lib/        API client (api.ts), WebSocket with reconnection (events.ts), formats (format.ts), texts (labels.ts; prefsMeta.ts = the Preferences tabs, one per page of eMule, and their options), shell.ts, transferActions.ts
 src/stores/     Pinia: session (token, connection), core (state, speed history), downloads, search, servers, shared, prefs, ui, toasts
 src/components/ pieces with no graphic model: Icon, ProgressBar, Ring, Sparkline, Modal, dialogs, DownloadDetail, SpeedChart, ...
 src/views/      screens common to all templates: Search, Servers, Shared, Kad, Statistics, Preferences, Login

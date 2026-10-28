@@ -1,5 +1,6 @@
 // Bahasa Indonesia. Must have exactly the same keys as it.ts (the type enforces it and the i18n test checks placeholders and plurals).
 import type { Messages } from './it'
+import en from './en'
 
 const id: Messages = {
   lang: { label: 'Bahasa' },
@@ -176,6 +177,7 @@ const id: Messages = {
     findSources: 'Cari sumber', findSourcesHint: 'Langsung meminta sumber baru untuk unduhan ini (server dan Kad), tanpa menunggu jeda normal',
   },
   servers: {
+    removeAll: en.servers.removeAll, removeAllTitle: en.servers.removeAllTitle, removeAllText: en.servers.removeAllText, removedAll: en.servers.removedAll,		// English until translated
     title: 'Server ed2k', connectedTo: 'Tersambung ke {name} · {id}', connecting: 'Menyambung…', notConnected: 'Anda tidak tersambung ke server mana pun.',
     updateFrom: 'Perbarui daftar dari alamat (server.met)', update: 'Perbarui', updating: 'Mengunduh…', updateHint: 'Mengunduh daftar dari alamat dan menambahkan server baru ke daftar Anda (tidak ada yang dihapus). Hanya http dan https; alamat yang pernah dipakai diingat.',
     updated: 'Daftar diperbarui: {n} server baru, total {total}', updateFailed: 'Pembaruan gagal: {why}', updateSlow: 'Pembaruan masih berjalan: lihat Log',
@@ -225,6 +227,7 @@ const id: Messages = {
     tempIdentity: 'Daemon berjalan dengan identitas atau port sementara: perubahan bertahan selama daemon berjalan dan tidak ditulis ke profil.',
     needRestart: 'Diubah, tetapi baru berlaku setelah daemon dimulai ulang: {list}.', fromRestart: 'setelah restart', others: 'Lainnya',
     daemon: {
+      address: en.prefs.daemon.address, addressHint: en.prefs.daemon.addressHint,
       title: 'Layanan emuled', restartText: 'Mulai ulang emuled untuk menerapkan perubahan yang memerlukannya (misalnya port baru). Ia menyimpan semuanya dan menyala lagi dalam beberapa detik; unduhan berlanjut sendiri.',
       restartButton: 'Mulai ulang emuled', restartNow: 'Mulai ulang sekarang', confirmTitle: 'Mulai ulang emuled?', confirmText: 'Antarmuka tidak tersedia selama beberapa detik dan halaman akan dimuat ulang sendiri.', confirm: 'Mulai ulang',
       restarting: 'Memulai ulang emuled…', restartFailed: 'emuled tidak kembali tepat waktu. Periksa: systemctl --user status emuled',
@@ -233,8 +236,10 @@ const id: Messages = {
     },
     saved: 'Preferensi disimpan', appliedNotSaved: 'Diterapkan, tetapi tidak ditulis ke profil (daemon memakai identitas sementara)',
     unsaved: '1 perubahan belum disimpan | {n} perubahan belum disimpan',
-    groups: { general: 'Umum', connection: 'Koneksi', network: 'Jaringan dan server', security: 'Keamanan', downloads: 'Unduhan', diagnostics: 'Diagnostik' },
+    inactive: en.prefs.inactive, inactivePage: en.prefs.inactivePage, pageChanged: en.prefs.pageChanged, secretSet: en.prefs.secretSet, secretUnset: en.prefs.secretUnset,
+    pages: en.prefs.pages, sections: en.prefs.sections,
     items: {
+      ...en.prefs.items,		// English until translated
       nick: { label: 'Nama pengguna', hint: 'Nama yang dilihat pengguna lain.' },
       tcp_port: { label: 'Port TCP', hint: 'Port mendengarkan: harus terbuka (diteruskan) di router agar mendapat ID tinggi.' },
       upnp_enabled: { label: 'UPnP: buka port di router secara otomatis', hint: 'Meminta router meneruskan port TCP dan UDP. Router harus mengaktifkan UPnP. Statusnya ditampilkan di halaman Kad.' },

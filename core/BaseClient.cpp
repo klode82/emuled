@@ -1422,6 +1422,9 @@ bool CUpDownClient::TryToConnect(bool bIgnoreMaxCon, bool bNoCallbacks, const CR
 		DebugLogError(_T("LowID and US_CONNECTING (%s)"), (LPCTSTR)DbgGetClientInfo());
 	}
 
+	// LINUX: debug only: how this LowID source is called back (it decides whether it connects at all)
+	if (thePrefs.GetVerbose())
+		AddDebugLogLine(false, _T("LowID callback for %s: server %s:%u local=%d, buddy %d (%s:%u), kad %d"), (LPCTSTR)DbgGetClientInfo(), (LPCTSTR)ipstr(m_dwServerIP), (UINT)m_nServerPort, (int)theApp.serverconnect->IsLocalServer(m_dwServerIP, m_nServerPort), (int)HasValidBuddyID(), (LPCTSTR)ipstr(GetBuddyIP()), (UINT)GetBuddyPort(), (int)Kademlia::CKademlia::IsConnected());
 	if (theApp.serverconnect->IsLocalServer(m_dwServerIP, m_nServerPort)) {
 		m_eConnectingState = CCS_SERVERCALLBACK;
 		Packet *packet = new Packet(OP_CALLBACKREQUEST, 4);

@@ -90,7 +90,7 @@ Typical uses: an always-on download box / NAS, a headless server, a container, o
 | Protocol / file formats | eD2K, Kad, `known.met`, `*.part.met`, `preferences.dat`, … | **unchanged** and compatible |
 | Service | Desktop program | `systemd` user service, Docker image, `.deb`/`.rpm` |
 | Robustness | — | profile checker, atomic writes, guardian, memory-bug fixes found with sanitizers and fuzzing |
-| Tests | — | 48 tests (ctest), 43 UI tests (vitest), browser end-to-end tests |
+| Tests | — | 49 tests (ctest), 45 UI tests (vitest), browser end-to-end tests |
 | Languages | eMule's own | web UI in 14 languages |
 
 Fixes made along the way include out-of-bounds reads in the original code (for example the key size in `clients.met` and `CPTR()` past the end of an empty string). The original sources are kept **untouched** in [`upstream/`](upstream/emule/0.72a-community) and you can compare them with `diff -ru upstream/emule/0.72a-community/srchybrid core`; the history of every change is in git.
@@ -277,7 +277,7 @@ emuled --profile … --guard-restore SLOT --backup-dir DIR [--force]
 ## Testing
 
 ```sh
-ctest --test-dir build --output-on-failure        # 48 tests
+ctest --test-dir build --output-on-failure        # 49 tests
 (cd web && npx vue-tsc --noEmit && npx vitest run)  # type check + UI tests
 (cd web && npm run e2e)                           # browser tests (needs Chrome and a test daemon, see web/e2e/flow.mjs)
 

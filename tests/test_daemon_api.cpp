@@ -313,6 +313,16 @@ int main(int argc, char **argv)
 		Http(port, "PATCH", "/api/v1/preferences", token, "{\"tcp_port\":70000}", s); CHECK(s == 422);
 		Http(port, "PATCH", "/api/v1/preferences", token, "{\"nick\":5}", s); CHECK(s == 422);
 		Http(port, "PATCH", "/api/v1/preferences", token, "{}", s); CHECK(s == 400);
+		// the eMule pages added later: units converted, enums in range, secrets write-only, strings that may be empty
+		r = Http(port, "PATCH", "/api/v1/preferences", token, "{\"min_free_disk_space_mb\":50,\"server_keepalive_minutes\":3,\"log_level\":2,\"file_buffer_kib\":512,\"start_next_paused\":2,\"proxy_host\":\"proxy.lan\",\"proxy_password\":\"segreto\",\"comment_filter\":\"\"}", s);
+		CHECK(s == 200); { json j = json::parse(r)["preferences"]; CHECK(j["min_free_disk_space_mb"] == 50 && j["server_keepalive_minutes"] == 3 && j["log_level"] == 2 && j["file_buffer_kib"] == 512 && j["start_next_paused"] == 2 && j["proxy_host"] == "proxy.lan" && j["comment_filter"] == "");
+			CHECK(j["proxy_password_set"] == true && !j.contains("proxy_password") && j["smtp_password_set"] == false && r.find("segreto") == std::string::npos); }
+		Http(port, "PATCH", "/api/v1/preferences", token, "{\"see_shares\":3}", s); CHECK(s == 422);
+		Http(port, "PATCH", "/api/v1/preferences", token, "{\"server_source_reask_minutes\":0}", s); CHECK(s == 422);	// 1..60
+		r = Http(port, "PATCH", "/api/v1/preferences", token, "{\"server_source_reask_minutes\":3}", s); CHECK(s == 200 && json::parse(r)["preferences"]["server_source_reask_minutes"] == 3);
+		Http(port, "PATCH", "/api/v1/preferences", token, "{\"proxy_password_set\":true}", s); CHECK(s == 422);	// the "_set" flag is read-only
+		Http(port, "PATCH", "/api/v1/preferences", token, "{\"nick\":\"\"}", s); CHECK(s == 422);
+		Http(port, "PATCH", "/api/v1/preferences", token, "{\"proxy_enabled\":true}", s); CHECK(s == 422);		// the proxy layer is a stub: it cannot be turned on
 		r = Http(port, "GET", "/api/v1/categories", token, "", s); CHECK(s == 200 && json::parse(r).size() == 1 && json::parse(r)[0]["id"] == 0);
 		r = Http(port, "POST", "/api/v1/categories", token, "{\"title\":\"Libri\",\"priority\":2}", s); CHECK(s == 201 && json::parse(r)["id"] == 1 && json::parse(r)["priority"] == 2);
 		Http(port, "POST", "/api/v1/categories", token, "{}", s); CHECK(s == 422);
@@ -410,6 +420,11 @@ int main(int argc, char **argv)
 		Http(port, "DELETE", "/api/v1/servers/203.0.113.77:4661", token, "", s); CHECK(s == 200);
 		Http(port, "DELETE", "/api/v1/servers/203.0.113.77:4661", token, "", s); CHECK(s == 404);
 		CHECK(json::parse(Http(port, "GET", "/api/v1/servers", token, "", s)).size() == n0);
+		// empty the whole list (eMule: "Remove all"): the answer says how many, the list and server.met are empty
+		Http(port, "POST", "/api/v1/servers", token, "{\"address\":\"203.0.113.78:4661\"}", s); CHECK(s == 201);
+		r = Http(port, "DELETE", "/api/v1/servers", token, "", s); CHECK(s == 200 && json::parse(r)["removed"] == n0 + 1);
+		CHECK(json::parse(Http(port, "GET", "/api/v1/servers", token, "", s)).empty());
+		{ std::error_code ec; CHECK(std::filesystem::file_size(base / "config" / "server.met", ec) <= 5); }		// only the header and the count
 		// folders: read, change with a check of everything (or nothing), eMule rules
 		r = Http(port, "GET", "/api/v1/directories", token, "", s); CHECK(s == 200 && json::parse(r)["incoming"].is_string() && json::parse(r)["temp"].size() >= 1 && json::parse(r)["shared"].is_array() && json::parse(r)["shared_missing"].is_array());
 		{

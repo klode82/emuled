@@ -233,6 +233,7 @@ UINT	CPreferences::m_uTransferWnd1;
 UINT	CPreferences::m_uTransferWnd2;
 UINT	CPreferences::m_uDeadServerRetries;
 DWORD	CPreferences::m_dwServerKeepAliveTimeout;
+UINT	CPreferences::m_uServerSourceReaskMinutes;
 UINT	CPreferences::statsMax;
 UINT	CPreferences::statsAverageMinutes;
 CString	CPreferences::notifierConfiguration __attribute__((init_priority(102)));
@@ -1549,6 +1550,7 @@ void CPreferences::SavePreferences()
 	ini.WriteInt(_T("UploadCapacityNew"), (int)maxGraphUploadRate);
 	ini.WriteInt(_T("DeadServerRetry"), m_uDeadServerRetries);
 	ini.WriteInt(_T("ServerKeepAliveTimeout"), m_dwServerKeepAliveTimeout);
+	ini.WriteInt(_T("ServerSourceReaskMinutes"), m_uServerSourceReaskMinutes);
 	ini.WriteInt(_T("SplitterbarPosition"), splitterbarPosition);
 	ini.WriteInt(_T("SplitterbarPositionServer"), splitterbarPositionSvr);
 	ini.WriteInt(_T("SplitterbarPositionStat"), splitterbarPositionStat + 1);
@@ -1991,6 +1993,7 @@ void CPreferences::LoadPreferences()
 	if (m_uDeadServerRetries > MAX_SERVERFAILCOUNT)
 		m_uDeadServerRetries = MAX_SERVERFAILCOUNT;
 	m_dwServerKeepAliveTimeout = ini.GetInt(_T("ServerKeepAliveTimeout"), 0);
+	m_uServerSourceReaskMinutes = min(max(ini.GetInt(_T("ServerSourceReaskMinutes"), 15), 1), 60);
 	splitterbarPosition = ini.GetInt(_T("SplitterbarPosition"), 75);
 	if (splitterbarPosition < 9)
 		splitterbarPosition = 9;

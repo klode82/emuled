@@ -1,5 +1,6 @@
 // Français. Doit avoir exactement les mêmes clés que it.ts (le type l’impose et le test i18n vérifie les paramètres et les pluriels).
 import type { Messages } from './it'
+import en from './en'
 
 const fr: Messages = {
   lang: { label: 'Langue' },
@@ -176,6 +177,7 @@ const fr: Messages = {
     findSources: 'Chercher des sources', findSourcesHint: 'Demande tout de suite de nouvelles sources pour ce téléchargement (serveur et Kad), sans attendre les délais habituels',
   },
   servers: {
+    removeAll: en.servers.removeAll, removeAllTitle: en.servers.removeAllTitle, removeAllText: en.servers.removeAllText, removedAll: en.servers.removedAll,		// English until translated
     title: 'Serveurs ed2k', connectedTo: 'Connecté à {name} · {id}', connecting: 'Connexion…', notConnected: 'Vous n’êtes connecté à aucun serveur.',
     updateFrom: 'Mettre à jour la liste depuis une adresse (server.met)', update: 'Mettre à jour', updating: 'Téléchargement…', updateHint: 'Télécharge la liste depuis l’adresse et ajoute les nouveaux serveurs aux vôtres (rien n’est retiré). Uniquement http et https ; les adresses utilisées sont mémorisées.',
     updated: 'Liste mise à jour : {n} nouveaux serveurs, {total} au total', updateFailed: 'Échec de la mise à jour : {why}', updateSlow: 'La mise à jour est toujours en cours : voir le Journal',
@@ -225,6 +227,7 @@ const fr: Messages = {
     tempIdentity: 'Le démon tourne avec une identité ou des ports temporaires : les modifications durent tant qu’il reste actif et ne sont pas écrites dans le profil.',
     needRestart: 'Modifié, mais valable seulement après le redémarrage du démon : {list}.', fromRestart: 'après redémarrage', others: 'Autres',
     daemon: {
+      address: en.prefs.daemon.address, addressHint: en.prefs.daemon.addressHint,
       title: 'Le service emuled', restartText: 'Redémarrez emuled pour appliquer les changements qui l\'exigent (comme les nouveaux ports). Il enregistre tout et repart en quelques secondes ; les téléchargements reprennent tout seuls.',
       restartButton: 'Redémarrer emuled', restartNow: 'Redémarrer maintenant', confirmTitle: 'Redémarrer emuled ?', confirmText: 'L\'interface sera indisponible quelques secondes et la page se rechargera toute seule.', confirm: 'Redémarrer',
       restarting: 'Redémarrage d\'emuled…', restartFailed: 'emuled n\'est pas revenu à temps. Vérifiez : systemctl --user status emuled',
@@ -233,8 +236,10 @@ const fr: Messages = {
     },
     saved: 'Préférences enregistrées', appliedNotSaved: 'Appliqué, mais non écrit dans le profil (le démon utilise une identité temporaire)',
     unsaved: '1 modification non enregistrée | {n} modifications non enregistrées',
-    groups: { general: 'Général', connection: 'Connexion', network: 'Réseaux et serveurs', security: 'Sécurité', downloads: 'Téléchargements', diagnostics: 'Diagnostic' },
+    inactive: en.prefs.inactive, inactivePage: en.prefs.inactivePage, pageChanged: en.prefs.pageChanged, secretSet: en.prefs.secretSet, secretUnset: en.prefs.secretUnset,
+    pages: en.prefs.pages, sections: en.prefs.sections,
     items: {
+      ...en.prefs.items,		// English until translated
       nick: { label: 'Nom d’utilisateur', hint: 'Le nom que voient les autres utilisateurs.' },
       tcp_port: { label: 'Port TCP', hint: 'Port d’écoute : il doit être ouvert (redirigé) sur le routeur pour obtenir un ID haut.' },
       upnp_enabled: { label: 'UPnP : ouvrir les ports du routeur automatiquement', hint: 'Demande au routeur de rediriger les ports TCP et UDP. UPnP doit être activé sur le routeur. L’état est affiché sur la page Kad.' },

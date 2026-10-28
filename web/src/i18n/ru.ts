@@ -1,5 +1,6 @@
 // Русский. Ключи должны полностью совпадать с it.ts (тип это гарантирует, а тест i18n проверяет заполнители и множественные формы).
 import type { Messages } from './it'
+import en from './en'
 
 const ru: Messages = {
   lang: { label: 'Язык' },
@@ -176,6 +177,7 @@ const ru: Messages = {
     findSources: 'Найти источники', findSourcesHint: 'Сразу запрашивает новые источники для этой загрузки (сервер и Kad), не дожидаясь обычных задержек',
   },
   servers: {
+    removeAll: en.servers.removeAll, removeAllTitle: en.servers.removeAllTitle, removeAllText: en.servers.removeAllText, removedAll: en.servers.removedAll,		// English until translated
     title: 'Серверы ed2k', connectedTo: 'Подключён к {name} · {id}', connecting: 'Подключение…', notConnected: 'Вы не подключены ни к одному серверу.',
     updateFrom: 'Обновить список по адресу (server.met)', update: 'Обновить', updating: 'Загрузка…', updateHint: 'Скачивает список по адресу и добавляет новые серверы к вашим (ничего не удаляется). Только http и https; использованные адреса запоминаются.',
     updated: 'Список обновлён: новых серверов {n}, всего {total}', updateFailed: 'Не удалось обновить: {why}', updateSlow: 'Обновление ещё идёт: смотрите Журнал',
@@ -225,6 +227,7 @@ const ru: Messages = {
     tempIdentity: 'Демон запущен с временной личностью или портами: изменения действуют, пока он работает, и не записываются в профиль.',
     needRestart: 'Изменено, но вступит в силу только после перезапуска демона: {list}.', fromRestart: 'после перезапуска', others: 'Прочее',
     daemon: {
+      address: en.prefs.daemon.address, addressHint: en.prefs.daemon.addressHint,
       title: 'Служба emuled', restartText: 'Перезапустите emuled, чтобы применить изменения, которым это нужно (например, новые порты). Он сохранит всё и снова запустится через несколько секунд; загрузки продолжатся сами.',
       restartButton: 'Перезапустить emuled', restartNow: 'Перезапустить сейчас', confirmTitle: 'Перезапустить emuled?', confirmText: 'Интерфейс будет недоступен несколько секунд, страница перезагрузится сама.', confirm: 'Перезапустить',
       restarting: 'Перезапуск emuled…', restartFailed: 'emuled не вернулся вовремя. Проверьте: systemctl --user status emuled',
@@ -233,8 +236,10 @@ const ru: Messages = {
     },
     saved: 'Настройки сохранены', appliedNotSaved: 'Применено, но не записано в профиль (демон использует временную личность)',
     unsaved: 'Несохранённых изменений: 1 | Несохранённых изменений: {n}',
-    groups: { general: 'Общие', connection: 'Соединение', network: 'Сети и серверы', security: 'Безопасность', downloads: 'Загрузки', diagnostics: 'Диагностика' },
+    inactive: en.prefs.inactive, inactivePage: en.prefs.inactivePage, pageChanged: en.prefs.pageChanged, secretSet: en.prefs.secretSet, secretUnset: en.prefs.secretUnset,
+    pages: en.prefs.pages, sections: en.prefs.sections,
     items: {
+      ...en.prefs.items,		// English until translated
       nick: { label: 'Имя пользователя', hint: 'Имя, которое видят другие пользователи.' },
       tcp_port: { label: 'Порт TCP', hint: 'Порт для входящих соединений: на маршрутизаторе он должен быть открыт (проброшен), чтобы получить высокий ID.' },
       upnp_enabled: { label: 'UPnP: открывать порты на маршрутизаторе автоматически', hint: 'Просит маршрутизатор пробросить порты TCP и UDP. На маршрутизаторе должен быть включён UPnP. Состояние показано на странице Kad.' },

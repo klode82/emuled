@@ -5,7 +5,7 @@ import { useRoute } from 'vue-router'
 import { usePrefs } from '@/stores/prefs'
 import { useTemplates } from '@/stores/templates'
 import { useUi, type Theme } from '@/stores/ui'
-import { PREFS, PREF_GROUPS, type PrefMeta } from '@/lib/prefsMeta'
+import { PREFS, PREF_PAGES, INACTIVE_PAGES, type PrefMeta, type PrefPage } from '@/lib/prefsMeta'
 import { LANGS, WIN_LANGID, lang, setLang, type Lang } from '@/i18n'
 import { useSession } from '@/stores/session'
 import { errText } from '@/stores/toasts'
@@ -30,18 +30,35 @@ async function testPorts() {
   try { window.open((await session.getApi().portsTestUrl(WIN_LANGID[lang()])).url, '_blank', 'noopener') } catch (e) { daemonMsg.value = errText(e) }
 }
 onMounted(async () => { await Promise.all([p.load(), p.loadDirs(), tpl.load()]); await nextTick(); if (route.hash) document.querySelector(route.hash)?.scrollIntoView() })
-const known = new Set(PREFS.map((m) => m.key))
-const groups = computed(() => PREF_GROUPS.map((g) => ({ name: g, items: PREFS.filter((m) => m.group === g && m.key in p.draft) })).filter((g) => g.items.length))
+// one tab per page of eMule's Preferences (PPg*.cpp): /prefs/<page>
+const page = computed<PrefPage>(() => { const x = String(route.params.page ?? ''); return (PREF_PAGES as readonly string[]).includes(x) ? (x as PrefPage) : 'general' })
+const present = (m: PrefMeta) => (m.type === 'secret' ? `${m.key}_set` in p.saved : m.key in p.draft)
+// the page's rows, by section (the order of PREFS)
+const sections = computed(() => {
+  const out: { name: string; items: PrefMeta[] }[] = []
+  for (const m of PREFS.filter((x) => x.page === page.value && present(x))) {
+    const n = m.section ?? ''; let g = out.find((x) => x.name === n); if (!g) out.push((g = { name: n, items: [] })); g.items.push(m)
+  }
+  return out
+})
+const known = new Set(PREFS.flatMap((m) => [m.key, `${m.key}_set`]))
 const others = computed(() => Object.keys(p.draft).filter((k) => !known.has(k)))
+// on the phone the tab bar scrolls: bring the current tab into view
+watch(page, async () => { await nextTick(); document.querySelector('nav[data-prefs-tabs] [aria-current="page"]')?.scrollIntoView({ inline: 'center', block: 'nearest' }) }, { immediate: true })
+const changedOn = (pg: PrefPage) => PREFS.some((m) => m.page === pg && m.key in p.changes)
+// passwords are write-only: an empty field means "leave it as it is"
+function setSecret(k: string, v: string) { if (v) p.draft[k] = v; else delete p.draft[k] }
 const hint = (m: PrefMeta) => (te(`prefs.items.${m.key}.hint`) ? t(`prefs.items.${m.key}.hint`) : '')
 const invalid = (m: PrefMeta) => {
   const v = p.draft[m.key]
   if (m.type === 'int') return typeof v !== 'number' || !Number.isInteger(v) || v < (m.min ?? -Infinity) || v > (m.max ?? Infinity)
   if (m.type === 'string') return typeof v !== 'string' || (!m.optional && !v.trim())
+  if (m.type === 'choice') return !m.choices?.includes(Number(v))
   return false
 }
-const anyInvalid = computed(() => PREFS.some((m) => m.key in p.draft && invalid(m)))
+const anyInvalid = computed(() => PREFS.some((m) => m.key in p.changes && invalid(m)))		// only the changed fields: an odd value already in the profile must not block saving the rest
 const needRestart = computed(() => (p.restart.length ? PREFS.filter((m) => p.restart.includes(m.key)).map((m) => t(`prefs.items.${m.key}.label`)) : []))
+const host = window.location.host
 const THEMES: Theme[] = ['system', 'light', 'dark']
 
 // ---- folders: work on a copy and send the daemon only what changed
@@ -92,27 +109,36 @@ const nChanges = computed(() => Object.keys(p.changes).length)
       <button type="button" class="rounded-lg border border-warn px-3 py-1.5 text-xs font-medium hover:bg-sunk disabled:opacity-50" :disabled="restarting" @click="restartNow">{{ restarting ? t('prefs.daemon.restarting') : t('prefs.daemon.restartNow') }}</button>
     </div>
 
-    <section v-for="g in groups" :key="g.name" class="rounded-xl border border-line bg-surface">
-      <h2 class="border-b border-line px-5 py-3 text-sm font-semibold">{{ t('prefs.groups.' + g.name) }}</h2>
+    <nav class="-mx-4 overflow-x-auto px-4" data-prefs-tabs :aria-label="t('nav.prefs')">
+      <ul class="flex w-max gap-x-1 border-b border-line sm:w-auto sm:flex-wrap">
+        <li v-for="pg in PREF_PAGES" :key="pg"><RouterLink :to="'/prefs/' + pg" class="flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-sm" :class="pg === page ? 'border-accent font-medium text-fg' : 'border-transparent text-mute hover:text-fg'" :aria-current="pg === page ? 'page' : undefined">{{ t('prefs.pages.' + pg) }}<span v-if="changedOn(pg)" class="size-1.5 rounded-full bg-warn" :title="t('prefs.pageChanged')"></span></RouterLink></li>
+      </ul>
+    </nav>
+    <p v-if="INACTIVE_PAGES.includes(page)" class="rounded-lg border border-line bg-soft px-4 py-3 text-sm text-mute" role="note">{{ t('prefs.inactivePage') }}</p>
+
+    <section v-for="g in sections" :key="g.name" class="rounded-xl border border-line bg-surface">
+      <h2 v-if="g.name" class="border-b border-line px-5 py-3 text-sm font-semibold">{{ t(`prefs.sections.${page}.${g.name}`) }}</h2>
       <div class="divide-y divide-line">
         <div v-for="m in g.items" :key="m.key" class="flex flex-col gap-1.5 px-5 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-          <div class="min-w-0 sm:max-w-md"><label :for="'p-' + m.key" class="text-sm font-medium">{{ t(`prefs.items.${m.key}.label`) }}<span v-if="m.restart" class="ml-2 rounded-full bg-sunk px-2 py-0.5 text-[10px] font-semibold uppercase text-mute">{{ t('prefs.fromRestart') }}</span></label><p v-if="hint(m)" class="text-xs text-mute">{{ hint(m) }}</p></div>
+          <div class="min-w-0 sm:max-w-md"><label :for="'p-' + m.key" class="text-sm font-medium">{{ t(`prefs.items.${m.key}.label`) }}<span v-if="m.restart" class="ml-2 inline-block whitespace-nowrap rounded-full bg-sunk px-2 py-0.5 text-[10px] font-semibold uppercase text-mute">{{ t('prefs.fromRestart') }}</span><span v-if="(m.inactive || m.locked) && !INACTIVE_PAGES.includes(page)" class="ml-2 inline-block whitespace-nowrap rounded-full bg-sunk px-2 py-0.5 text-[10px] font-semibold uppercase text-warn">{{ t('prefs.inactive') }}</span></label><p v-if="hint(m)" class="text-xs text-mute">{{ hint(m) }}</p></div>
           <div class="flex shrink-0 items-center gap-2">
-            <input v-if="m.type === 'bool'" :id="'p-' + m.key" v-model="p.draft[m.key]" type="checkbox" class="size-5 accent-[var(--accent)]" />
+            <input v-if="m.type === 'bool'" :id="'p-' + m.key" v-model="p.draft[m.key]" type="checkbox" :disabled="m.locked" class="size-5 accent-[var(--accent)] disabled:opacity-50" />
+            <select v-else-if="m.type === 'choice'" :id="'p-' + m.key" v-model.number="p.draft[m.key]" class="w-full rounded-lg border border-line bg-bg px-3 py-2 text-sm sm:w-56"><option v-for="c in m.choices" :key="c" :value="c">{{ t(`prefs.items.${m.key}.choices.${c}`) }}</option></select>
+            <input v-else-if="m.type === 'secret'" :id="'p-' + m.key" :value="p.draft[m.key] ?? ''" type="password" autocomplete="new-password" :placeholder="p.saved[m.key + '_set'] ? t('prefs.secretSet') : t('prefs.secretUnset')" class="w-full rounded-lg border border-line bg-bg px-3 py-2 text-sm sm:w-56" @input="setSecret(m.key, ($event.target as HTMLInputElement).value)" />
             <template v-else>
-              <input :id="'p-' + m.key" v-model="p.draft[m.key]" :type="m.type === 'int' ? 'number' : 'text'" :min="m.min" :max="m.max" :aria-invalid="invalid(m)" class="w-full rounded-lg border bg-bg px-3 py-2 text-sm sm:w-40" :class="invalid(m) ? 'border-bad' : 'border-line'" @input="m.type === 'int' && (p.draft[m.key] = ($event.target as HTMLInputElement).value === '' ? NaN : Number(($event.target as HTMLInputElement).value))" />
+              <input :id="'p-' + m.key" v-model="p.draft[m.key]" :type="m.type === 'int' ? 'number' : 'text'" :min="m.min" :max="m.max" :aria-invalid="invalid(m)" class="w-full rounded-lg border bg-bg px-3 py-2 text-sm" :class="[invalid(m) ? 'border-bad' : 'border-line', m.type === 'int' ? 'sm:w-40' : 'sm:w-56']" @input="m.type === 'int' && (p.draft[m.key] = ($event.target as HTMLInputElement).value === '' ? NaN : Number(($event.target as HTMLInputElement).value))" />
               <span v-if="m.unit" class="text-xs text-mute">{{ m.unit }}</span>
             </template>
           </div>
         </div>
       </div>
     </section>
-    <section v-if="others.length" class="rounded-xl border border-line bg-surface">
+    <section v-if="page === 'advanced' && others.length" class="rounded-xl border border-line bg-surface">
       <h2 class="border-b border-line px-5 py-3 text-sm font-semibold">{{ t('prefs.others') }}</h2>
       <div class="divide-y divide-line"><div v-for="k in others" :key="k" class="flex items-center justify-between gap-4 px-5 py-3 text-sm"><code class="font-mono text-xs">{{ k }}</code><span class="font-mono text-xs">{{ p.draft[k] }}</span></div></div>
     </section>
 
-    <section id="dirs" class="rounded-xl border border-line bg-surface">
+    <section v-if="page === 'directories'" id="dirs" class="rounded-xl border border-line bg-surface">
       <h2 class="border-b border-line px-5 py-3 text-sm font-semibold">{{ t('dirs.title') }}</h2>
       <div v-if="p.dirs" class="flex flex-col gap-5 px-5 py-4">
         <label class="flex flex-col gap-1 text-sm font-medium">{{ t('dirs.incoming') }}
@@ -135,7 +161,7 @@ const nChanges = computed(() => Object.keys(p.changes).length)
       </div>
     </section>
 
-    <section class="rounded-xl border border-line bg-surface">
+    <section v-if="page === 'directories'" class="rounded-xl border border-line bg-surface">
       <header class="flex items-center justify-between border-b border-line px-5 py-3"><h2 class="text-sm font-semibold">{{ t('prefs.categories') }}</h2><button class="inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-xs hover:bg-sunk" @click="edit()"><Icon name="plus" class="!size-3.5" />{{ t('common.new') }}</button></header>
       <ul class="divide-y divide-line">
         <li v-for="c in p.categories" :key="c.id" class="flex items-center justify-between gap-3 px-5 py-3 text-sm">
@@ -152,7 +178,7 @@ const nChanges = computed(() => Object.keys(p.changes).length)
       </form>
     </section>
 
-    <section id="template" class="rounded-xl border border-line bg-surface">
+    <section v-if="page === 'display'" id="template" class="rounded-xl border border-line bg-surface">
       <header class="flex flex-wrap items-center justify-between gap-2 border-b border-line px-5 py-3"><h2 class="text-sm font-semibold">{{ t('template.title') }}</h2>
         <button class="inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-xs hover:bg-sunk" @click="tpl.rescan()"><Icon name="refresh" class="!size-3.5" />{{ t('template.rescan') }}</button></header>
       <p class="px-5 pt-3 text-xs text-mute">{{ t('template.hint', { user: tpl.dirs.user ?? '~/.emuled/templates' }) }}</p>
@@ -177,7 +203,7 @@ const nChanges = computed(() => Object.keys(p.changes).length)
       </div>
     </section>
 
-    <section class="rounded-xl border border-line bg-surface">
+    <section v-if="page === 'display'" class="rounded-xl border border-line bg-surface">
       <h2 class="border-b border-line px-5 py-3 text-sm font-semibold">{{ t('prefs.interface') }}</h2>
       <div class="divide-y divide-line">
         <div class="flex flex-col gap-1.5 px-5 py-3 sm:flex-row sm:items-center sm:justify-between"><div><label for="theme" class="text-sm font-medium">{{ t('prefs.theme') }}</label><p class="text-xs text-mute">{{ t('prefs.rememberedHere') }}</p></div>
@@ -187,9 +213,10 @@ const nChanges = computed(() => Object.keys(p.changes).length)
       </div>
     </section>
 
-    <section class="rounded-xl border border-line bg-surface" aria-labelledby="daemon">
+    <section v-if="page === 'web'" class="rounded-xl border border-line bg-surface" aria-labelledby="daemon">
       <h2 id="daemon" class="border-b border-line px-5 py-3 text-sm font-semibold">{{ t('prefs.daemon.title') }}</h2>
       <div class="flex flex-col gap-5 px-5 py-4 text-sm">
+        <p>{{ t('prefs.daemon.address') }} <code class="font-mono">{{ host }}</code> <span class="text-xs text-mute">{{ t('prefs.daemon.addressHint') }}</span></p>
         <div class="flex flex-col items-start gap-2"><p class="text-mute">{{ t('prefs.daemon.restartText') }}</p>
           <button type="button" class="rounded-lg border border-line px-4 py-2 hover:bg-sunk disabled:opacity-50" :disabled="restarting" @click="restartNow">{{ restarting ? t('prefs.daemon.restarting') : t('prefs.daemon.restartButton') }}</button></div>
         <div class="flex flex-col items-start gap-2"><h3 class="font-medium">{{ t('prefs.daemon.testTitle') }}</h3>
@@ -199,7 +226,7 @@ const nChanges = computed(() => Object.keys(p.changes).length)
       </div>
     </section>
 
-    <section class="rounded-xl border border-line bg-surface" aria-labelledby="about">
+    <section v-if="page === 'web'" class="rounded-xl border border-line bg-surface" aria-labelledby="about">
       <h2 id="about" class="border-b border-line px-5 py-3 text-sm font-semibold">{{ t('about.title') }}</h2>
       <dl class="grid gap-x-6 gap-y-2 px-5 py-3 text-sm sm:grid-cols-[auto_1fr]">
         <dt class="text-mute">{{ t('about.emuled') }}</dt><dd class="tabular-nums">{{ core.status?.emuled_version ?? '…' }}</dd>

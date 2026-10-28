@@ -28,7 +28,7 @@ export function createAppRouter(transfers: Component, uploads?: Component) {
       { path: '/kad', name: 'kad', component: () => import('@/views/KadView.vue') },
       { path: '/log', name: 'log', component: () => import('@/views/LogView.vue') },
       { path: '/stats', name: 'stats', component: () => import('@/views/StatsView.vue') },
-      { path: '/prefs', name: 'prefs', component: () => import('@/views/PrefsView.vue') },
+      { path: '/prefs/:page?', name: 'prefs', component: () => import('@/views/PrefsView.vue') },
       { path: '/:rest(.*)*', redirect: '/transfers' },
     ],
   })

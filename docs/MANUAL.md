@@ -23,11 +23,14 @@ Status of what the entries mention: **[used]** is already in the code; **[planne
   - B8. The libraries
   - B9. The project directories
   - B10. Porting rule for every file (checklist)
+  - B11. The preferences
 - **Part C** — How we work
 
 ---
 
 # Part A — Glossary A–Z
+
+**A4AF** (*Ask For Another File*) — When a user has several files you are downloading, eMule can move that source from one of your downloads to another ("swap"). *Here:* **[used]** as in eMule; the Advanced page has "fewer A4AF checks" (`a4af_save_cpu`) and the `log_a4af` debug topic.
 
 **AICH** (*Advanced Intelligent Corruption Handling*) — eMule's system for repairing a badly downloaded file without downloading a whole 9.7 MB part again. Besides the MD4 hash, it computes a tree of SHA-1 hashes over the 180 KB blocks: if a part turns out to be corrupt, you can tell *which blocks* are wrong. The root of the tree (20 bytes) is the "master hash". *Here:* the data is in `known2_64.met` (52 MB in the real profile, 333 records); reading and validation are **[used]**, the computation (port of `SHAHashSet.cpp`) is **[planned]** in Phase 5.
 
@@ -52,6 +55,8 @@ Status of what the entries mention: **[used]** is already in the code; **[planne
 **BOM** (*Byte Order Mark*) — A sequence of bytes at the start of a text file that declares its encoding: `EF BB BF` = UTF-8, `FF FE` = UTF-16 little-endian. *Here:* `shareddir.dat` has the UTF-16 BOM; in the `.met` files, names with non-ASCII characters start with the UTF-8 BOM.
 
 **bootstrap (Kad)** — The first phase, in which a Kademlia client with no contacts looks for some in order to join the network. A bootstrap `nodes.dat` contains hundreds of contacts to try. *Here:* the validator recognises it (version 3, edition 1).
+
+**captcha** — A short code shown as an image that a person must copy: programs cannot read it easily. eMule can ask it to whoever writes to you in chat for the first time. *Here:* the preference `chat_captchas` (page Messages and comments).
 
 **CEMSocket** — The socket for ed2k packets: it reads the TCP stream and reassembles it into packets (even when split across several segments), queues the packets to send in two queues (control and data) that the throttler empties, and applies the download limit. *Here:* `core/EMSocket.*`. See B4.
 
@@ -187,6 +192,8 @@ Status of what the entries mention: **[used]** is already in the code; **[planne
 
 **OpenAPI** — A standard format to describe an API in a file (paths, parameters, replies), from which the documentation is generated and tests are made. **[planned]**.
 
+**overhead** — The traffic that is not file data: protocol messages, requests, answers. *Here:* the preference `show_overhead` counts it separately in the statistics.
+
 **Packet** — The eMule class that represents a packet (header + data) and compresses/decompresses it with zlib. See B4.
 
 **part / .part / .part.met** — A download in progress is made of `NNN.part` (the data, of the final size) and `NNN.part.met` (the list of missing pieces, the "gaps", the name, the size, the hashes). Losing the `.part.met` makes a gigabyte-sized `.part` unusable. See B1.
@@ -208,6 +215,8 @@ Status of what the entries mention: **[used]** is already in the code; **[planne
 **profile** — The eMule folder with the configuration and the data: `preferences.ini`, `known.met`, `clients.met`, `server.met`, ... See B1. Yours is in `/home/steveholmes/eMule/config`.
 
 **protocol** — The set of rules by which two programs exchange messages.
+
+**proxy** — An intermediate computer through which the connections go, for example to cross a company network. SOCKS (4, 4a, 5) and HTTP are the ways of talking to it. *Here:* **[not ported]**: `core/AsyncProxySocketLayer.h` is a stub, so the API refuses `proxy_enabled: true` (turning it on would break every connection); the other proxy settings are kept in the profile.
 
 **RC4** — A simple stream cipher. eMule uses it to **mask** the traffic (obfuscation), not to protect it: the keys are not secret. After creating the key it discards the first 1,024 bytes. *Here:* `RC4CreateKey` and `RC4Crypt` in `util/Crypto`.
 
@@ -231,7 +240,11 @@ Status of what the entries mention: **[used]** is already in the code; **[planne
 
 **slot** — The number of a download in Temp (`001`, `002`, ...). The Guardian tracks the slots; a slot can be taken by another download (state REPLACED).
 
+**SMTP / STARTTLS** — SMTP is the protocol used to send email; STARTTLS starts the conversation in clear and then switches to encryption, while "SSL/TLS" encrypts from the first byte. *Here:* the email notifications of eMule (page Notifications) are kept in the profile but **[not ported]**: emuled sends no email yet.
+
 **SPA** (*Single Page Application*) — A web application that loads once and then updates the page by itself. **[used]**, Vue 3.
+
+**sparse file** — A file whose empty parts take no disk space: the system writes only the blocks that contain data. *Here:* the preference `sparse_part_files` creates the `.part` files this way (ext4 and most Linux file systems support it).
 
 **static_assert** — A check done by the compiler: if a condition is false the program does not compile. *Here:* it checks that `DWORD` is 4 bytes and that the structs have the size of the format.
 
@@ -262,6 +275,8 @@ Status of what the entries mention: **[used]** is already in the code; **[planne
 **UInt128** — A 128-bit number used by Kademlia for identifiers. *Here:* class `Kademlia::CUInt128` (ported).
 
 **UPnP** — A protocol by which a program asks the router to open a port. **[used]**.
+
+**USS** (*Upload SpeedSense*) — eMule's automatic upload limit: it measures the ping of the line and lowers the upload when the line gets congested. *Here:* **[not ported]** (`core/LastCommonRouteFinder.h` is a stub); the settings are kept in the profile (page Advanced).
 
 **UTF-8 / UTF-16** — Two encodings of Unicode text: UTF-8 uses 1–4 bytes per character (ASCII stays 1 byte), UTF-16 uses 2 or 4 bytes. *Here:* all the internal text is UTF-8 (Bench #554); `shareddir.dat` is UTF-16.
 
@@ -559,7 +574,7 @@ Without a config folder anywhere the daemon does not start and says so (exit cod
 
 ## B6. The tests
 
-`ctest --test-dir build --output-on-failure` runs 48 tests. The ones on the real profile work in **read-only** mode and are skipped if the folder is missing.
+`ctest --test-dir build --output-on-failure` runs 49 tests. The ones on the real profile work in **read-only** mode and are skipped if the folder is missing.
 
 | Test | What it checks |
 |---|---|
@@ -591,6 +606,7 @@ Without a config folder anywhere the daemon does not start and says so (exit cod
 | `eventlog` | **the event log**: numbering that continues after clearing, circular buffer (the oldest lines are lost and it says so), "after the last seen", level filter, debug only with `verbose`, source from the prefix (`[server]`, `[api]`), link to `Log()`/`LogError()`, 8 threads writing together (with TSan) |
 | `fuzz_smoke` | **fixed fuzzing of the parsers** (see B7): every target of `tests/fuzz/` runs on its seed corpus (`tests/fuzz/corpus/`, including the inputs that crashed the code before the fixes) and on 300 deterministic mutations of each seed, in an empty network namespace. Skips itself (exit code 77) if the kernel does not allow the namespace (for example a container or Ubuntu 24.04 with AppArmor restricting unprivileged user namespaces) |
 | `manpage` | **the man page matches the program** (`tools/check_manpage.py`): every option named in `docs/emuled.1` must be accepted by `emuled`, and every option of `emuled` must be in the man page, except the network probes (documented here in B5) |
+| `prefs_sync` | **the preference keys are the same everywhere** (`tools/check_prefs.py`): the API table in `core/api/Prefs.cpp`, the web pages (`web/src/lib/prefsMeta.ts`), `APIDOC.md` section 9 and `openapi.json` (regenerate it with `tools/gen_openapi.py`) |
 | `daemon_config` | **the start-up settings**: reading the file (comments, quotes, unknown keys and wrong lines refused with the line number), invalid ports, precedence command line > environment > file; then the real daemon started only with `EMULED_CONFIG` and `EMULED_API_PORT`, only with `--conf`, and without a config folder (clear error, code 2) |
 | `api_http` | the API's HTTP/WebSocket server: token (and `?token=`), paths with parameters, 404/405/413/400, body, static files with attempts to escape the folder (`..`, `%2e%2e`), single page, WebSocket with the RFC 6455 key, masked and unmasked frames, ping/pong, messages from the server, two requests together |
 | `daemon_api` | **`emuled --run` as a real process** (offline) and its API: status, adding by hash and by link, duplicate (409), errors, pause, resume, deletion (the `.part` disappears), servers, the token created with 0600 permissions, **every path of the OpenAPI description exists**, clean stop with SIGTERM (exit code 0, `.part.met` saved) |
@@ -703,6 +719,17 @@ Compiler: g++ 13.3, C++20. Build: CMake 3.28 + Ninja 1.11. List of system packag
 | `docs/` | this manual, the inventory of unaligned casts |
 | `web/` | the web interface (empty until Phase 7) |
 | `upstream/emule/0.72a-community/srchybrid/` (path in `EMULED_UPSTREAM`, CMakeLists.txt) | the original Windows source: **not modified** |
+
+## B11. The preferences
+
+The Preferences page of the web interface has **one tab per page of eMule's Preferences dialog** (`PPg*.cpp`, same order): General, Display, Connection, Proxy, Server, Directories, Files, Notifications, Statistics, Messages and comments, Security, Scheduler, Web interface, Advanced (eMule's "Extended" tree). Each tab has its own address (`#/prefs/<page>`, e.g. `#/prefs/advanced`); unsaved changes stay while you move between tabs and are saved together, and a dot on a tab shows it has unsaved changes. Windows-only options (tray, skins, sounds, window, IRC) are not shown.
+
+- **The list of options** is one table in `core/api/Prefs.cpp` (key, type, limits, "from restart", read and write of the same `thePrefs` member and `preferences.ini` key as eMule). The web pages read their layout from `web/src/lib/prefsMeta.ts` (page, section, type, limits, choices); labels and explanations are in `web/src/i18n` (`prefs.items.<key>`). The test `prefs_sync` (`tools/check_prefs.py`) fails if the keys differ between the C++ table, `prefsMeta.ts`, `APIDOC.md` section 9 and `openapi.json`, whose Preferences schema is generated from the C++ table by `tools/gen_openapi.py`.
+- **Not active yet**: options whose feature is not in emuled (proxy, notifications and email, scheduler, IP filter, Upload SpeedSense, a few others such as the online signature) are shown with a "not active yet" label, or with a notice at the top of the whole page; their values are kept in the profile, so a profile moved back to eMule for Windows keeps them. The proxy cannot be turned on at all (see *proxy* in the glossary).
+- **Passwords** (proxy, SMTP) are write-only: the API never returns them, it only says whether they are set (`proxy_password_set`). eMule stores them in plain text in `preferences.ini`, and emuled does the same to stay compatible.
+- **Units**: the API speaks human units where eMule stores others (free disk space in MB instead of bytes, server keep-alive in minutes instead of milliseconds, file buffer in KiB, debug detail 1–5 instead of eMule's reversed 0–4).
+- **Beyond eMule**: `server_source_reask_minutes` (Server tab, 1–60, default 15 as in eMule) sets how often each file asks the connected server for sources. A lower value finds sooner a source that registers later (e.g. a LowID uploader that just reconnected), at the cost of more requests to the server: do not go below 3–5. It is separate from the sources watchdog (files with 0 sources). `preferences.ini` key `ServerSourceReaskMinutes`; eMule for Windows ignores it.
+- **Checks**: before saving, the page blocks only the fields you changed that are out of range; the daemon checks everything again and applies all or nothing (422 on error).
 
 ---
 

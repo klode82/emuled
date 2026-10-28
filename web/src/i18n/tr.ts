@@ -1,5 +1,6 @@
 // Türkçe. it.ts ile tamamen aynı anahtarlara sahip olmalı (tür bunu zorunlu kılar, i18n testi yer tutucuları ve çoğul biçimlerini denetler).
 import type { Messages } from './it'
+import en from './en'
 
 const tr: Messages = {
   lang: { label: 'Dil' },
@@ -176,6 +177,7 @@ const tr: Messages = {
     findSources: 'Kaynak bul', findSourcesHint: 'Normal gecikmeleri beklemeden bu indirme için hemen yeni kaynak ister (sunucu ve Kad)',
   },
   servers: {
+    removeAll: en.servers.removeAll, removeAllTitle: en.servers.removeAllTitle, removeAllText: en.servers.removeAllText, removedAll: en.servers.removedAll,		// English until translated
     title: 'ed2k sunucuları', connectedTo: '{name} sunucusuna bağlı · {id}', connecting: 'Bağlanıyor…', notConnected: 'Hiçbir sunucuya bağlı değilsiniz.',
     updateFrom: 'Listeyi bir adresten güncelle (server.met)', update: 'Güncelle', updating: 'İndiriliyor…', updateHint: 'Listeyi adresten indirir ve yeni sunucuları sizinkilere ekler (hiçbiri kaldırılmaz). Yalnızca http ve https; kullandığınız adresler hatırlanır.',
     updated: 'Liste güncellendi: {n} yeni sunucu, toplam {total}', updateFailed: 'Güncelleme başarısız: {why}', updateSlow: 'Güncelleme hâlâ sürüyor: Günlüğe bakın',
@@ -225,6 +227,7 @@ const tr: Messages = {
     tempIdentity: 'Hizmet geçici bir kimlik veya bağlantı noktalarıyla çalışıyor: değişiklikler hizmet çalıştığı sürece geçerlidir ve profile yazılmaz.',
     needRestart: 'Değiştirildi ama yalnızca hizmet yeniden başladıktan sonra geçerli: {list}.', fromRestart: 'yeniden başlatınca', others: 'Diğer',
     daemon: {
+      address: en.prefs.daemon.address, addressHint: en.prefs.daemon.addressHint,
       title: 'emuled servisi', restartText: 'Gerektiren değişiklikleri (yeni portlar gibi) uygulamak için emuled\'i yeniden başlatın. Her şeyi kaydeder ve birkaç saniye içinde yeniden başlar; indirmeler kendiliğinden devam eder.',
       restartButton: 'emuled\'i yeniden başlat', restartNow: 'Şimdi yeniden başlat', confirmTitle: 'emuled yeniden başlatılsın mı?', confirmText: 'Arayüz birkaç saniye kullanılamaz olacak ve sayfa kendiliğinden yenilenecek.', confirm: 'Yeniden başlat',
       restarting: 'emuled yeniden başlatılıyor…', restartFailed: 'emuled zamanında geri gelmedi. Kontrol edin: systemctl --user status emuled',
@@ -233,8 +236,10 @@ const tr: Messages = {
     },
     saved: 'Tercihler kaydedildi', appliedNotSaved: 'Uygulandı ama profile yazılmadı (hizmet geçici kimlik kullanıyor)',
     unsaved: '1 kaydedilmemiş değişiklik | {n} kaydedilmemiş değişiklik',
-    groups: { general: 'Genel', connection: 'Bağlantı', network: 'Ağlar ve sunucular', security: 'Güvenlik', downloads: 'İndirmeler', diagnostics: 'Tanılama' },
+    inactive: en.prefs.inactive, inactivePage: en.prefs.inactivePage, pageChanged: en.prefs.pageChanged, secretSet: en.prefs.secretSet, secretUnset: en.prefs.secretUnset,
+    pages: en.prefs.pages, sections: en.prefs.sections,
     items: {
+      ...en.prefs.items,		// English until translated
       nick: { label: 'Kullanıcı adı', hint: 'Diğer kullanıcıların gördüğü ad.' },
       tcp_port: { label: 'TCP bağlantı noktası', hint: 'Dinleme bağlantı noktası: high ID almak için yönlendiricide açık (yönlendirilmiş) olmalı.' },
       upnp_enabled: { label: 'UPnP: bağlantı noktalarını yönlendiricide kendiliğinden aç', hint: 'Yönlendiriciden TCP ve UDP bağlantı noktalarını yönlendirmesini ister. Yönlendiricide UPnP etkin olmalı. Durum Kad sayfasında görünür.' },

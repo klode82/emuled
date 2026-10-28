@@ -568,6 +568,16 @@ void RegisterRoutes(HttpServer &srv, double started_s, const DaemonHooks &hooks)
 		theApp.serverlist->SaveServermetToFile();
 		return Ok(j);
 	});
+	// remove every server (eMule: "Remove all" in the server list menu). The connection to the current server stays; a connection attempt is stopped.
+	srv.Route("DELETE", "/api/v1/servers", [](const Request &) {
+		const int n = (int)theApp.serverlist->GetServerCount();
+		if (theApp.serverconnect->IsConnecting()) { theApp.serverconnect->StopConnectionTry(); theApp.serverconnect->Disconnect(); }
+		theApp.downloadqueue->StopUDPRequests();		// LINUX: RemoveAllServers() does not clear cur_udpserver: stop the UDP source requests first, so nothing points to a deleted server
+		theApp.serverlist->RemoveAllServers();
+		theApp.serverlist->SaveServermetToFile();
+		Audit("all servers removed: " + std::to_string(n));
+		return Ok({{"removed", n}});
+	});
 	srv.Route("POST", "/api/v1/servers/connect", [](const Request &r) {
 		json b = r.body.empty() ? json::object() : json::parse(r.body, nullptr, false);
 		if (b.is_discarded() || !b.is_object()) return Response::Error(400, "a JSON object is required in the body (or nothing)");

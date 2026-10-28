@@ -1,5 +1,6 @@
 // हिन्दी (Hindi). Must have exactly the same keys as it.ts (the type enforces it and the i18n test checks placeholders and plurals).
 import type { Messages } from './it'
+import en from './en'
 
 const hi: Messages = {
   lang: { label: 'भाषा' },
@@ -176,6 +177,7 @@ const hi: Messages = {
     findSources: 'स्रोत खोजें', findSourcesHint: 'सामान्य देरी का इंतज़ार किए बिना, इस डाउनलोड के लिए अभी नए स्रोत माँगता है (सर्वर और Kad)',
   },
   servers: {
+    removeAll: en.servers.removeAll, removeAllTitle: en.servers.removeAllTitle, removeAllText: en.servers.removeAllText, removedAll: en.servers.removedAll,		// English until translated
     title: 'ed2k सर्वर', connectedTo: '{name} से जुड़े · {id}', connecting: 'जुड़ रहे हैं…', notConnected: 'आप किसी सर्वर से जुड़े नहीं हैं।',
     updateFrom: 'किसी पते से सूची अपडेट करें (server.met)', update: 'अपडेट', updating: 'डाउनलोड हो रहा है…', updateHint: 'पते से सूची डाउनलोड करता है और नए सर्वर आपकी सूची में जोड़ता है (कुछ हटाया नहीं जाता)। केवल http और https; उपयोग किए गए पते याद रखे जाते हैं।',
     updated: 'सूची अपडेट हुई: {n} नए सर्वर, कुल {total}', updateFailed: 'अपडेट विफल: {why}', updateSlow: 'अपडेट अभी चल रहा है: लॉग देखें',
@@ -225,6 +227,7 @@ const hi: Messages = {
     tempIdentity: 'डेमन अस्थायी पहचान या पोर्ट के साथ चल रहा है: बदलाव उसके चलते रहने तक रहते हैं और प्रोफ़ाइल में नहीं लिखे जाते।',
     needRestart: 'बदला गया, पर डेमन के रीस्टार्ट के बाद ही मान्य होगा: {list}।', fromRestart: 'रीस्टार्ट के बाद', others: 'अन्य',
     daemon: {
+      address: en.prefs.daemon.address, addressHint: en.prefs.daemon.addressHint,
       title: 'emuled सेवा', restartText: 'जिन बदलावों के लिए ज़रूरी है (जैसे नए पोर्ट) उन्हें लागू करने के लिए emuled को रीस्टार्ट करें। यह सब कुछ सहेजकर कुछ सेकंड में फिर शुरू हो जाता है; डाउनलोड अपने आप जारी रहते हैं।',
       restartButton: 'emuled रीस्टार्ट करें', restartNow: 'अभी रीस्टार्ट करें', confirmTitle: 'emuled रीस्टार्ट करें?', confirmText: 'इंटरफ़ेस कुछ सेकंड के लिए उपलब्ध नहीं रहेगा और पेज अपने आप फिर लोड होगा।', confirm: 'रीस्टार्ट करें',
       restarting: 'emuled रीस्टार्ट हो रहा है…', restartFailed: 'emuled समय पर वापस नहीं आया। जाँचें: systemctl --user status emuled',
@@ -233,8 +236,10 @@ const hi: Messages = {
     },
     saved: 'पसंद सहेजी गईं', appliedNotSaved: 'लागू हुआ, पर प्रोफ़ाइल में नहीं लिखा गया (डेमन अस्थायी पहचान उपयोग करता है)',
     unsaved: '1 बिना सहेजा बदलाव | {n} बिना सहेजे बदलाव',
-    groups: { general: 'सामान्य', connection: 'कनेक्शन', network: 'नेटवर्क और सर्वर', security: 'सुरक्षा', downloads: 'डाउनलोड', diagnostics: 'निदान' },
+    inactive: en.prefs.inactive, inactivePage: en.prefs.inactivePage, pageChanged: en.prefs.pageChanged, secretSet: en.prefs.secretSet, secretUnset: en.prefs.secretUnset,
+    pages: en.prefs.pages, sections: en.prefs.sections,
     items: {
+      ...en.prefs.items,		// English until translated
       nick: { label: 'उपयोगकर्ता नाम', hint: 'वह नाम जो दूसरे उपयोगकर्ता देखते हैं।' },
       tcp_port: { label: 'TCP पोर्ट', hint: 'सुनने वाला पोर्ट: High ID पाने के लिए राउटर पर इसका खुला (फ़ॉरवर्ड) होना ज़रूरी है।' },
       upnp_enabled: { label: 'UPnP: राउटर पर पोर्ट अपने आप खोलें', hint: 'राउटर से TCP और UDP पोर्ट फ़ॉरवर्ड करने को कहता है। राउटर पर UPnP चालू होना चाहिए। स्थिति Kad पेज पर दिखती है।' },

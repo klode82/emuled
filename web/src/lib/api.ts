@@ -81,6 +81,7 @@ export class Api {
   addServer = (b: { address: string; name?: string; priority?: ServerPriority; static?: boolean }) => this.post<Server>('/servers', b)
   patchServer = (addr: string, b: { priority?: ServerPriority; static?: boolean; name?: string }) => this.patch<Server>(`/servers/${addr}`, b)
   removeServer = (addr: string) => this.del<Server>(`/servers/${addr}`)
+  removeAllServers = () => this.del<{ removed: number }>('/servers')
   content = (hash: string) => this.get<Content>(`/downloads/${hash}/content`)
   contentStart = (hash: string) => this.post<Content>(`/downloads/${hash}/content`)
   details = (hash: string) => this.get<Details>(`/downloads/${hash}/details`)

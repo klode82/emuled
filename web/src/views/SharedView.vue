@@ -24,7 +24,7 @@ onMounted(() => void sh.load())
     <header class="flex flex-wrap items-center justify-between gap-3">
       <h1 class="text-lg font-semibold">{{ t('shared.title') }} <span class="text-sm font-normal tabular-nums text-mute">{{ sh.list.length }}</span></h1>
       <div class="flex flex-wrap gap-2">
-        <RouterLink to="/prefs#dirs" class="inline-flex items-center gap-1.5 rounded-lg border border-line px-3.5 py-2 text-sm hover:bg-sunk"><Icon name="folder" />{{ t('shared.manageFolders') }}</RouterLink>
+        <RouterLink to="/prefs/directories" class="inline-flex items-center gap-1.5 rounded-lg border border-line px-3.5 py-2 text-sm hover:bg-sunk"><Icon name="folder" />{{ t('shared.manageFolders') }}</RouterLink>
         <button class="inline-flex items-center gap-1.5 rounded-lg border border-line px-3.5 py-2 text-sm hover:bg-sunk" @click="sh.reload()"><Icon name="refresh" />{{ t('shared.recheck') }}</button>
       </div>
     </header>

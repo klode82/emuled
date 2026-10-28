@@ -517,6 +517,9 @@ bool CDownloadQueue::CheckAndAddSource(CPartFile *sender, CUpDownClient *source)
 		for (POSITION pos2 = cur_file->srclist.GetHeadPosition(); pos2 != NULL;) {
 			CUpDownClient *cur_client = cur_file->srclist.GetNext(pos2);
 			if (cur_client->Compare(source, true) || cur_client->Compare(source, false)) {
+				// LINUX: debug only: which copy of the same user survives (the kept one decides how a LowID source is called back)
+				if (thePrefs.GetVerbose() && cur_file == sender)
+					AddDebugLogLine(false, _T("Duplicate source dropped: new [from %d] %s; kept [from %d] %s"), (int)source->GetSourceFrom(), (LPCTSTR)source->DbgGetClientInfo(), (int)cur_client->GetSourceFrom(), (LPCTSTR)cur_client->DbgGetClientInfo());
 				// if this file has not this source already, set request for this source
 				if (cur_file != sender && cur_client->AddRequestForAnotherFile(sender)) {
 					refused((CString(_T("this user is already a source of \"")) + cur_file->GetFileName() + _T("\": kept there and listed here as 'ask for another file' (A4AF)")));

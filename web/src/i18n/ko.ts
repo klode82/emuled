@@ -1,5 +1,6 @@
 // 한국어. it.ts와 키가 정확히 같아야 합니다 (타입이 강제하고, i18n 테스트가 자리표시자와 복수형을 검사합니다).
 import type { Messages } from './it'
+import en from './en'
 
 const ko: Messages = {
   lang: { label: '언어' },
@@ -176,6 +177,7 @@ const ko: Messages = {
     findSources: '소스 찾기', findSourcesHint: '평소 지연을 기다리지 않고 지금 이 다운로드의 새 소스를 요청합니다 (서버와 Kad)',
   },
   servers: {
+    removeAll: en.servers.removeAll, removeAllTitle: en.servers.removeAllTitle, removeAllText: en.servers.removeAllText, removedAll: en.servers.removedAll,		// English until translated
     title: 'ed2k 서버', connectedTo: '{name}에 연결됨 · {id}', connecting: '연결 중…', notConnected: '어떤 서버에도 연결되어 있지 않습니다.',
     updateFrom: '주소에서 목록 업데이트 (server.met)', update: '업데이트', updating: '다운로드 중…', updateHint: '주소에서 목록을 내려받아 새 서버를 내 목록에 추가합니다 (제거되는 것은 없습니다). http와 https만 가능하며, 사용한 주소는 기억됩니다.',
     updated: '목록을 업데이트했습니다: 새 서버 {n}개, 총 {total}개', updateFailed: '업데이트 실패: {why}', updateSlow: '업데이트가 아직 진행 중입니다: 로그를 확인하세요',
@@ -225,6 +227,7 @@ const ko: Messages = {
     tempIdentity: '데몬이 임시 ID 또는 포트로 실행 중입니다. 변경 사항은 실행 중에만 유지되며 프로필에 기록되지 않습니다.',
     needRestart: '변경되었지만 데몬을 다시 시작해야 적용됩니다: {list}.', fromRestart: '재시작 후', others: '기타',
     daemon: {
+      address: en.prefs.daemon.address, addressHint: en.prefs.daemon.addressHint,
       title: 'emuled 서비스', restartText: '다시 시작이 필요한 변경 사항(예: 새 포트)을 적용하려면 emuled를 다시 시작하세요. 모두 저장한 뒤 몇 초 안에 다시 켜지며, 다운로드는 저절로 이어집니다.',
       restartButton: 'emuled 다시 시작', restartNow: '지금 다시 시작', confirmTitle: 'emuled를 다시 시작할까요?', confirmText: '인터페이스가 몇 초 동안 사용할 수 없고 페이지가 저절로 다시 불러와집니다.', confirm: '다시 시작',
       restarting: 'emuled 다시 시작 중…', restartFailed: 'emuled가 제시간에 돌아오지 않았습니다. 확인: systemctl --user status emuled',
@@ -233,8 +236,10 @@ const ko: Messages = {
     },
     saved: '환경설정을 저장했습니다', appliedNotSaved: '적용했지만 프로필에 기록하지 않았습니다 (데몬이 임시 ID 사용 중)',
     unsaved: '저장되지 않은 변경 1개 | 저장되지 않은 변경 {n}개',
-    groups: { general: '일반', connection: '연결', network: '네트워크 및 서버', security: '보안', downloads: '다운로드', diagnostics: '진단' },
+    inactive: en.prefs.inactive, inactivePage: en.prefs.inactivePage, pageChanged: en.prefs.pageChanged, secretSet: en.prefs.secretSet, secretUnset: en.prefs.secretUnset,
+    pages: en.prefs.pages, sections: en.prefs.sections,
     items: {
+      ...en.prefs.items,		// English until translated
       nick: { label: '사용자 이름', hint: '다른 사용자에게 보이는 이름입니다.' },
       tcp_port: { label: 'TCP 포트', hint: '수신 포트: High ID를 받으려면 라우터에서 열려(포워딩) 있어야 합니다.' },
       upnp_enabled: { label: 'UPnP: 라우터 포트 자동 열기', hint: '라우터에 TCP와 UDP 포트 포워딩을 요청합니다. 라우터에서 UPnP가 켜져 있어야 합니다. 상태는 Kad 화면에 표시됩니다.' },

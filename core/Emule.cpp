@@ -16,6 +16,7 @@ void CemuleApp::QueueLogLine(bool, LPCTSTR fmt, ...) { va_list ap; va_start(ap, 
 // LINUX: see CServerListCtrl in Emule.h. Original: ServerListCtrl.cpp AddServer / RemoveServer, without the graphical list lines.
 #include "ServerList.h"
 #include "util/Random.h"
+#include "util/Net.h"
 bool CServerListCtrl::AddServer(const CServer *pServer, bool /*bAddToList*/, bool bRandom)
 {
 	bool bAddTail = !bRandom || (GetRandomUInt16() % (1 + theApp.serverlist->GetServerCount()) != 0);
@@ -26,13 +27,21 @@ void CServerListCtrl::RemoveServer(const CServer *pServer) { theApp.serverlist->
 // LINUX: see CSearchList in AppBridge.h
 UINT CSearchList::ProcessSearchAnswer(const uchar *packet, uint32 size, bool /*bOptUTF8*/, uint32 nServerIP, uint16 nServerPort, bool *pbMoreResultsAvailable)
 {
-	return emule::net::ParseSearchAnswer(packet, size, serverHits, pbMoreResultsAvailable, nServerIP, nServerPort);
+	const size_t before = serverHits.size();
+	UINT n = emule::net::ParseSearchAnswer(packet, size, serverHits, pbMoreResultsAvailable, nServerIP, nServerPort);
+	if (thePrefs.GetVerbose()) {		// LINUX: with debug on, how many results and how many with complete sources (to check the "complete" column)
+		size_t withComplete = 0; for (size_t i = before; i < serverHits.size(); ++i) withComplete += serverHits[i].complete > 0;
+		AddDebugLogLine(false, _T("Search answer (TCP) from %s:%u: %u results, %u with complete sources"), (LPCTSTR)ipstr(nServerIP), (UINT)nServerPort, n, (UINT)withComplete);
+	}
+	return n;
 }
 UINT CSearchList::ProcessUDPSearchAnswer(CFileDataIO &packet, bool /*bOptUTF8*/, uint32 nServerIP, uint16 nServerPort)
 {
 	emule::net::SearchHit h;
 	emule::net::ParseSearchFile(packet, h);
 	h.server_ip = nServerIP; h.server_port = nServerPort;
+	if (thePrefs.GetVerbose())
+		AddDebugLogLine(false, _T("Search answer (UDP) from %s:%u: sources %u, complete %u: %s"), (LPCTSTR)ipstr(nServerIP), (UINT)nServerPort, h.sources, h.complete, h.name.c_str());
 	serverHits.push_back(h);
 	return 1;
 }

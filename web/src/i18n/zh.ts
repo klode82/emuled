@@ -1,5 +1,6 @@
 // 简体中文。键必须与 it.ts 完全一致(类型会强制检查,i18n 测试会检查占位符和复数形式)。
 import type { Messages } from './it'
+import en from './en'
 
 const zh: Messages = {
   lang: { label: '语言' },
@@ -176,6 +177,7 @@ const zh: Messages = {
     findSources: '查找来源', findSourcesHint: '立即为此下载请求新来源(服务器和 Kad),无需等待常规延迟',
   },
   servers: {
+    removeAll: en.servers.removeAll, removeAllTitle: en.servers.removeAllTitle, removeAllText: en.servers.removeAllText, removedAll: en.servers.removedAll,		// English until translated
     title: 'ed2k 服务器', connectedTo: '已连接到 {name} · {id}', connecting: '连接中…', notConnected: '未连接到任何服务器。',
     updateFrom: '从地址更新列表(server.met)', update: '更新', updating: '下载中…', updateHint: '从该地址下载列表,并把新服务器加入您的列表(不会移除任何服务器)。仅支持 http 和 https;用过的地址会被记住。',
     updated: '列表已更新:新增 {n} 个服务器,共 {total} 个', updateFailed: '更新失败:{why}', updateSlow: '更新仍在进行:请查看日志',
@@ -225,6 +227,7 @@ const zh: Messages = {
     tempIdentity: '守护进程正以临时身份或临时端口运行:更改只在其保持运行期间有效,不会写入配置。',
     needRestart: '已更改,但需要守护进程重启后才生效:{list}。', fromRestart: '重启后', others: '其他',
     daemon: {
+      address: en.prefs.daemon.address, addressHint: en.prefs.daemon.addressHint,
       title: 'emuled 服务', restartText: '重启 emuled 以应用需要重启才生效的更改(如新端口)。它会保存所有内容并在几秒后重新启动;下载会自动继续。',
       restartButton: '重启 emuled', restartNow: '立即重启', confirmTitle: '重启 emuled?', confirmText: '界面将在几秒内不可用,页面会自动重新加载。', confirm: '重启',
       restarting: '正在重启 emuled…', restartFailed: 'emuled 没有及时恢复。请检查:systemctl --user status emuled',
@@ -233,8 +236,10 @@ const zh: Messages = {
     },
     saved: '偏好设置已保存', appliedNotSaved: '已应用,但未写入配置(守护进程使用临时身份)',
     unsaved: '1 项未保存的更改 | {n} 项未保存的更改',
-    groups: { general: '常规', connection: '连接', network: '网络和服务器', security: '安全', downloads: '下载', diagnostics: '诊断' },
+    inactive: en.prefs.inactive, inactivePage: en.prefs.inactivePage, pageChanged: en.prefs.pageChanged, secretSet: en.prefs.secretSet, secretUnset: en.prefs.secretUnset,
+    pages: en.prefs.pages, sections: en.prefs.sections,
     items: {
+      ...en.prefs.items,		// English until translated
       nick: { label: '用户名', hint: '其他用户看到的名称。' },
       tcp_port: { label: 'TCP 端口', hint: '监听端口:必须在路由器上开放(转发)才能获得 High ID。' },
       upnp_enabled: { label: 'UPnP:自动在路由器上开放端口', hint: '请求路由器转发 TCP 和 UDP 端口。路由器必须启用 UPnP。状态显示在 Kad 页面。' },

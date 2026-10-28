@@ -1,5 +1,6 @@
 // العربية (Arabic). Must have exactly the same keys as it.ts (the type enforces it and the i18n test checks placeholders and plurals).
 import type { Messages } from './it'
+import en from './en'
 
 const ar: Messages = {
   lang: { label: 'اللغة' },
@@ -176,6 +177,7 @@ const ar: Messages = {
     findSources: 'البحث عن مصادر', findSourcesHint: 'يطلب مصادر جديدة لهذا التنزيل الآن (الخادم وKad)، دون انتظار المدد المعتادة',
   },
   servers: {
+    removeAll: en.servers.removeAll, removeAllTitle: en.servers.removeAllTitle, removeAllText: en.servers.removeAllText, removedAll: en.servers.removedAll,		// English until translated
     title: 'خوادم ed2k', connectedTo: 'متصل بـ {name} · {id}', connecting: 'جارٍ الاتصال…', notConnected: 'أنت غير متصل بأي خادم.',
     updateFrom: 'تحديث القائمة من عنوان (server.met)', update: 'تحديث', updating: 'جارٍ التنزيل…', updateHint: 'ينزّل القائمة من العنوان ويضيف الخوادم الجديدة إلى قائمتك (لا يُحذف شيء). http وhttps فقط؛ تُتذكَّر العناوين التي استخدمتها.',
     updated: 'تم تحديث القائمة: {n} خوادم جديدة، والمجموع {total}', updateFailed: 'فشل التحديث: {why}', updateSlow: 'التحديث ما زال جاريًا: راجع السجل',
@@ -225,6 +227,7 @@ const ar: Messages = {
     tempIdentity: 'تعمل الخدمة بهوية أو منافذ مؤقتة: تدوم التغييرات ما دامت الخدمة قيد التشغيل ولا تُكتب في الملف الشخصي.',
     needRestart: 'تغيّر، لكنه لا يسري إلا بعد إعادة تشغيل الخدمة: {list}.', fromRestart: 'بعد إعادة التشغيل', others: 'أخرى',
     daemon: {
+      address: en.prefs.daemon.address, addressHint: en.prefs.daemon.addressHint,
       title: 'خدمة emuled', restartText: 'أعد تشغيل emuled لتطبيق التغييرات التي تحتاج إلى ذلك (مثل المنافذ الجديدة). يحفظ كل شيء ويعمل من جديد خلال ثوانٍ؛ وتُستأنف التنزيلات تلقائيًا.',
       restartButton: 'إعادة تشغيل emuled', restartNow: 'إعادة التشغيل الآن', confirmTitle: 'إعادة تشغيل emuled؟', confirmText: 'ستكون الواجهة غير متاحة لبضع ثوانٍ وستُعاد الصفحة تلقائيًا.', confirm: 'إعادة التشغيل',
       restarting: 'جارٍ إعادة تشغيل emuled…', restartFailed: 'لم يعد emuled في الوقت المناسب. تحقق: systemctl --user status emuled',
@@ -233,8 +236,10 @@ const ar: Messages = {
     },
     saved: 'تم حفظ التفضيلات', appliedNotSaved: 'طُبّقت، لكنها لم تُكتب في الملف الشخصي (تستخدم الخدمة هوية مؤقتة)',
     unsaved: 'تغيير واحد غير محفوظ | {n} تغييرات غير محفوظة',
-    groups: { general: 'عام', connection: 'الاتصال', network: 'الشبكات والخوادم', security: 'الأمان', downloads: 'التنزيلات', diagnostics: 'التشخيص' },
+    inactive: en.prefs.inactive, inactivePage: en.prefs.inactivePage, pageChanged: en.prefs.pageChanged, secretSet: en.prefs.secretSet, secretUnset: en.prefs.secretUnset,
+    pages: en.prefs.pages, sections: en.prefs.sections,
     items: {
+      ...en.prefs.items,		// English until translated
       nick: { label: 'اسم المستخدم', hint: 'الاسم الذي يراه المستخدمون الآخرون.' },
       tcp_port: { label: 'منفذ TCP', hint: 'منفذ الاستماع: يجب أن يكون مفتوحًا (موجَّهًا) في الراوتر للحصول على ID عالٍ.' },
       upnp_enabled: { label: 'UPnP: فتح المنافذ في الراوتر تلقائيًا', hint: 'يطلب من الراوتر توجيه منفذَي TCP وUDP. يجب أن يكون UPnP مفعّلًا في الراوتر. تظهر الحالة في صفحة Kad.' },

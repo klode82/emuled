@@ -383,6 +383,7 @@ public:
 	//MORPH END - Added by SiRoB, Splitting Bar [O²]
 	static UINT		m_uDeadServerRetries;
 	static DWORD	m_dwServerKeepAliveTimeout;
+	static UINT	m_uServerSourceReaskMinutes;	// LINUX: how often each file asks the connected server for sources (eMule: fixed 15)
 	// -khaos--+++> Changed data type to avoid overflows
 	static UINT		statsMax;
 	// <-----khaos-
@@ -973,6 +974,7 @@ public:
 	static UINT		GetMaxSourcePerFileDefault()		{ return maxsourceperfile; }
 	static UINT		GetDeadServerRetries()				{ return m_uDeadServerRetries; }
 	static DWORD	GetServerKeepAliveTimeout()			{ return m_dwServerKeepAliveTimeout; }
+	static UINT	GetServerSourceReaskMinutes()		{ return m_uServerSourceReaskMinutes; }
 	static bool		GetConditionalTCPAccept()			{ return m_bConditionalTCPAccept; }
 
 	static LANGID	GetLanguageID()						{ return m_wLanguageID; }

@@ -29,6 +29,9 @@ export const useServers = defineStore('servers', () => {
   async function remove(addr: string) {
     try { await api().removeServer(addr); await load(); useToasts().ok(t('servers.removed')) } catch (e) { useToasts().error(errText(e)) }
   }
+  async function removeAll() {
+    try { const r = await api().removeAllServers(); await load(); useToasts().ok(t('servers.removedAll', { n: r.removed })) } catch (e) { useToasts().error(errText(e)) }
+  }
   // update the server list from a web address (server.met): the download starts, then the state is watched until it finishes
   const urls = ref<string[]>([]); const updating = ref(false)
   async function loadUrls() { try { urls.value = await api().serverUrls() } catch { /* without a list, type it by hand */ } }
@@ -41,5 +44,5 @@ export const useServers = defineStore('servers', () => {
       else useToasts().error(r.state === 'failed' ? t('servers.updateFailed', { why: r.error ?? '' }) : t('servers.updateSlow'))
     } catch (e) { useToasts().error(errText(e)) } finally { updating.value = false }
   }
-  return { urls, updating, loadUrls, updateFromUrl, reconnect, list, loading, load, connect, disconnect, add, edit, remove }
+  return { urls, updating, loadUrls, updateFromUrl, reconnect, list, loading, load, connect, disconnect, add, edit, remove, removeAll }
 })

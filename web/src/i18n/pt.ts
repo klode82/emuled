@@ -1,5 +1,6 @@
 // Português (Brasil). Deve ter exatamente as mesmas chaves de it.ts (o tipo garante, e o teste de i18n verifica placeholders e plurais).
 import type { Messages } from './it'
+import en from './en'
 
 const pt: Messages = {
   lang: { label: 'Idioma' },
@@ -176,6 +177,7 @@ const pt: Messages = {
     findSources: 'Buscar fontes', findSourcesHint: 'Pede agora novas fontes para este download (servidor e Kad), sem esperar os atrasos normais',
   },
   servers: {
+    removeAll: en.servers.removeAll, removeAllTitle: en.servers.removeAllTitle, removeAllText: en.servers.removeAllText, removedAll: en.servers.removedAll,		// English until translated
     title: 'Servidores ed2k', connectedTo: 'Conectado a {name} · {id}', connecting: 'Conectando…', notConnected: 'Você não está conectado a nenhum servidor.',
     updateFrom: 'Atualizar a lista a partir de um endereço (server.met)', update: 'Atualizar', updating: 'Baixando…', updateHint: 'Baixa a lista do endereço e adiciona os servidores novos aos seus (nada é removido). Somente http e https; os endereços usados ficam salvos.',
     updated: 'Lista atualizada: {n} servidores novos, {total} no total', updateFailed: 'Falha na atualização: {why}', updateSlow: 'A atualização ainda está em andamento: veja o Registro',
@@ -225,6 +227,7 @@ const pt: Messages = {
     tempIdentity: 'O daemon está rodando com uma identidade ou portas temporárias: as alterações valem enquanto ele continuar em execução e não são gravadas no perfil.',
     needRestart: 'Alterado, mas só vale depois de reiniciar o daemon: {list}.', fromRestart: 'após reiniciar', others: 'Outras',
     daemon: {
+      address: en.prefs.daemon.address, addressHint: en.prefs.daemon.addressHint,
       title: 'O serviço emuled', restartText: 'Reinicie o emuled para aplicar as alterações que precisam disso (como as portas novas). Ele guarda tudo e volta a arrancar em poucos segundos; as transferências retomam sozinhas.',
       restartButton: 'Reiniciar o emuled', restartNow: 'Reiniciar agora', confirmTitle: 'Reiniciar o emuled?', confirmText: 'A interface ficará indisponível por alguns segundos e a página recarrega sozinha.', confirm: 'Reiniciar',
       restarting: 'A reiniciar o emuled…', restartFailed: 'O emuled não voltou a tempo. Verifique: systemctl --user status emuled',
@@ -233,8 +236,10 @@ const pt: Messages = {
     },
     saved: 'Preferências salvas', appliedNotSaved: 'Aplicado, mas não gravado no perfil (o daemon usa uma identidade temporária)',
     unsaved: '1 alteração não salva | {n} alterações não salvas',
-    groups: { general: 'Geral', connection: 'Conexão', network: 'Redes e servidores', security: 'Segurança', downloads: 'Downloads', diagnostics: 'Diagnóstico' },
+    inactive: en.prefs.inactive, inactivePage: en.prefs.inactivePage, pageChanged: en.prefs.pageChanged, secretSet: en.prefs.secretSet, secretUnset: en.prefs.secretUnset,
+    pages: en.prefs.pages, sections: en.prefs.sections,
     items: {
+      ...en.prefs.items,		// English until translated
       nick: { label: 'Nome de usuário', hint: 'O nome que os outros usuários veem.' },
       tcp_port: { label: 'Porta TCP', hint: 'Porta de escuta: precisa estar aberta (encaminhada) no roteador para obter ID alto.' },
       upnp_enabled: { label: 'UPnP: abrir as portas no roteador automaticamente', hint: 'Pede ao roteador que encaminhe as portas TCP e UDP. O roteador precisa ter o UPnP ativado. O estado aparece na página Kad.' },

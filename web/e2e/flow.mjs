@@ -1,5 +1,5 @@
 // Real-browser test against a RUNNING, OFFLINE daemon (better a profile copy: it adds and deletes downloads, changes the username, creates categories).
-//   emuled --run --fake-profile --profile COPIA --offline --api-port 18765 --templates-dir dist/templates &
+//   emuled --run --fake-profile --profile COPIA --offline --api-port 18765 --templates-dir dist/templates &     (with the package installed use --web-dir dist/templates/console and EMULED_URL=http://127.0.0.1:18765/: the built-in templates win over --templates-dir)
 //   EMULED_URL=http://127.0.0.1:18765/t/console/ EMULED_TOKEN_FILE=COPIA/emuled.token npm run e2e     (the address of the template to test; the API is always at the root)
 // Needs a profile with some servers (e.g. a copy of server.met): the server tests require it.
 // Variables: EMULED_URL, EMULED_TOKEN | EMULED_TOKEN_FILE, CHROME (default /usr/bin/google-chrome), E2E_SHOTS (folder where screenshots are saved)
@@ -24,6 +24,11 @@ const btn = async (label) => (await p.evaluateHandle((l) => [...document.querySe
 const uniq = (n) => Array.from({ length: n }, () => '0123456789ABCDEF'[Math.floor(Math.random() * 16)]).join('')
 
 await p.setViewport({ width: 1280, height: 800 })
+// a fresh profile has no account yet: create one (the setup code is the file token), so the login page offers "sign in with the token"
+const authUrl = (x) => new URL('/api/v1/auth/' + x, base).href
+if ((await (await fetch(authUrl('status'))).json()).setup_required)
+  await fetch(authUrl('setup'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ setup_code: token, username: 'e2e', password: 'e2e-password-' + uniq(6) }) })
+await fetch(new URL('/api/v1/setup/done', base).href, { method: 'POST', headers: { Authorization: 'Bearer ' + token } })		// skip the first-start Wizard
 // login: wrong token rejected, right token accepted
 await p.goto(base, { waitUntil: 'networkidle0' })
 await p.evaluate(() => localStorage.setItem('emuled.lang', 'it')); await p.reload({ waitUntil: 'networkidle0' })
@@ -146,6 +151,26 @@ await (await btn('Salva')).click(); await wait(800)
 const pr = await (await fetch(new URL('/api/v1/preferences', base).href, { headers: { Authorization: 'Bearer ' + token } })).json()
 ok(pr.nick === nick, 'preference saved in the daemon')
 
+// preference pages (tabs, as in eMule): every tab opens; changes on two tabs are saved together; proxy cannot be turned on; passwords are write-only
+const PAGES = { general: 'Generale', display: 'Visualizzazione', connection: 'Connessione', proxy: 'Proxy', server: 'Server', directories: 'Cartelle', files: 'File', notifications: 'Notifiche', statistics: 'Statistiche', messages: 'Messaggi e commenti', security: 'Sicurezza', scheduler: 'Programmazione', web: 'Interfaccia web', advanced: 'Avanzate' }
+for (const [pg, title] of Object.entries(PAGES)) {
+  await p.goto(base + '#/prefs/' + pg); await wait(400)
+  ok(await p.evaluate((x) => document.querySelector('nav[aria-label="Preferenze"] a[aria-current="page"]')?.innerText.trim() === x, title), `prefs tab ${pg}`)
+}
+const before = await (await fetch(new URL('/api/v1/preferences', base).href, { headers: { Authorization: 'Bearer ' + token } })).json()
+const nextPaused = before.start_next_paused === 2 ? 1 : 2, buffer = before.file_buffer_kib === 384 ? 320 : 384		// always a real change, also on a daemon used before
+await p.goto(base + '#/prefs/files'); await wait(400)
+await p.select('#p-start_next_paused', String(nextPaused)); await wait(200)
+await p.goto(base + '#/prefs/advanced'); await wait(400); await shot('prefs_advanced')
+await p.$eval('#p-file_buffer_kib', (e, v) => { e.value = String(v); e.dispatchEvent(new Event('input')) }, buffer); await wait(200)
+ok(/2 modifiche non salvate/.test(await text()), 'changes on two tabs are kept together')
+await (await btn('Salva')).click(); await wait(800)
+const pr2 = await (await fetch(new URL('/api/v1/preferences', base).href, { headers: { Authorization: 'Bearer ' + token } })).json()
+ok(pr2.start_next_paused === nextPaused && pr2.file_buffer_kib === buffer, 'options of two tabs saved')
+await p.goto(base + '#/prefs/proxy'); await wait(400); await shot('prefs_proxy')
+ok(await p.$eval('#p-proxy_enabled', (e) => e.disabled) && /non c’è ancora in emuled/.test(await text()), 'proxy: shown as not active, cannot be turned on')
+ok(await p.$eval('#p-proxy_password', (e) => e.type === 'password' && e.value === ''), 'proxy password field is empty (write-only)')
+
 // servers: add, change priority, remove
 await p.goto(base + '#/servers'); await wait(800)
 const srvName = 'ProvaE2E' + Date.now() % 10000, srvAddr = '203.0.113.' + (100 + Date.now() % 100) + ':4661'
@@ -160,7 +185,7 @@ await p.evaluate(() => [...document.querySelectorAll('dialog[open] button')].fin
 ok(!(await text()).includes(srvName), 'server removed')
 
 // folders: daemon error shown, then a valid change
-await p.goto(base + '#/prefs'); await wait(800)
+await p.goto(base + '#/prefs/directories'); await wait(800)
 const tmpDir = '/tmp/e2e-arrivo-' + Date.now()
 await p.$eval('#dirs input', (e, v) => { e.value = v; e.dispatchEvent(new Event('input')) }, 'relativo/dir'); await wait(200)
 await (await btn('Applica le cartelle')).click(); await wait(800); ok(/absolute/.test(await text()), 'folders: the daemon rejects a relative path')
@@ -211,8 +236,8 @@ ok(await p.evaluate(() => { const o = document.querySelector('ol'); return o.scr
 p.removeAllListeners('request'); await p.setRequestInterception(false); await p.setViewport({ width: 1280, height: 800 })
 
 // language: English
-await p.goto(base + '#/prefs'); await wait(800)
-await p.select('#lang', 'en'); await wait(400); ok((await text()).includes('Preferences') && (await text()).includes('Folders'), 'English language'); await shot('english')
+await p.goto(base + '#/prefs/display'); await wait(800)
+await p.select('#lang', 'en'); await wait(400); ok((await text()).includes('Preferences') && (await text()).includes('Directories'), 'English language'); await shot('english')
 await p.select('#lang', 'it'); await wait(300)
 
 // dark theme

@@ -40,6 +40,9 @@ async function submit() {
 }
 const updateUrl = ref('')
 onMounted(() => void sv.loadUrls())
+async function delAll() {
+  if (await ui.ask({ title: t('servers.removeAllTitle'), text: t('servers.removeAllText', { n: sv.list.length }), confirm: t('servers.removeAll'), danger: true })) await sv.removeAll()
+}
 async function del(s: Server) {
   if (await ui.ask({ title: t('servers.removeTitle'), text: t('servers.removeText', { name: s.name || addr(s) }), confirm: t('common.remove'), danger: true })) await sv.remove(addr(s))
 }
@@ -53,6 +56,7 @@ async function del(s: Server) {
         <button class="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3.5 py-2 text-sm font-medium text-onaccent" @click="sv.connect()"><Icon name="wifi" />{{ t('servers.connectAny') }}</button>
         <button class="inline-flex items-center gap-1.5 rounded-lg border border-line px-3.5 py-2 text-sm hover:bg-sunk" @click="openAdd"><Icon name="plus" />{{ t('servers.add') }}</button>
         <button class="inline-flex items-center gap-1.5 rounded-lg border border-line px-3.5 py-2 text-sm hover:bg-sunk" :disabled="!core.status?.ed2k.connected && !core.status?.ed2k.connecting" @click="sv.disconnect()">{{ t('servers.disconnect') }}</button>
+        <button class="inline-flex items-center gap-1.5 rounded-lg border border-line px-3.5 py-2 text-sm text-bad hover:bg-sunk disabled:opacity-50" :disabled="!sv.list.length" @click="delAll"><Icon name="trash" />{{ t('servers.removeAll') }}</button>
       </div>
     </header>
     <form class="flex flex-wrap items-end gap-2 rounded-xl border border-line bg-surface p-4" @submit.prevent="sv.updateFromUrl(updateUrl)">

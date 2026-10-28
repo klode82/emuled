@@ -1945,7 +1945,7 @@ uint32 CPartFile::Process(uint32 factor, UINT icounter)
 			Kademlia::CSearchManager::StopSearch(GetKadFileSearchID(), true);
 
 		// check if we want new sources from server
-		if (!m_bLocalSrcReqQueued && (!m_LastSearchTime || curTick >= m_LastSearchTime + SERVERREASKTIME) && theApp.serverconnect->IsConnected()
+		if (!m_bLocalSrcReqQueued && (!m_LastSearchTime || curTick >= m_LastSearchTime + MIN2MS(thePrefs.GetServerSourceReaskMinutes())) && theApp.serverconnect->IsConnected()
 			&& GetMaxSourcePerFileSoft() > GetSourceCount() && !m_stopped
 			&& (!IsLargeFile() || (theApp.serverconnect->GetCurrentServer() != NULL && theApp.serverconnect->GetCurrentServer()->SupportsLargeFilesTCP())))
 		{

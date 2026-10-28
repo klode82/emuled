@@ -30,10 +30,17 @@ struct Pref
 	bool restart;						// takes effect only after the daemon restarts
 	std::function<json()> get;
 	std::function<void(const json &)> set;
+	bool empty_ok = false;				// string that may be empty
+	bool secret = false;				// write-only (passwords): GET shows only "<key>_set": true/false
 };
 #define B(key, restart, G, SETTER) Pref{key, "bool", 0, 1, restart, [] { return json((bool)(G)); }, [](const json &v) { SETTER(v.get<bool>()); }}
 #define I(key, lo, hi, restart, G, SETTER) Pref{key, "int", lo, hi, restart, [] { return json((int64_t)(G)); }, [](const json &v) { SETTER(v.get<int64_t>()); }}
-constexpr int64_t kKb = 1000000;		// 0 = illimitato
+// rows bound to a member of thePrefs (the original PPg* pages write the members directly, without setters)
+#define BM(key, restart, M) Pref{key, "bool", 0, 1, restart, [] { return json((bool)thePrefs.M); }, [](const json &v) { thePrefs.M = v.get<bool>(); }}
+#define IM(key, lo, hi, restart, M) Pref{key, "int", lo, hi, restart, [] { return json((int64_t)thePrefs.M); }, [](const json &v) { thePrefs.M = static_cast<decltype(thePrefs.M)>(v.get<int64_t>()); }}
+#define SM(key, restart, M, empty) Pref{key, "string", 0, 0, restart, [] { return json(S(thePrefs.M)); }, [](const json &v) { thePrefs.M = CString(v.get<std::string>().c_str()); }, empty}
+#define PW(key, M) Pref{key, "string", 0, 0, false, [] { return json(!thePrefs.M.IsEmpty()); }, [](const json &v) { thePrefs.M = CString(v.get<std::string>().c_str()); }, true, true}
+constexpr int64_t kKb = 1000000;		// 0 = unlimited
 
 const std::vector<Pref> &Prefs()
 {
@@ -53,6 +60,7 @@ const std::vector<Pref> &Prefs()
 		B("add_servers_from_server", false, thePrefs.GetAddServersFromServer(), thePrefs.SetAddServersFromServer),
 		B("add_servers_from_clients", false, thePrefs.GetAddServersFromClients(), thePrefs.SetAddServersFromClients),
 		B("use_server_priorities", false, thePrefs.GetUseServerPriorities(), thePrefs.SetUseServerPriorities),
+		IM("server_source_reask_minutes", 1, 60, false, m_uServerSourceReaskMinutes),
 		B("safe_server_connect", false, thePrefs.IsSafeServerConnectEnabled(), thePrefs.SetSafeServerConnectEnabled),
 		B("static_servers_only", false, thePrefs.GetAutoConnectToStaticServersOnly(), thePrefs.SetAutoConnectToStaticServersOnly),
 		I("dead_server_retries", 1, 100, false, thePrefs.GetDeadServerRetries(), thePrefs.SetDeadServerRetries),
@@ -66,17 +74,113 @@ const std::vector<Pref> &Prefs()
 		B("auto_down_priority", false, thePrefs.GetNewAutoDown(), thePrefs.SetNewAutoDown),
 		B("transfer_full_chunks", false, thePrefs.TransferFullChunks(), thePrefs.SetTransferFullChunks),
 		B("remove_finished_downloads", false, thePrefs.GetRemoveFinishedDownloads(), thePrefs.SetRemoveFinishedDownloads),
-		Pref{"comment_filter", "string", 0, 0, false, [] { return json(S(thePrefs.GetCommentFilter())); }, [](const json &v) { CString s(v.get<std::string>().c_str()); s.MakeLower(); thePrefs.SetCommentFilter(s); }},
+		Pref{"comment_filter", "string", 0, 0, false, [] { return json(S(thePrefs.GetCommentFilter())); }, [](const json &v) { CString s(v.get<std::string>().c_str()); s.MakeLower(); thePrefs.SetCommentFilter(s); }, true},
 		B("verbose_log", false, thePrefs.GetVerbose(), thePrefs.SetVerbose),
 		B("save_log_to_disk", false, thePrefs.GetLog2Disk(), thePrefs.SetLog2Disk),
 		B("save_debug_to_disk", false, thePrefs.GetDebug2DiskSetting(), thePrefs.SetDebug2Disk),
 		B("upnp_enabled", false, thePrefs.IsUPnPEnabled(), thePrefs.SetUPnPEnabled),
 		B("upnp_close_on_exit", false, thePrefs.CloseUPnPOnExit(), thePrefs.SetCloseUPnPOnExit),
+		// the rest of eMule's preference pages (PPg*.cpp), same members and same preferences.ini keys
+		// General
+		BM("online_signature", false, onlineSig),
+		BM("check_new_version", false, updatenotify),
+		IM("check_new_version_days", 2, 7, false, versioncheckdays),
+		// Display
+		BM("store_searches", false, m_bStoreSearches),
+		// Connection
+		Pref{"download_capacity_kbps", "int", 1, kKb, false, [] { return json((int64_t)thePrefs.GetMaxGraphDownloadRate()); }, [](const json &v) { thePrefs.SetMaxGraphDownloadRate((uint32)v.get<int64_t>()); }},
+		Pref{"upload_capacity_kbps", "int", 0, kKb, false, [] { return json((int64_t)(thePrefs.maxGraphUploadRate == UNLIMITED ? 0 : thePrefs.maxGraphUploadRate)); }, [](const json &v) { thePrefs.SetMaxGraphUploadRate((uint32)v.get<int64_t>()); }},
+		BM("show_overhead", false, m_bshowoverhead),
+		// Proxy (not active yet in emuled: kept in the profile)
+		BM("proxy_enabled", false, proxy.bUseProxy),
+		IM("proxy_type", 0, 5, false, proxy.type),
+		SM("proxy_host", false, proxy.host, true),
+		IM("proxy_port", 1, 65535, false, proxy.port),
+		BM("proxy_auth", false, proxy.bEnablePassword),
+		SM("proxy_user", false, proxy.user, true),
+		PW("proxy_password", proxy.password),
+		// Server
+		BM("auto_update_server_list", false, m_bAutoUpdateServerList),
+		BM("smart_lowid_check", false, m_bSmartServerIdCheck),
+		BM("manual_servers_high_priority", false, m_bManualAddedServersHighPriority),
+		// Files
+		Pref{"advanced_time_remaining", "bool", 0, 1, false, [] { return json(!thePrefs.m_bUseOldTimeRemaining); }, [](const json &v) { thePrefs.m_bUseOldTimeRemaining = !v.get<bool>(); }},
+		BM("preview_chunks_first", false, m_bpreviewprio),
+		IM("start_next_paused", 0, 3, false, m_istartnextfile),
+		BM("filename_cleanup", false, autofilenamecleanup),
+		SM("filename_cleanup_filter", false, filenameCleanups, true),
+		BM("remember_downloaded_files", false, m_bRememberDownloadedFiles),
+		BM("remember_cancelled_files", false, m_bRememberCancelledFiles),
+		// Notifications (email: not active yet in emuled)
+		BM("notify_download_finished", false, notifierOnDownloadFinished),
+		BM("notify_new_download", false, notifierOnNewDownload),
+		BM("notify_chat", false, notifierOnChat),
+		BM("notify_log", false, notifierOnLog),
+		BM("notify_important_error", false, notifierOnImportantError),
+		BM("notify_new_version", false, notifierOnNewVersion),
+		BM("email_enabled", false, m_email.bSendMail),
+		SM("email_to", false, m_email.sTo, true),
+		SM("email_from", false, m_email.sFrom, true),
+		SM("smtp_server", false, m_email.sServer, true),
+		IM("smtp_port", 0, 65535, false, m_email.uPort),
+		IM("smtp_security", 0, 2, false, m_email.uTLS),
+		IM("smtp_auth", 0, 2, false, m_email.uAuth),
+		SM("smtp_user", false, m_email.sUser, true),
+		PW("smtp_password", m_email.sPass),
+		// Statistics
+		IM("stats_graph_interval_s", 0, 200, false, trafficOMeterInterval),
+		IM("stats_tree_interval_s", 0, 100, false, statsInterval),
+		IM("stats_average_minutes", 1, 100, false, statsAverageMinutes),
+		// Messages and comments
+		BM("messages_friends_only", false, msgonlyfriends),
+		BM("advanced_spam_filter", false, m_bAdvancedSpamfilter),
+		BM("chat_captchas", false, m_bUseChatCaptchas),
+		SM("message_filter", false, messageFilter, true),
+		// Security
+		IM("ip_filter_level", 0, 255, false, filterlevel),
+		BM("filter_servers_by_ip", false, filterserverbyip),
+		BM("search_spam_filter", false, m_bEnableSearchResultFilter),
+		IM("see_shares", 0, 2, false, m_iSeeShares),
+		// Scheduler (not active yet in emuled)
+		BM("scheduler_enabled", false, scheduler),
+		// Extended (PPgTweaks)
+		IM("max_half_connections", 1, 1000, false, maxhalfconnections),
+		BM("fast_connection_reject", false, m_bConditionalTCPAccept),
+		Pref{"server_keepalive_minutes", "int", 0, 1440, false, [] { return json((int64_t)(thePrefs.m_dwServerKeepAliveTimeout / 60000)); }, [](const json &v) { thePrefs.m_dwServerKeepAliveTimeout = (DWORD)(v.get<int64_t>() * 60000); }},
+		BM("filter_lan_ips", false, filterLANIPs),
+		BM("a4af_save_cpu", false, m_bA4AFSaveCpu),
+		SM("own_hostname", false, m_strYourHostname, true),
+		BM("sparse_part_files", false, m_bSparsePartFiles),
+		BM("allocate_full_file", false, m_bAllocFull),
+		BM("check_disk_space", false, checkDiskspace),
+		Pref{"min_free_disk_space_mb", "int", 0, 4095, false, [] { return json((int64_t)(thePrefs.m_uMinFreeDiskSpace / (1024 * 1024))); }, [](const json &v) { thePrefs.m_uMinFreeDiskSpace = (UINT)(v.get<int64_t>() * 1024 * 1024); }},
+		IM("safe_file_writing", 0, 2, false, m_iCommitFiles),
+		IM("extract_metadata", 0, 1, false, m_iExtractMetaData),
+		Pref{"file_buffer_kib", "int", 16, 1536, false, [] { return json((int64_t)(thePrefs.m_uFileBufferSize / 1024)); }, [](const json &v) { thePrefs.m_uFileBufferSize = (UINT)(v.get<int64_t>() * 1024); }},
+		IM("upload_queue_size", 2000, 10000, false, m_iQueueSize),
+		Pref{"log_level", "int", 1, 5, false, [] { return json((int64_t)(5 - thePrefs.m_byLogLevel)); }, [](const json &v) { thePrefs.m_byLogLevel = 5 - (int)v.get<int64_t>(); }},
+		BM("log_source_exchange", false, m_bDebugSourceExchange),
+		BM("log_banned_clients", false, m_bLogBannedClients),
+		BM("log_ratings", false, m_bLogRatingDescReceived),
+		BM("log_secure_ident", false, m_bLogSecureIdent),
+		BM("log_filtered_ips", false, m_bLogFilteredIPs),
+		BM("log_file_saving", false, m_bLogFileSaving),
+		BM("log_a4af", false, m_bLogA4AF),
+		BM("log_updown_events", false, m_bLogUlDlEvents),
+		// Upload SpeedSense (not active yet in emuled)
+		BM("uss_enabled", false, m_bDynUpEnabled),
+		IM("uss_min_upload_kbps", 1, kKb, false, m_minupload),
+		IM("uss_ping_tolerance_percent", 100, 10000, false, m_iDynUpPingTolerance),
+		IM("uss_ping_tolerance_ms", 1, 10000, false, m_iDynUpPingToleranceMilliseconds),
+		BM("uss_use_ms_tolerance", false, m_bDynUpUseMillisecondPingTolerance),
+		IM("uss_going_up_divider", 1, 1000, false, m_iDynUpGoingUpDivider),
+		IM("uss_going_down_divider", 1, 1000, false, m_iDynUpGoingDownDivider),
+		IM("uss_pings", 1, 100, false, m_iDynUpNumberOfPings),
 	};
 	return p;
 }
 
-json AllPrefs() { json j = json::object(); for (auto &p : Prefs()) j[p.key] = p.get(); return j; }
+json AllPrefs() { json j = json::object(); for (auto &p : Prefs()) j[p.secret ? std::string(p.key) + "_set" : std::string(p.key)] = p.get(); return j; }
 
 json DirsJson()
 {
@@ -162,7 +266,8 @@ void RegisterPrefsRoutes(HttpServer &srv, const DaemonHooks &hooks)
 			std::string t = found->type;
 			if (t == "bool" ? !v.is_boolean() : t == "int" ? !v.is_number_integer() : !v.is_string()) return Response::Error(422, k + ": invalid type (" + t + ")");
 			if (t == "int" && (v.get<int64_t>() < found->min || v.get<int64_t>() > found->max)) return Response::Error(422, k + ": out of range (" + std::to_string(found->min) + ".." + std::to_string(found->max) + ")");
-			if (t == "string" && v.get<std::string>().empty()) return Response::Error(422, k + ": cannot be empty");
+			if (t == "string" && !found->empty_ok && v.get<std::string>().empty()) return Response::Error(422, k + ": cannot be empty");
+			if (k == "proxy_enabled" && v.get<bool>()) return Response::Error(422, "proxy_enabled: the proxy is not available in emuled yet (the settings are kept for eMule)");		// core/AsyncProxySocketLayer.h is a stub: turning it on would break every connection
 			todo.push_back({found, &v});
 		}
 		std::string changed; for (auto &[p, v] : todo) { p->set(*v); if (p->restart) restart.push_back(p->key); changed += std::string(changed.empty() ? "" : ", ") + p->key; }

@@ -25,11 +25,14 @@ export const usePrefs = defineStore('prefs', () => {
     } catch (e) { useToasts().error(errText(e)) }
   }
   function reset() { draft.value = { ...saved.value } }
-  async function save() {
+  async function save() { await patch(changes.value) }
+  // sends only these keys; the other unsaved changes of the page stay in the draft
+  async function patch(b: Preferences) {
     saving.value = true
     try {
-      const r = await api().patchPreferences(changes.value)
-      saved.value = r.preferences; draft.value = { ...r.preferences }; persisted.value = r.saved
+      const r = await api().patchPreferences(b)
+      const keep = Object.fromEntries(Object.entries(changes.value).filter(([k]) => !(k in b)))
+      saved.value = r.preferences; draft.value = { ...r.preferences, ...keep }; persisted.value = r.saved
       restart.value = [...new Set([...restart.value, ...r.restart_required])]
       useToasts().ok(t(r.saved ? 'prefs.saved' : 'prefs.appliedNotSaved'))
     } catch (e) { useToasts().error(errText(e)) } finally { saving.value = false }
@@ -45,5 +48,5 @@ export const usePrefs = defineStore('prefs', () => {
   async function createCategory(c: Partial<Category>): Promise<number | null> { try { const r = await api().addCategory(c); await loadCategories(); useToasts().ok(t('prefs.categoryCreated')); return r.id } catch (e) { useToasts().error(errText(e)); return null } }
   async function editCategory(id: number, c: Partial<Category>): Promise<number | null> { try { await api().patchCategory(id, c); await loadCategories(); useToasts().ok(t('prefs.categorySaved')); return id } catch (e) { useToasts().error(errText(e)); return null } }
   async function removeCategory(id: number) { try { await api().removeCategory(id); await loadCategories(); useToasts().ok(t('prefs.categoryDeleted')) } catch (e) { useToasts().error(errText(e)) } }
-  return { dirs, dirsSaved, loadDirs, saveDirs, saved, draft, categories, saving, restart, persisted, changes, dirty, load, reset, save, loadCategories, addCategory, createCategory, editCategory, removeCategory }
+  return { dirs, dirsSaved, loadDirs, saveDirs, saved, draft, categories, saving, restart, persisted, changes, dirty, load, reset, save, patch, loadCategories, addCategory, createCategory, editCategory, removeCategory }
 })

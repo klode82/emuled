@@ -1,5 +1,6 @@
 // 日本語。it.ts と全く同じキーを持つこと(型が強制し、i18n テストがプレースホルダーと複数形を検査する)。
 import type { Messages } from './it'
+import en from './en'
 
 const ja: Messages = {
   lang: { label: '言語' },
@@ -176,6 +177,7 @@ const ja: Messages = {
     findSources: 'ソースを探す', findSourcesHint: '通常の待ち時間を待たずに、このダウンロードの新しいソースを今すぐ要求します(サーバーと Kad)',
   },
   servers: {
+    removeAll: en.servers.removeAll, removeAllTitle: en.servers.removeAllTitle, removeAllText: en.servers.removeAllText, removedAll: en.servers.removedAll,		// English until translated
     title: 'ed2k サーバー', connectedTo: '{name} に接続中 · {id}', connecting: '接続中…', notConnected: 'どのサーバーにも接続していません。',
     updateFrom: 'アドレスから一覧を更新 (server.met)', update: '更新', updating: 'ダウンロード中…', updateHint: 'アドレスから一覧をダウンロードし、新しいサーバーを自分の一覧に追加します(削除はされません)。http と https のみ。使ったアドレスは記憶されます。',
     updated: '一覧を更新しました: 新規 {n} 台、合計 {total} 台', updateFailed: '更新に失敗しました: {why}', updateSlow: '更新はまだ実行中です。ログを確認してください',
@@ -225,6 +227,7 @@ const ja: Messages = {
     tempIdentity: 'デーモンは一時的な ID またはポートで動作しています。変更は実行中のみ有効で、プロファイルには書き込まれません。',
     needRestart: '変更しましたが、デーモンの再起動後に有効になります: {list}。', fromRestart: '再起動後', others: 'その他',
     daemon: {
+      address: en.prefs.daemon.address, addressHint: en.prefs.daemon.addressHint,
       title: 'emuled サービス', restartText: '再起動が必要な変更(新しいポートなど)を反映するには emuled を再起動します。すべて保存して数秒で再び起動し、ダウンロードは自動で再開します。',
       restartButton: 'emuled を再起動', restartNow: '今すぐ再起動', confirmTitle: 'emuled を再起動しますか?', confirmText: '画面は数秒間使えなくなり、ページは自動で再読み込みされます。', confirm: '再起動',
       restarting: 'emuled を再起動中…', restartFailed: 'emuled が時間内に戻りませんでした。確認: systemctl --user status emuled',
@@ -233,8 +236,10 @@ const ja: Messages = {
     },
     saved: '設定を保存しました', appliedNotSaved: '適用しましたが、プロファイルには書き込まれていません(デーモンは一時的な ID を使用中)',
     unsaved: '未保存の変更 1 件 | 未保存の変更 {n} 件',
-    groups: { general: '全般', connection: '接続', network: 'ネットワークとサーバー', security: 'セキュリティ', downloads: 'ダウンロード', diagnostics: '診断' },
+    inactive: en.prefs.inactive, inactivePage: en.prefs.inactivePage, pageChanged: en.prefs.pageChanged, secretSet: en.prefs.secretSet, secretUnset: en.prefs.secretUnset,
+    pages: en.prefs.pages, sections: en.prefs.sections,
     items: {
+      ...en.prefs.items,		// English until translated
       nick: { label: 'ユーザー名', hint: '他のユーザーに表示される名前です。' },
       tcp_port: { label: 'TCP ポート', hint: '待ち受けポート。High ID を得るには、ルーターで開放(転送)する必要があります。' },
       upnp_enabled: { label: 'UPnP: ルーターのポートを自動で開く', hint: 'ルーターに TCP と UDP ポートの転送を依頼します。ルーターで UPnP が有効である必要があります。状態は Kad ページに表示されます。' },

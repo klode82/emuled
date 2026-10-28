@@ -495,20 +495,449 @@
       },
       "Preferences": {
         "type": "object",
-        "description": "Keys: nick, tcp_port, udp_port, max_download_kbps, max_upload_kbps (0 = unlimited), max_connections, max_connections_per_5s, max_sources_per_file, network_ed2k, network_kademlia, auto_connect, reconnect, add_servers_from_server, add_servers_from_clients, use_server_priorities, safe_server_connect, static_servers_only, dead_server_retries, crypt_supported, crypt_requested, crypt_required, secure_ident, credit_system, add_new_downloads_paused, auto_up_priority, auto_down_priority, transfer_full_chunks, remove_finished_downloads, verbose_log, save_log_to_disk, save_debug_to_disk, comment_filter (text: words separated by |, in lowercase; comments containing them are discarded)",
-        "additionalProperties": {
-          "oneOf": [
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "integer"
-            },
-            {
-              "type": "string"
-            }
-          ]
+        "description": "eMule's preferences, grouped by page in APIDOC.md section 9. Only the keys to change are sent with PATCH.",
+        "properties": {
+          "nick": {
+            "type": "string"
+          },
+          "tcp_port": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 65535
+          },
+          "udp_port": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 65535
+          },
+          "max_download_kbps": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000000
+          },
+          "max_upload_kbps": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000000
+          },
+          "max_connections": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000
+          },
+          "max_connections_per_5s": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "max_sources_per_file": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000
+          },
+          "network_ed2k": {
+            "type": "boolean"
+          },
+          "network_kademlia": {
+            "type": "boolean"
+          },
+          "auto_connect": {
+            "type": "boolean"
+          },
+          "reconnect": {
+            "type": "boolean"
+          },
+          "add_servers_from_server": {
+            "type": "boolean"
+          },
+          "add_servers_from_clients": {
+            "type": "boolean"
+          },
+          "use_server_priorities": {
+            "type": "boolean"
+          },
+          "server_source_reask_minutes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 60
+          },
+          "safe_server_connect": {
+            "type": "boolean"
+          },
+          "static_servers_only": {
+            "type": "boolean"
+          },
+          "dead_server_retries": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "crypt_supported": {
+            "type": "boolean"
+          },
+          "crypt_requested": {
+            "type": "boolean"
+          },
+          "crypt_required": {
+            "type": "boolean"
+          },
+          "secure_ident": {
+            "type": "boolean"
+          },
+          "credit_system": {
+            "type": "boolean"
+          },
+          "add_new_downloads_paused": {
+            "type": "boolean"
+          },
+          "auto_up_priority": {
+            "type": "boolean"
+          },
+          "auto_down_priority": {
+            "type": "boolean"
+          },
+          "transfer_full_chunks": {
+            "type": "boolean"
+          },
+          "remove_finished_downloads": {
+            "type": "boolean"
+          },
+          "comment_filter": {
+            "type": "string"
+          },
+          "verbose_log": {
+            "type": "boolean"
+          },
+          "save_log_to_disk": {
+            "type": "boolean"
+          },
+          "save_debug_to_disk": {
+            "type": "boolean"
+          },
+          "upnp_enabled": {
+            "type": "boolean"
+          },
+          "upnp_close_on_exit": {
+            "type": "boolean"
+          },
+          "online_signature": {
+            "type": "boolean"
+          },
+          "check_new_version": {
+            "type": "boolean"
+          },
+          "check_new_version_days": {
+            "type": "integer",
+            "minimum": 2,
+            "maximum": 7
+          },
+          "store_searches": {
+            "type": "boolean"
+          },
+          "download_capacity_kbps": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000
+          },
+          "upload_capacity_kbps": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000000
+          },
+          "show_overhead": {
+            "type": "boolean"
+          },
+          "proxy_enabled": {
+            "type": "boolean"
+          },
+          "proxy_type": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 5
+          },
+          "proxy_host": {
+            "type": "string"
+          },
+          "proxy_port": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 65535
+          },
+          "proxy_auth": {
+            "type": "boolean"
+          },
+          "proxy_user": {
+            "type": "string"
+          },
+          "proxy_password": {
+            "type": "string",
+            "writeOnly": true,
+            "description": "password: never returned"
+          },
+          "proxy_password_set": {
+            "type": "boolean",
+            "readOnly": true,
+            "description": "whether proxy_password is set"
+          },
+          "auto_update_server_list": {
+            "type": "boolean"
+          },
+          "smart_lowid_check": {
+            "type": "boolean"
+          },
+          "manual_servers_high_priority": {
+            "type": "boolean"
+          },
+          "advanced_time_remaining": {
+            "type": "boolean"
+          },
+          "preview_chunks_first": {
+            "type": "boolean"
+          },
+          "start_next_paused": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 3
+          },
+          "filename_cleanup": {
+            "type": "boolean"
+          },
+          "filename_cleanup_filter": {
+            "type": "string"
+          },
+          "remember_downloaded_files": {
+            "type": "boolean"
+          },
+          "remember_cancelled_files": {
+            "type": "boolean"
+          },
+          "notify_download_finished": {
+            "type": "boolean"
+          },
+          "notify_new_download": {
+            "type": "boolean"
+          },
+          "notify_chat": {
+            "type": "boolean"
+          },
+          "notify_log": {
+            "type": "boolean"
+          },
+          "notify_important_error": {
+            "type": "boolean"
+          },
+          "notify_new_version": {
+            "type": "boolean"
+          },
+          "email_enabled": {
+            "type": "boolean"
+          },
+          "email_to": {
+            "type": "string"
+          },
+          "email_from": {
+            "type": "string"
+          },
+          "smtp_server": {
+            "type": "string"
+          },
+          "smtp_port": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 65535
+          },
+          "smtp_security": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2
+          },
+          "smtp_auth": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2
+          },
+          "smtp_user": {
+            "type": "string"
+          },
+          "smtp_password": {
+            "type": "string",
+            "writeOnly": true,
+            "description": "password: never returned"
+          },
+          "smtp_password_set": {
+            "type": "boolean",
+            "readOnly": true,
+            "description": "whether smtp_password is set"
+          },
+          "stats_graph_interval_s": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 200
+          },
+          "stats_tree_interval_s": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "stats_average_minutes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "messages_friends_only": {
+            "type": "boolean"
+          },
+          "advanced_spam_filter": {
+            "type": "boolean"
+          },
+          "chat_captchas": {
+            "type": "boolean"
+          },
+          "message_filter": {
+            "type": "string"
+          },
+          "ip_filter_level": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "filter_servers_by_ip": {
+            "type": "boolean"
+          },
+          "search_spam_filter": {
+            "type": "boolean"
+          },
+          "see_shares": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2
+          },
+          "scheduler_enabled": {
+            "type": "boolean"
+          },
+          "max_half_connections": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "fast_connection_reject": {
+            "type": "boolean"
+          },
+          "server_keepalive_minutes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1440
+          },
+          "filter_lan_ips": {
+            "type": "boolean"
+          },
+          "a4af_save_cpu": {
+            "type": "boolean"
+          },
+          "own_hostname": {
+            "type": "string"
+          },
+          "sparse_part_files": {
+            "type": "boolean"
+          },
+          "allocate_full_file": {
+            "type": "boolean"
+          },
+          "check_disk_space": {
+            "type": "boolean"
+          },
+          "min_free_disk_space_mb": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4095
+          },
+          "safe_file_writing": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2
+          },
+          "extract_metadata": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "file_buffer_kib": {
+            "type": "integer",
+            "minimum": 16,
+            "maximum": 1536
+          },
+          "upload_queue_size": {
+            "type": "integer",
+            "minimum": 2000,
+            "maximum": 10000
+          },
+          "log_level": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "log_source_exchange": {
+            "type": "boolean"
+          },
+          "log_banned_clients": {
+            "type": "boolean"
+          },
+          "log_ratings": {
+            "type": "boolean"
+          },
+          "log_secure_ident": {
+            "type": "boolean"
+          },
+          "log_filtered_ips": {
+            "type": "boolean"
+          },
+          "log_file_saving": {
+            "type": "boolean"
+          },
+          "log_a4af": {
+            "type": "boolean"
+          },
+          "log_updown_events": {
+            "type": "boolean"
+          },
+          "uss_enabled": {
+            "type": "boolean"
+          },
+          "uss_min_upload_kbps": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000
+          },
+          "uss_ping_tolerance_percent": {
+            "type": "integer",
+            "minimum": 100,
+            "maximum": 10000
+          },
+          "uss_ping_tolerance_ms": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10000
+          },
+          "uss_use_ms_tolerance": {
+            "type": "boolean"
+          },
+          "uss_going_up_divider": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "uss_going_down_divider": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "uss_pings": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
         },
+        "additionalProperties": false,
         "example": {
           "nick": "eMuleLinux",
           "max_upload_kbps": 50
@@ -5191,6 +5620,45 @@
             }
           }
         }
+      },
+      "delete": {
+        "summary": "Empty the server list",
+        "description": "Removes every server (eMule: \"Remove all\") and rewrites server.met empty. A connection attempt is stopped; the connection to the current server stays until it closes.",
+        "responses": {
+          "200": {
+            "description": "How many were removed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "removed": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": [
+          "Server"
+        ]
       }
     },
     "/api/v1/servers/{addr}": {

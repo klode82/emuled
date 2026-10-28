@@ -24,7 +24,7 @@ async function bootstrap(b: { url?: string; address?: string }) {
     setTimeout(() => void core.refresh(), 2000)
   } catch (e) { toasts.error(errText(e)) } finally { boot.value = false }
 }
-async function toggleUpnp() { prefs.draft.upnp_enabled = !upnp.value?.enabled; await prefs.save(); setTimeout(() => void core.refresh(), 2000) }
+async function toggleUpnp() { await prefs.patch({ upnp_enabled: !upnp.value?.enabled }); setTimeout(() => void core.refresh(), 2000) }
 const k = computed(() => core.status?.kad)
 async function run(what: 'kadConnect' | 'kadDisconnect' | 'kadRecheck', ok: string) {
   try { await session.getApi()[what](); toasts.ok(t(ok)); setTimeout(() => void core.refresh(), 1000) } catch (e) { toasts.error(errText(e)) }

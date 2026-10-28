@@ -1,5 +1,6 @@
 // Deutsch. Must have exactly the same keys as it.ts (the type enforces it and the i18n test checks placeholders and plurals).
 import type { Messages } from './it'
+import en from './en'
 
 const de: Messages = {
   lang: { label: 'Sprache' },
@@ -176,6 +177,7 @@ const de: Messages = {
     findSources: 'Quellen suchen', findSourcesHint: 'Fragt sofort nach neuen Quellen für diesen Download (Server und Kad), ohne die normalen Wartezeiten abzuwarten',
   },
   servers: {
+    removeAll: en.servers.removeAll, removeAllTitle: en.servers.removeAllTitle, removeAllText: en.servers.removeAllText, removedAll: en.servers.removedAll,		// English until translated
     title: 'ed2k-Server', connectedTo: 'Verbunden mit {name} · {id}', connecting: 'Verbinde…', notConnected: 'Du bist mit keinem Server verbunden.',
     updateFrom: 'Liste von einer Adresse aktualisieren (server.met)', update: 'Aktualisieren', updating: 'Lädt herunter…', updateHint: 'Lädt die Liste von der Adresse und fügt die neuen Server zu deinen hinzu (nichts wird entfernt). Nur http und https; die verwendeten Adressen werden gemerkt.',
     updated: 'Liste aktualisiert: {n} neue Server, insgesamt {total}', updateFailed: 'Aktualisierung fehlgeschlagen: {why}', updateSlow: 'Die Aktualisierung läuft noch: siehe Protokoll',
@@ -225,6 +227,7 @@ const de: Messages = {
     tempIdentity: 'Der Daemon läuft mit einer temporären Identität oder temporären Ports: Änderungen gelten, solange er läuft, und werden nicht ins Profil geschrieben.',
     needRestart: 'Geändert, gilt aber erst nach einem Neustart des Daemons: {list}.', fromRestart: 'nach Neustart', others: 'Andere',
     daemon: {
+      address: en.prefs.daemon.address, addressHint: en.prefs.daemon.addressHint,
       title: 'Der emuled-Dienst', restartText: 'Starte emuled neu, um Änderungen zu übernehmen, die das brauchen (z. B. neue Ports). Es speichert alles und startet in wenigen Sekunden wieder; Downloads laufen von selbst weiter.',
       restartButton: 'emuled neu starten', restartNow: 'Jetzt neu starten', confirmTitle: 'emuled neu starten?', confirmText: 'Die Oberfläche ist einige Sekunden nicht erreichbar und die Seite lädt sich von selbst neu.', confirm: 'Neu starten',
       restarting: 'emuled wird neu gestartet…', restartFailed: 'emuled ist nicht rechtzeitig zurückgekommen. Prüfen: systemctl --user status emuled',
@@ -233,8 +236,10 @@ const de: Messages = {
     },
     saved: 'Einstellungen gespeichert', appliedNotSaved: 'Angewendet, aber nicht ins Profil geschrieben (der Daemon nutzt eine temporäre Identität)',
     unsaved: '1 ungespeicherte Änderung | {n} ungespeicherte Änderungen',
-    groups: { general: 'Allgemein', connection: 'Verbindung', network: 'Netzwerke und Server', security: 'Sicherheit', downloads: 'Downloads', diagnostics: 'Diagnose' },
+    inactive: en.prefs.inactive, inactivePage: en.prefs.inactivePage, pageChanged: en.prefs.pageChanged, secretSet: en.prefs.secretSet, secretUnset: en.prefs.secretUnset,
+    pages: en.prefs.pages, sections: en.prefs.sections,
     items: {
+      ...en.prefs.items,		// English until translated
       nick: { label: 'Benutzername', hint: 'Der Name, den andere Benutzer sehen.' },
       tcp_port: { label: 'TCP-Port', hint: 'Port für eingehende Verbindungen: Er muss im Router offen (weitergeleitet) sein, um eine High ID zu bekommen.' },
       upnp_enabled: { label: 'UPnP: Ports im Router selbst öffnen', hint: 'Bittet den Router, die TCP- und UDP-Ports weiterzuleiten. UPnP muss im Router aktiviert sein. Der Status steht auf der Kad-Seite.' },

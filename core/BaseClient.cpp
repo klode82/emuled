@@ -1120,6 +1120,9 @@ bool CUpDownClient::Disconnected(LPCTSTR pszReason, bool bFromSocket)
 		// ensure that all possible block requests are removed from the partfile
 		ClearDownloadBlockRequests();
 		if (GetDownloadState() == DS_CONNECTED || GetDownloadState() == DS_REQHASHSET) { // successfully connected, but probably no response to our file request
+			// LINUX: with debug on, says why a source ends on the dead-source list
+			if (thePrefs.GetVerbose())
+				AddDebugLogLine(false, _T("Source marked dead (connected, no answer to the file request: %s): %s"), pszReason, (LPCTSTR)DbgGetClientInfo());
 			theApp.clientlist->m_globDeadSourceList.AddDeadSource(*this);
 			theApp.downloadqueue->RemoveSource(this);
 		}
@@ -1179,6 +1182,8 @@ bool CUpDownClient::Disconnected(LPCTSTR pszReason, bool bFromSocket)
 	if ((m_eConnectingState != CCS_NONE && !(socket && socket->GetProxyConnectFailed()))
 		|| m_eDownloadState == DS_ERROR)
 	{
+		if (thePrefs.GetVerbose())
+			AddDebugLogLine(false, _T("Source marked dead (%s: %s): %s"), m_eDownloadState == DS_ERROR ? _T("error") : _T("connection failed"), pszReason, (LPCTSTR)DbgGetClientInfo());
 		if (m_eDownloadState != DS_NONE) // Unable to connect = Remove any download state
 			theApp.downloadqueue->RemoveSource(this);
 		theApp.clientlist->m_globDeadSourceList.AddDeadSource(*this);

@@ -123,7 +123,7 @@ int RunDaemon(const DaemonOptions &opt)
 		if (!opt.fake_profile) { profile::CheckTally t; profile::CheckConfigFiles(cfg, true, t, profileLog, true); if (t.recovered || t.bad_lost) AddLogLine(true, _T("Profile: %d files restored from .bak, %d lost"), t.recovered, t.bad_lost); }
 		thePrefs.Init();
 		const uint16_t origServerUdp = thePrefs.GetServerUDPPort();
-		thePrefs.SetServerUDPPort(0);									// no UDP towards the servers until it is decided
+		thePrefs.SetServerUDPPort(0);									// no UDP towards the servers until the network starts (see the server connection below)
 		if (opt.tcp_port) thePrefs.SetPort(opt.tcp_port);
 		if (opt.udp_port) thePrefs.SetUDPPort(opt.udp_port);
 		if (opt.fake_profile) {
@@ -252,9 +252,9 @@ int RunDaemon(const DaemonOptions &opt)
 		hooks.upnp_apply = [&](bool on) { if (on) upnpStart(); else upnpStop(); };
 		hooks.upnp_state = [&] { return nlohmann::json{{"enabled", thePrefs.IsUPnPEnabled()}, {"state", !upnp ? (opt.offline ? "offline" : "off") : upnpResult == 0 ? "forwarded" : upnpResult == 1 ? "failed" : "pending"}}; };
 		if (thePrefs.IsUPnPEnabled()) upnpStart();
-		// preferences are saved to the profile only if identity and ports are the profile's; ServerUDPPort has always been forced to 0: the real one is restored only for the duration of the save
+		// preferences are saved to the profile only if identity and ports are the profile's; ServerUDPPort is 0 until the network starts (and always with --offline): the profile's value is what gets saved
 		if (!opt.fake_profile && !opt.tcp_port && !opt.udp_port)
-			hooks.save_prefs = [origServerUdp] { thePrefs.SetServerUDPPort(origServerUdp); bool failed = thePrefs.Save(); thePrefs.SetServerUDPPort(0); return !failed; };		// Save() returns true if there was an error
+			hooks.save_prefs = [origServerUdp] { const uint16_t cur = thePrefs.GetServerUDPPort(); thePrefs.SetServerUDPPort(origServerUdp); bool failed = thePrefs.Save(); thePrefs.SetServerUDPPort(cur); return !failed; };		// Save() returns true if there was an error
 		if (udp) { hooks.kad_start = kadStart; hooks.kad_stop = kadStop; }
 
 		emule::templates::Registry templates;		// the UI templates (folders with template.yaml); must live as long as the HTTP server
@@ -313,6 +313,8 @@ int RunDaemon(const DaemonOptions &opt)
 				if (col != std::string::npos) srv = theApp.serverlist->GetServerByAddress(opt.server_address.substr(0, col).c_str(), (uint16)std::atoi(opt.server_address.c_str() + col + 1));
 				if (!srv) std::printf("  warning: server %s not found in the list: using any server\n", opt.server_address.c_str());
 			}
+			// the server UDP socket (global source search, server pings) opens only now that the network is allowed: theApp built CServerConnect before preferences.ini was read
+			if (!opt.offline && origServerUdp) { thePrefs.SetServerUDPPort(origServerUdp); if (!theApp.serverconnect->RecreateUDPSocket()) LogWarning(_T("Server UDP: socket not created: no global source search")); }
 			if (opt.offline) {}
 			else if (srv) theApp.serverconnect->ConnectToServer(srv);
 			else if (thePrefs.DoAutoConnect()) theApp.serverconnect->ConnectToAnyServer();

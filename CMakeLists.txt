@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 project(emule_linux CXX)
 
-set(EMULED_VERSION 0.3.3)		# emuled version (not eMule's): the GitHub workflow and tools/release.sh derive the tag v<version> from it
+set(EMULED_VERSION 0.3.4)		# emuled version (not eMule's): the GitHub workflow and tools/release.sh derive the tag v<version> from it
 set(EMULED_UPSTREAM "upstream/emule/0.72a-community")	# sorgenti originali di eMule (sola lettura); gli script in tools/ la leggono da qui
 set(EMULED_BASE_VERSION "eMule 0.72a-community")	# il codice da cui deriva
 add_compile_definitions(EMULED_VERSION="${EMULED_VERSION}" EMULED_BASE_VERSION="${EMULED_BASE_VERSION}")

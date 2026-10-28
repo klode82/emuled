@@ -112,7 +112,7 @@ std::vector<Event> Guardian::Scan(time_t now)
 				met::SafeWriteResult w = met::SafeWriteMet(bp, cur, met::ValidatePartMet, wo);
 				if (w.ok) { dirty_ = true; s.backup = true; } else s.backup = met::ValidateFile(bp, met::ValidatePartMet).ok();
 			} else s.backup = br.ok();
-			if (!known_slot) set(State::Ok, "nuovo download " + r.filename);
+			if (!known_slot) set(State::Ok, "new download " + r.filename);
 			else if (prev == State::New) set(State::Ok, "");
 			else if (prev != State::Ok) set(State::Ok, prev == State::Damaged ? "file sound again" : "file readable again");
 			dirty_ = true;

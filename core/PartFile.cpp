@@ -2037,6 +2037,14 @@ void CPartFile::AddSources(CSafeMemFile *sources, uint32 serverip, uint16 server
 				DebugLogWarning(_T("Server provided UserHash for source %u, even if it wasn't expected to (or local obfuscation settings changed during server connect)"), userid);
 		}
 
+		// LINUX: with debug on, lists every source the server sent (the summary line in ServerSocket.cpp only counts them)
+		if (thePrefs.GetVerbose()) {
+			if (::IsLowID(userid))
+				AddDebugLogLine(false, _T("Server source for \"%s\": low ID %u port %u, crypt 0x%02x"), (LPCTSTR)GetFileName(), userid, (UINT)port, (UINT)byCryptOptions);
+			else
+				AddDebugLogLine(false, _T("Server source for \"%s\": %s:%u, crypt 0x%02x"), (LPCTSTR)GetFileName(), (LPCTSTR)ipstr(userid), (UINT)port, (UINT)byCryptOptions);
+		}
+
 		// since we may receive multiple UDP source search results, we have to "consume" all data of that packet
 		if (m_stopped || bSkip)
 			continue;

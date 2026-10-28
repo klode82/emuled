@@ -137,6 +137,9 @@ void CUDPSocket::OnReceive(int nErrorCode)
 	if (length != SOCKET_ERROR) {
 		int nPayLoadLen = length;
 		CServer *pServer = theApp.serverlist->GetServerByIPUDP(sockAddr.sin_addr.s_addr, ntohs(sockAddr.sin_port), true);
+		// LINUX: with debug on, every datagram that reaches the server UDP socket (to see if servers answer at all)
+		if (thePrefs.GetVerbose())
+			DebugLog(_T("Server UDP: received %d bytes from %s:%u (%s)"), length, (LPCTSTR)ipstr(sockAddr.sin_addr), ntohs(sockAddr.sin_port), pServer ? (LPCTSTR)pServer->GetListName() : _T("unknown server"));
 		if (pServer != NULL && thePrefs.IsCryptLayerEnabled()
 			&& ((pServer->GetServerKeyUDP() != 0 && pServer->SupportsObfuscationUDP()) || (pServer->GetCryptPingReplyPending() && pServer->GetChallenge() != 0)))
 		{
@@ -636,6 +639,8 @@ SocketSentBytes CUDPSocket::SendControlData(uint32 maxNumberOfBytesToSend, uint3
 	while (!controlpacket_queue.IsEmpty() && !IsBusy() && sentBytes < maxNumberOfBytesToSend) { // ZZ:UploadBandWithThrottler (UDP)
 		SServerUDPPacket *packet = controlpacket_queue.RemoveHead();
 		int iLen = SendTo(packet->packet, packet->size, packet->dwIP, packet->nPort);
+		if (thePrefs.GetVerbose()) // LINUX: with debug on, every datagram sent to a server (another thread: queued log line)
+			theApp.QueueDebugLogLine(false, _T("Server UDP: sent %u bytes to %s:%u, result %d"), packet->size, (LPCTSTR)ipstr(packet->dwIP), packet->nPort, iLen);
 		if (iLen >= 0) {
 			sentBytes += iLen; // ZZ:UploadBandWithThrottler (UDP)
 			delete[] packet->packet;

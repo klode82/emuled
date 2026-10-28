@@ -349,7 +349,7 @@ int RunDaemon(const DaemonOptions &opt)
 		if (kadTimer) loop.CancelTimer(kadTimer);
 		if (udp) { Kademlia::CKademlia::Stop(); theApp.clientudp = nullptr; udp.reset(); }
 		thr.EndThread();
-		theApp.serverconnect->Disconnect(); theApp.serverconnect->StopConnectionTry(); theApp.serverconnect->RecreateUDPSocket();
+		theApp.serverconnect->Disconnect(); theApp.serverconnect->StopConnectionTry(); thePrefs.SetServerUDPPort(0); theApp.serverconnect->RecreateUDPSocket();		// port 0 first: RecreateUDPSocket must only close the server UDP socket, not open a new one on a loop that is going away
 		theApp.DestroyObjects();
 		for (int i = 0; i < 10; ++i) loop.RunOnce(20);
 		thePrefs.SetConfigDir(CString());

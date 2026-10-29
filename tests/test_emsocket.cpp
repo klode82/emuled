@@ -25,8 +25,10 @@ struct EMS : CEMSocket
 {
 	~EMS() override { StopThrottling(); }				// destruction contract (see EMSocket.h)
 	std::vector<Got> got; int err = 0, closes = 0, receives = 0;
+	std::function<void()> onPacket;		// runs inside the packet handler, like SetDownloadState() does
 	bool PacketReceived(Packet *p) override
 	{
+		if (onPacket) { auto f = onPacket; onPacket = nullptr; f(); }
 		if (p->prot == OP_PACKEDPROT) { Got g{p->prot, p->opcode, std::string(p->pBuffer, p->size)}; packed_sizes.push_back(p->size); (void)g; CHECK(p->UnPackPacket(200000)); }
 		got.push_back({p->prot, p->opcode, std::string(p->pBuffer, p->size)}); return true;
 	}
@@ -147,6 +149,22 @@ int main(int argc, char **argv)
 		CHECK(Pump(e.loop, [&] { return srv->got.size() == 3; }));
 		CHECK(srv->got.size() == 3 && srv->got[0].data == "0123456789" && srv->got[0].opcode == 0x21 && srv->got[1].data == "ABCDE" && srv->got[1].prot == OP_EMULEPROT && srv->got[2].data.empty() && srv->got[2].opcode == 0x23);
 		CHECK(srv->err == 0);
+	}
+	// 7b. a receive requested from inside a packet handler (SetDownloadState -> DisableDownloadLimit -> OnReceive) must not overwrite the
+	// shared read buffer under the loop that is still parsing it ("Wrong header" with aMule clients)
+	{
+		Env e; auto sv = e.Serve(); EMS *srv = nullptr; sv->onNew = [&](EMS &c) { srv = &c; };
+		Raw r; r.Create(0, SOCK_STREAM, FD_CONNECT | FD_WRITE | FD_READ | FD_CLOSE); r.Connect("127.0.0.1", PortOf(*sv)); CHECK(Pump(e.loop, [&] { return srv && r.GetState() == connected; }));
+		std::string first, rest;
+		for (int i = 0; i < 3; ++i) first += Header(OP_EDONKEYPROT, 1 + 20, 0x30 + i) + std::string(20, (char)('a' + i));
+		for (int i = 3; i < 8; ++i) rest += Header(OP_EDONKEYPROT, 1 + 20, 0x30 + i) + std::string(20, (char)('a' + i));
+		srv->SetDownloadLimit((uint32)first.size());												// the first read returns exactly "first": a full read, so a read stays pending
+		srv->onPacket = [&] { srv->DisableDownloadLimit(); };										// first packet: nested receive request
+		r.Send(first.data(), (int)first.size()); r.Send(rest.data(), (int)rest.size());
+		CHECK(Pump(e.loop, [&] { return srv->got.size() >= 8 || srv->err; }));
+		bool ok = srv->got.size() == 8 && srv->err == 0;
+		for (size_t i = 0; ok && i < 8; ++i) ok = srv->got[i].opcode == 0x30 + i && srv->got[i].data == std::string(20, (char)('a' + i));
+		CHECK(ok);
 	}
 	// 8. close: OnClose, sends after close without damage, destruction with the throttler active
 	{

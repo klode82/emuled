@@ -50,6 +50,7 @@ public:
 	virtual bool IsRawDataMode() const						{ return false; }
 	void	SetDownloadLimit(uint32 limit);
 	void	DisableDownloadLimit();
+	void	ReceiveAgain();		// LINUX: reads what the download limit held back, never from inside another OnReceive()
 	BOOL	AsyncSelect(long lEvent);
 	virtual bool IsBusyExtensiveCheck();
 	virtual bool IsBusyQuickCheck() const;

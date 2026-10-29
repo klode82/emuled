@@ -251,8 +251,13 @@ BOOL CEMSocket::AsyncSelect(long lEvent)
 	return (GetSocketHandle() == INVALID_SOCKET) || CEncryptedStreamSocket::AsyncSelect(lEvent);		// LINUX: m_SocketData.hSocket -> GetSocketHandle()
 }
 
+// LINUX: how many OnReceive() calls are running. GlobalReadBuffer is one buffer for every socket and the loop below parses it
+// packet by packet: a second OnReceive() started from inside a packet handler would overwrite the bytes still to be parsed
+static int s_rxDepth = 0;
+
 void CEMSocket::OnReceive(int nErrorCode)
 {
+	struct RxDepth { RxDepth() { ++s_rxDepth; } ~RxDepth() { --s_rxDepth; } } rxDepth;
 	// the 2 meg size was taken from another place
 	static char GlobalReadBuffer[2000000];
 
@@ -413,7 +418,7 @@ void CEMSocket::SetDownloadLimit(uint32 limit)
 
 	// CPU load improvement
 	if (limit > 0 && pendingOnReceive)
-		OnReceive(0);
+		ReceiveAgain();
 }
 
 void CEMSocket::DisableDownloadLimit()
@@ -422,7 +427,20 @@ void CEMSocket::DisableDownloadLimit()
 
 	// CPU load improvement
 	if (pendingOnReceive)
+		ReceiveAgain();
+}
+
+void CEMSocket::ReceiveAgain()
+{
+	if (s_rxDepth == 0) {
 		OnReceive(0);
+		return;
+	}
+	// called from inside a packet handler (e.g. SetDownloadState -> DisableDownloadLimit): reading now would overwrite the shared
+	// read buffer under the loop that is still parsing it (stream out of sync: "Wrong header"). Do it after the handler returns.
+	if (thePrefs.GetVerbose())
+		DebugLogWarning(_T("EMSocket: receive requested from inside another receive (depth %d): deferred"), s_rxDepth);
+	TriggerEvent(FD_FORCEREAD);
 }
 
 /**

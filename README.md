@@ -141,16 +141,37 @@ docker run -d --name emuled --restart unless-stopped \
   -p 127.0.0.1:8765:8765 -p 55662:55662 -p 55672:55672/udp \
   emuled
 
-docker exec emuled cat /data/.emuled/profile/emuled.token     # the login token
+docker exec emuled cat /data/config/emuled.token     # the login token
 ```
 
 Then open <http://127.0.0.1:8765>, create your account with the setup code from `docker logs emuled` (or the token above) and sign in.
 
-- **Data**: profile, configuration and downloads live in the `emuled-data` volume (`/data`); you can rebuild the image without losing anything.
+- **One volume, `/data`**: everything lives in it, so you can rebuild the image without losing anything: `config/` (profile: preferences, servers, accounts, token), `Temp/` (downloads in progress), `Incoming/` (completed downloads) and `Shared/` (folders to share). The first three are created by the daemon, `Shared/` by the container at start; in *Preferences → Directories* choose the folders to share under `/data/Shared`.
 - **Ports**: inside the container the eD2K ports are random until you set them. In *Preferences → Connection* set **55662 (TCP)** and **55672 (UDP)** to match the `-p` mappings, and forward them on your router.
-- **Downloads on the host disk**: add `-v /path/to/Downloads:/data/.emuled/Incoming` (the folder must be writable by the container user `emule`; check with `docker exec emuled id`). Files in progress are in `/data/.emuled/Temp`.
+- **Data on the host disk**: use a folder instead of the named volume, e.g. `-v /srv/emuled:/data`. The daemon runs as the container user `emule`, **uid/gid 1000** by default. If your folder belongs to another user (typical on a NAS), pass its numbers: `-e PUID=1026 -e PGID=100`. The entrypoint then gives `/data` to that user: the profile (`config/`) and `Temp/` in depth, `Incoming/` and `Shared/` only their top level (they can hold millions of files). With `docker run --user UID:GID` the container does not use `PUID`/`PGID` and stops at once with *cannot write to /data* if the folder is not writable by that user. Another host folder to share or to download into needs its own `-v`, e.g. `-v /mnt/films:/data/Shared/films`. A symbolic link inside the volume works only if its target is inside the volume (or relative): a link to an absolute host path does not exist inside the container.
+- **Temp and Incoming on different disks** (for example Temp on an SSD and Incoming on a NAS): mount each one on its own folder, `-v /mnt/ssd/emuled-temp:/data/Temp -v /mnt/nas/downloads:/data/Incoming`. A finished download is moved with a copy when the two folders are on different filesystems; the copy keeps its date and permissions (tested).
+- **With `docker compose`** (one volume, the host folder owned by user 1026 and group 100 as an example):
+
+```yaml
+services:
+  emuled:
+    build: .                 # in a clone of the repository; or: image: klode82/emuled:latest
+    container_name: emuled
+    restart: unless-stopped
+    environment:
+      - PUID=1026            # the owner of /srv/emuled on the host (omit for 1000)
+      - PGID=100
+    volumes:
+      - /srv/emuled:/data    # config/, Temp/, Incoming/, Shared/
+      - /mnt/films:/data/Shared/films:ro    # optional: another folder to share
+    ports:
+      - "127.0.0.1:8765:8765"
+      - "55662:55662"
+      - "55672:55672/udp"
+```
+
 - **Security**: the API listens on `0.0.0.0` *inside* the container but is published only to the host's loopback (`-p 127.0.0.1:8765:8765`). **Do not drop that `127.0.0.1`** on a machine reachable by others.
-- **Prebuilt image**: after a release, `docker pull ghcr.io/klode82/emuled:latest`.
+- **Prebuilt image**: after a release, `docker pull klode82/emuled:latest` (Docker Hub) or `docker pull ghcr.io/klode82/emuled:latest` (GitHub). The tags are the version (`0.3.7`), `major.minor` (`0.3`) and `latest`.
 
 ### Building from source
 
@@ -295,7 +316,7 @@ Tests and the test daemons never touch your real profile: they run with `--fake-
 
 ## Releases
 
-[`.github/workflows/release.yml`](.github/workflows/release.yml) runs when you push a `v*` tag. It builds the `.deb` and `.rpm`, installs them in clean containers and starts the daemon, builds the Docker image (published on `ghcr.io`), then publishes a GitHub release with the packages attached. [`ci.yml`](.github/workflows/ci.yml) runs the tests on every push and pull request.
+[`.github/workflows/release.yml`](.github/workflows/release.yml) runs when you push a `v*` tag. It builds the `.deb` and `.rpm`, installs them in clean containers and starts the daemon, builds the Docker image (published on `ghcr.io` and on Docker Hub), then publishes a GitHub release with the packages attached. [`ci.yml`](.github/workflows/ci.yml) runs the tests on every push and pull request.
 
 **To release:** set `EMULED_VERSION` in `CMakeLists.txt` (the tag must match it), commit, then
 

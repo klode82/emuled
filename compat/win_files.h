@@ -144,6 +144,11 @@ inline BOOL MoveFileWithProgress(LPCTSTR src, LPCTSTR dst, LPPROGRESS_ROUTINE ro
 			routine(total, xfer, zero, zero, 1, 0, INVALID_HANDLE_VALUE, INVALID_HANDLE_VALUE, data);
 		}
 	}
+	if (ok) {	// like rename() and like CopyFile on Windows: the new file keeps the permissions and the dates of the old one
+		const struct timespec times[2] = {st.st_atim, st.st_mtim};
+		(void)::fchmod(out, st.st_mode & 07777);	// best effort: vfat/exfat/some network mounts refuse it, and a finished download must still be moved
+		(void)::futimens(out, times);
+	}
 	if (ok && ::fsync(out) != 0) ok = false;
 	::close(in);
 	if (::close(out) != 0) ok = false;

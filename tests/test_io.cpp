@@ -118,6 +118,46 @@ int main()
 		{ CStdioFile f; CHECK(f.Open((dir + "/t.txt").c_str(), CFile::modeCreate | CFile::modeWrite | CFile::typeText)); f.WriteString("riga\n"); f.Close(); CHECK(slurp(dir + "/t.txt") == "riga\n"); }
 		CHECK(leftovers() == 0);
 	}
+	// MoveFileWithProgress between two filesystems (EXDEV): a completed download moved from Temp to an Incoming on another disk (Bench 925)
+	{
+		namespace fs = std::filesystem;
+		const std::string other = "/dev/shm/emule_io_" + std::to_string(getpid());
+		std::error_code ec; fs::create_directories(other, ec);
+		struct stat s1, s2;
+		if (ec || ::stat(dir.c_str(), &s1) != 0 || ::stat(other.c_str(), &s2) != 0 || s1.st_dev == s2.st_dev)
+			std::printf("  EXDEV: skipped (no second filesystem at /dev/shm)\n");
+		else {
+			const std::string src = dir + "/big.part", dst = other + "/big.mkv";
+			std::string data(5 * 1024 * 1024 + 123, '\0');		// more than one 1 MB block, not a multiple of it
+			for (size_t i = 0; i < data.size(); ++i) data[i] = (char)(i * 31 + (i >> 8));
+			{ std::ofstream o(src, std::ios::binary); o.write(data.data(), (std::streamsize)data.size()); }
+			::chmod(src.c_str(), 0640);
+			const struct timespec ts[2] = {{1700000000, 0}, {1700000000, 0}};
+			::utimensat(AT_FDCWD, src.c_str(), ts, 0);
+			CHECK(::rename(src.c_str(), dst.c_str()) != 0 && errno == EXDEV);		// the two folders really are on different filesystems
+			struct Prog { long long last = 0, total = 0; int calls = 0; bool monotonic = true; } pr;
+			LPPROGRESS_ROUTINE cb = [](LARGE_INTEGER total, LARGE_INTEGER xfer, LARGE_INTEGER, LARGE_INTEGER, DWORD, DWORD, HANDLE, HANDLE, LPVOID d) -> DWORD {
+				Prog *p = static_cast<Prog *>(d);
+				if (xfer.QuadPart <= p->last) p->monotonic = false;
+				p->last = xfer.QuadPart; p->total = total.QuadPart; ++p->calls;
+				return PROGRESS_CONTINUE;
+			};
+			CHECK(MoveFileWithProgress(src.c_str(), dst.c_str(), cb, &pr, MOVEFILE_COPY_ALLOWED));
+			CHECK(!fs::exists(src) && fs::exists(dst));										// the original is gone
+			std::string got; { std::ifstream i(dst, std::ios::binary); got.assign(std::istreambuf_iterator<char>(i), {}); }
+			CHECK(got == data);																// the same bytes
+			CHECK(pr.calls >= 5 && pr.monotonic && pr.last == (long long)data.size() && pr.total == (long long)data.size());
+			struct stat sd; CHECK(::stat(dst.c_str(), &sd) == 0 && sd.st_mtime == 1700000000);	// the date of the file is kept, as with rename() and on Windows
+			CHECK(::stat(dst.c_str(), &sd) == 0 && (sd.st_mode & 07777) == 0640);			// and the permissions
+			// the destination already exists: nothing is overwritten and the source stays where it is
+			{ std::ofstream o(src, std::ios::binary); o << "again"; }
+			{ std::ofstream o(dst, std::ios::binary); o << "keep"; }
+			CHECK(!MoveFileWithProgress(src.c_str(), dst.c_str(), nullptr, nullptr, MOVEFILE_COPY_ALLOWED));
+			std::string kept; { std::ifstream i(dst); std::getline(i, kept); }
+			CHECK(kept == "keep" && fs::exists(src));
+			fs::remove_all(other, ec);
+		}
+	}
 	std::filesystem::remove_all(dir);
 	std::printf(fails ? "FALLITO (%d)\n" : "OK\n", fails);
 	return fails != 0;
